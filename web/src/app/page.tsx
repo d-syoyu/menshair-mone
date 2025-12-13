@@ -124,8 +124,8 @@ export default function Home() {
             style={{ backgroundImage: 'url(/image3.jpeg)' }}
           />
 
-          {/* Overlay for text readability - adjusted for monochrome background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/35 to-black/50" />
+          {/* Overlay for text readability - darker for white background areas */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/50 to-black/60" />
 
           {/* Accent glow effects - contained within viewport */}
           <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent opacity-[0.06] blur-[80px] md:blur-[100px]" />
@@ -141,6 +141,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-subheading mb-4 md:mb-8"
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
           >
             Men&apos;s Private Salon
           </motion.p>
