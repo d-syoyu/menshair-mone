@@ -37,11 +37,23 @@ function AdminLoginContent() {
       localStorage.removeItem(STORAGE_KEY);
     }
 
-    await signIn('credentials', {
+    // redirect: false でリダイレクトを防ぎ、結果を手動で処理
+    const result = await signIn('credentials', {
       email,
       password,
-      callbackUrl: '/admin',
+      redirect: false,
     });
+
+    if (result?.error) {
+      // エラーの場合はここでハンドリング
+      setIsLoading(false);
+      window.location.href = '/admin/login?error=CredentialsSignin';
+    } else if (result?.ok) {
+      // 成功したら管理画面へ
+      window.location.href = '/admin';
+    } else {
+      setIsLoading(false);
+    }
   };
 
   return (
