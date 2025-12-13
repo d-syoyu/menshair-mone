@@ -444,8 +444,26 @@ function AdminReservationsContent() {
             ダッシュボードに戻る
           </Link>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl md:text-3xl font-medium">予約管理</h1>
+            <h1 className="text-2xl md:text-3xl font-medium">予約管理</h1>
+            <div className="flex items-center gap-3">
+              {selectedDate && (
+                <>
+                  <span className="text-base md:text-xl text-gray-600">
+                    {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（{WEEKDAYS[selectedDate.getDay()]}）
+                  </span>
+                  {selectedDate.toDateString() !== getToday().toDateString() && (
+                    <button
+                      onClick={() => {
+                        setSelectedDate(getToday());
+                        setCurrentMonth(new Date());
+                      }}
+                      className="px-4 py-2.5 text-base bg-gray-600 text-white rounded-lg hover:opacity-90 transition-opacity min-h-[44px]"
+                    >
+                      今日
+                    </button>
+                  )}
+                </>
+              )}
               <button
                 onClick={openAddModal}
                 className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
@@ -454,24 +472,6 @@ function AdminReservationsContent() {
                 <span className="hidden sm:inline">予約追加</span>
               </button>
             </div>
-            {selectedDate && (
-              <div className="flex items-center gap-3">
-                <span className="text-base md:text-xl text-gray-600">
-                  {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（{WEEKDAYS[selectedDate.getDay()]}）
-                </span>
-                {selectedDate.toDateString() !== getToday().toDateString() && (
-                  <button
-                    onClick={() => {
-                      setSelectedDate(getToday());
-                      setCurrentMonth(new Date());
-                    }}
-                    className="px-4 py-2.5 text-base bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity min-h-[44px]"
-                  >
-                    今日
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </motion.div>
 
@@ -689,7 +689,7 @@ function AdminReservationsContent() {
                                 {formatDate(reservation.date)}
                               </p>
                               <p className="text-xl font-medium">
-                                {reservation.startTime}
+                                {reservation.startTime} - {reservation.endTime}
                               </p>
                             </div>
                             <span
@@ -698,25 +698,29 @@ function AdminReservationsContent() {
                               {STATUS_LABELS[reservation.status]}
                             </span>
                           </div>
-                          {/* カラーセグメント */}
+
+                          {/* メニュー詳細 */}
                           {reservation.items?.length > 0 && (
-                            <div className="flex gap-0.5 mb-2">
-                              {reservation.items.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="h-1.5 rounded-full"
-                                  style={{
-                                    backgroundColor: CATEGORY_COLORS[item.category] || '#888',
-                                    flex: item.duration,
-                                  }}
-                                  title={item.menuName}
-                                />
+                            <div className="mb-3 space-y-2">
+                              {reservation.items.map((item, idx) => (
+                                <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                  <div
+                                    className="w-1 h-10 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#888' }}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm">{item.menuName}</p>
+                                    <p className="text-xs text-gray-500">{item.category}</p>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <p className="text-sm font-medium text-gray-900">¥{item.price.toLocaleString()}</p>
+                                    <p className="text-xs text-gray-500">{item.duration}分</p>
+                                  </div>
+                                </div>
                               ))}
                             </div>
                           )}
-                          <p className="font-medium text-base mb-1">
-                            {reservation.menuSummary}
-                          </p>
+
                           <p className="text-sm text-gray-500 mb-1">
                             {reservation.user.name || '名前未登録'}
                           </p>
@@ -725,10 +729,18 @@ function AdminReservationsContent() {
                               {reservation.user.phone}
                             </p>
                           )}
-                          <div className="flex items-center justify-between">
-                            <p className="text-lg text-[var(--color-gold)]">
-                              ¥{reservation.totalPrice.toLocaleString()}
+                          {reservation.note && (
+                            <p className="text-sm text-gray-400 mb-2">
+                              備考: {reservation.note}
                             </p>
+                          )}
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                            <div>
+                              <p className="text-xs text-gray-500">合計</p>
+                              <p className="text-lg font-medium text-[var(--color-gold)]">
+                                ¥{reservation.totalPrice.toLocaleString()}
+                              </p>
+                            </div>
                             {reservation.status === 'CONFIRMED' && (
                               <div className="flex items-center gap-2">
                                 <button
@@ -756,104 +768,117 @@ function AdminReservationsContent() {
                                     : 'text-red-500 bg-red-50 hover:bg-red-100'
                                 }`}
                               >
-                                {STATUS_LABELS[reservation.status]}
+                                復元
                               </button>
                             )}
                           </div>
                         </div>
 
                         {/* Desktop/Tablet Layout */}
-                        <div className="hidden md:flex items-start gap-4 md:gap-6">
-                          {/* Date & Time */}
-                          <div className="w-28 md:w-32 text-center flex-shrink-0">
-                            <p className="text-base text-gray-500">
-                              {formatDate(reservation.date)}
-                            </p>
-                            <p className="text-xl md:text-2xl font-medium">
-                              {reservation.startTime}
-                            </p>
-                          </div>
-
-                          {/* Color indicator */}
-                          {reservation.items?.length > 0 && (
-                            <div className="flex gap-0.5 w-16 flex-shrink-0 mt-2">
-                              {reservation.items.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="h-6 rounded"
-                                  style={{
-                                    backgroundColor: CATEGORY_COLORS[item.category] || '#888',
-                                    flex: item.duration,
-                                  }}
-                                  title={item.menuName}
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-2">
-                              <p className="font-medium text-base md:text-lg truncate">
-                                {reservation.menuSummary}
+                        <div className="hidden md:block">
+                          <div className="flex items-start gap-4 md:gap-6">
+                            {/* Date & Time */}
+                            <div className="w-28 md:w-36 text-center flex-shrink-0">
+                              <p className="text-base text-gray-500">
+                                {formatDate(reservation.date)}
                               </p>
-                              <span
-                                className={`px-3 py-1 text-sm rounded ${STATUS_STYLES[reservation.status]}`}
-                              >
-                                {STATUS_LABELS[reservation.status]}
-                              </span>
-                            </div>
-                            <p className="text-base text-gray-500">
-                              {reservation.user.name || '名前未登録'}
-                              {reservation.user.phone && ` ・ ${reservation.user.phone}`}
-                              {reservation.user.email && ` ・ ${reservation.user.email}`}
-                            </p>
-                            {reservation.note && (
-                              <p className="text-base text-gray-400 mt-2 truncate">
-                                備考: {reservation.note}
+                              <p className="text-xl md:text-2xl font-medium">
+                                {reservation.startTime}
                               </p>
-                            )}
-                          </div>
+                              <p className="text-sm text-gray-400">
+                                {reservation.endTime}
+                              </p>
+                            </div>
 
-                          {/* Price */}
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-lg md:text-xl text-[var(--color-gold)]">
-                              ¥{reservation.totalPrice.toLocaleString()}
-                            </p>
-                          </div>
+                            {/* Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-3">
+                                <p className="text-base text-gray-500">
+                                  {reservation.user.name || '名前未登録'}
+                                  {reservation.user.phone && ` ・ ${reservation.user.phone}`}
+                                </p>
+                                <span
+                                  className={`px-3 py-1 text-sm rounded ${STATUS_STYLES[reservation.status]}`}
+                                >
+                                  {STATUS_LABELS[reservation.status]}
+                                </span>
+                              </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {reservation.status === 'CONFIRMED' && (
-                              <>
+                              {/* メニュー詳細 */}
+                              {reservation.items?.length > 0 && (
+                                <div className="space-y-2 mb-3">
+                                  {reservation.items.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                                      <div
+                                        className="w-1 h-12 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#888' }}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-base">{item.menuName}</p>
+                                        <p className="text-sm text-gray-500">{item.category}</p>
+                                      </div>
+                                      <div className="flex items-center gap-4 flex-shrink-0">
+                                        <span className="text-sm text-gray-500">{item.duration}分</span>
+                                        <span className="text-base font-medium text-gray-900 min-w-[80px] text-right">
+                                          ¥{item.price.toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {reservation.note && (
+                                <p className="text-sm text-gray-400 mt-2">
+                                  備考: {reservation.note}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Price */}
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-xs text-gray-500 mb-1">合計</p>
+                              <p className="text-xl md:text-2xl font-medium text-[var(--color-gold)]">
+                                ¥{reservation.totalPrice.toLocaleString()}
+                              </p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                {reservation.totalDuration}分
+                              </p>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {reservation.status === 'CONFIRMED' && (
+                                <>
+                                  <button
+                                    onClick={() => openConfirmDialog(reservation, 'CANCELLED')}
+                                    className="p-3 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                    title="キャンセル"
+                                  >
+                                    <XCircle className="w-6 h-6" />
+                                  </button>
+                                  <button
+                                    onClick={() => openConfirmDialog(reservation, 'NO_SHOW')}
+                                    className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                    title="無断キャンセル"
+                                  >
+                                    <Clock className="w-6 h-6" />
+                                  </button>
+                                </>
+                              )}
+                              {(reservation.status === 'CANCELLED' || reservation.status === 'NO_SHOW') && (
                                 <button
-                                  onClick={() => openConfirmDialog(reservation, 'CANCELLED')}
-                                  className="p-3 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-                                  title="キャンセル"
+                                  onClick={() => openConfirmDialog(reservation, 'CONFIRMED')}
+                                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                    reservation.status === 'CANCELLED'
+                                      ? 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                                      : 'text-red-500 bg-red-50 hover:bg-red-100'
+                                  }`}
                                 >
-                                  <XCircle className="w-6 h-6" />
+                                  復元
                                 </button>
-                                <button
-                                  onClick={() => openConfirmDialog(reservation, 'NO_SHOW')}
-                                  className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-                                  title="無断キャンセル"
-                                >
-                                  <Clock className="w-6 h-6" />
-                                </button>
-                              </>
-                            )}
-                            {(reservation.status === 'CANCELLED' || reservation.status === 'NO_SHOW') && (
-                              <button
-                                onClick={() => openConfirmDialog(reservation, 'CONFIRMED')}
-                                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                  reservation.status === 'CANCELLED'
-                                    ? 'text-gray-500 bg-gray-100 hover:bg-gray-200'
-                                    : 'text-red-500 bg-red-50 hover:bg-red-100'
-                                }`}
-                              >
-                                復元
-                              </button>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

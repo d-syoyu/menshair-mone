@@ -622,7 +622,7 @@ export default function BookingPage() {
                     key={i}
                     onClick={() => handleDateSelect(date)}
                     disabled={!isSelectable}
-                    className={`aspect-square flex items-center justify-center text-xs sm:text-sm transition-all rounded-sm ${
+                    className={`aspect-square flex items-center justify-center text-xs sm:text-sm font-medium transition-all rounded-sm ${
                       isSelected
                         ? 'bg-accent text-white'
                         : isSelectable
@@ -678,7 +678,7 @@ export default function BookingPage() {
                       key={slot.time}
                       onClick={() => slot.available && handleTimeSelect(slot.time)}
                       disabled={!slot.available}
-                      className={`py-2.5 sm:py-3 text-xs sm:text-sm border transition-all rounded ${
+                      className={`py-2.5 sm:py-3 text-xs sm:text-sm font-medium border transition-all rounded ${
                         selectedTime === slot.time
                           ? 'bg-accent text-white border-accent'
                           : slot.available
