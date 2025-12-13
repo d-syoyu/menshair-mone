@@ -1,4 +1,4 @@
-// src/middleware.ts
+// src/proxy.ts
 // Hair Salon White - Route Protection Middleware
 // Simple token-based check for Edge Runtime compatibility
 
