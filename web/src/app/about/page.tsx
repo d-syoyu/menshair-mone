@@ -150,7 +150,7 @@ export default function AboutPage() {
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
-                  src="/scissors.avif"
+                  src="/shaving.jpeg"
                   alt="シェービング"
                   fill
                   className="object-cover"
