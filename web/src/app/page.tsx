@@ -128,7 +128,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/50 to-black/60" />
 
           {/* Accent glow effects - contained within viewport */}
-          <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent opacity-[0.06] blur-[80px] md:blur-[100px]" />
+          <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent-light opacity-[0.06] blur-[80px] md:blur-[100px]" />
           <div className="absolute bottom-1/3 right-[10%] w-[150px] md:w-[300px] h-[150px] md:h-[300px] rounded-full bg-gold opacity-[0.04] blur-[60px] md:blur-[80px]" />
 
           {/* Subtle vignette */}
@@ -141,7 +141,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-subheading mb-4 md:mb-8"
-            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)', color: '#FFFFFF' }}
           >
             Men&apos;s Private Salon
           </motion.p>
@@ -156,7 +156,7 @@ export default function Home() {
               一人一人の男性に
             </span>
             <span className="text-display block">
-              <span className="text-gold">「光」</span>と<span className="text-accent-light">「印象」</span>を...
+              <span className="text-gold">「光」</span>と<span style={{ color: '#1F3D30' }}>「印象」</span>を...
             </span>
           </motion.h1>
 
