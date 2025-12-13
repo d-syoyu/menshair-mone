@@ -77,8 +77,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(holidays);
   } catch (error) {
     console.error("Get holidays error:", error);
+    const errorMessage = error instanceof Error ? error.message : "不定休の取得に失敗しました";
     return NextResponse.json(
-      { error: "不定休の取得に失敗しました" },
+      { error: "不定休の取得に失敗しました", details: errorMessage },
       { status: 500 }
     );
   }
@@ -135,8 +136,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(holiday, { status: 201 });
   } catch (error) {
     console.error("Create holiday error:", error);
+    const errorMessage = error instanceof Error ? error.message : "不定休の作成に失敗しました";
     return NextResponse.json(
-      { error: "不定休の作成に失敗しました" },
+      { error: "不定休の作成に失敗しました", details: errorMessage },
       { status: 500 }
     );
   }

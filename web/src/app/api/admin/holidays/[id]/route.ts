@@ -39,8 +39,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete holiday error:", error);
+    const errorMessage = error instanceof Error ? error.message : "不定休の削除に失敗しました";
     return NextResponse.json(
-      { error: "不定休の削除に失敗しました" },
+      { error: "不定休の削除に失敗しました", details: errorMessage },
       { status: 500 }
     );
   }
