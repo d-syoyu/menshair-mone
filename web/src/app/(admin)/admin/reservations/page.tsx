@@ -19,6 +19,7 @@ import {
   Plus,
   User,
   Check,
+  Pencil,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { CATEGORY_COLORS, MENUS, MENU_CATEGORY_LIST, type MenuItem } from '@/constants/menu';
@@ -160,6 +161,19 @@ function AdminReservationsContent() {
   const [reservationNote, setReservationNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // 編集モーダル
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [editTab, setEditTab] = useState<'customer' | 'reservation'>('reservation');
+  const [editCustomerName, setEditCustomerName] = useState('');
+  const [editCustomerPhone, setEditCustomerPhone] = useState('');
+  const [editMenuIds, setEditMenuIds] = useState<string[]>([]);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     fetchReservations();
@@ -362,6 +376,119 @@ function AdminReservationsContent() {
       setAddError('予約の作成に失敗しました');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 編集モーダルを開く
+  const openEditModal = (reservation: Reservation) => {
+    setEditingReservation(reservation);
+    setEditTab('reservation');
+    setEditCustomerName(reservation.user.name || '');
+    setEditCustomerPhone(reservation.user.phone || '');
+    setEditMenuIds(reservation.items.map(item => item.menuId));
+    setEditDate(formatDateForInput(new Date(reservation.date)));
+    setEditTime(reservation.startTime);
+    setEditNote(reservation.note || '');
+    setEditError(null);
+    setIsEditModalOpen(true);
+  };
+
+  // 編集メニュー選択を切り替え
+  const toggleEditMenu = (menuId: string) => {
+    setEditMenuIds(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  // 編集中のメニュー合計
+  const getEditMenusTotal = () => {
+    const menus = editMenuIds.map(id => MENUS.find(m => m.id === id)).filter((m): m is MenuItem => !!m);
+    const totalPrice = menus.reduce((sum, m) => sum + m.price, 0);
+    const totalDuration = menus.reduce((sum, m) => sum + m.duration, 0);
+    return { totalPrice, totalDuration, menus };
+  };
+
+  // 顧客情報を更新
+  const updateCustomer = async () => {
+    if (!editingReservation) return;
+    setIsEditSubmitting(true);
+    setEditError(null);
+
+    try {
+      const res = await fetch(`/api/admin/customers/${editingReservation.user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editCustomerName,
+          phone: editCustomerPhone,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEditError(data.error);
+        return;
+      }
+
+      // 成功したら予約リストを更新
+      setReservations(prev =>
+        prev.map(r =>
+          r.id === editingReservation.id
+            ? {
+                ...r,
+                user: {
+                  ...r.user,
+                  name: editCustomerName,
+                  phone: editCustomerPhone,
+                },
+              }
+            : r
+        )
+      );
+      setEditError(null);
+      alert('顧客情報を更新しました');
+    } catch {
+      setEditError('顧客情報の更新に失敗しました');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  // 予約情報を更新
+  const updateReservation = async () => {
+    if (!editingReservation || editMenuIds.length === 0) return;
+    setIsEditSubmitting(true);
+    setEditError(null);
+
+    try {
+      const res = await fetch(`/api/admin/reservations/${editingReservation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          menuIds: editMenuIds,
+          date: editDate,
+          startTime: editTime,
+          note: editNote || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEditError(data.error);
+        return;
+      }
+
+      // 成功したら予約リストを更新してモーダルを閉じる
+      fetchReservations();
+      setIsEditModalOpen(false);
+    } catch {
+      setEditError('予約情報の更新に失敗しました');
+    } finally {
+      setIsEditSubmitting(false);
     }
   };
 
@@ -741,36 +868,45 @@ function AdminReservationsContent() {
                                 ¥{reservation.totalPrice.toLocaleString()}
                               </p>
                             </div>
-                            {reservation.status === 'CONFIRMED' && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => openConfirmDialog(reservation, 'CANCELLED')}
-                                  className="p-3 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-                                  title="キャンセル"
-                                >
-                                  <XCircle className="w-6 h-6" />
-                                </button>
-                                <button
-                                  onClick={() => openConfirmDialog(reservation, 'NO_SHOW')}
-                                  className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
-                                  title="無断キャンセル"
-                                >
-                                  <Clock className="w-6 h-6" />
-                                </button>
-                              </div>
-                            )}
-                            {(reservation.status === 'CANCELLED' || reservation.status === 'NO_SHOW') && (
+                            <div className="flex items-center gap-2">
                               <button
-                                onClick={() => openConfirmDialog(reservation, 'CONFIRMED')}
-                                className={`px-3 py-2 text-sm rounded-lg transition-colors ${
-                                  reservation.status === 'CANCELLED'
-                                    ? 'text-gray-500 bg-gray-100 hover:bg-gray-200'
-                                    : 'text-red-500 bg-red-50 hover:bg-red-100'
-                                }`}
+                                onClick={() => openEditModal(reservation)}
+                                className="p-3 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                title="編集"
                               >
-                                復元
+                                <Pencil className="w-5 h-5" />
                               </button>
-                            )}
+                              {reservation.status === 'CONFIRMED' && (
+                                <>
+                                  <button
+                                    onClick={() => openConfirmDialog(reservation, 'CANCELLED')}
+                                    className="p-3 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                    title="キャンセル"
+                                  >
+                                    <XCircle className="w-6 h-6" />
+                                  </button>
+                                  <button
+                                    onClick={() => openConfirmDialog(reservation, 'NO_SHOW')}
+                                    className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                    title="無断キャンセル"
+                                  >
+                                    <Clock className="w-6 h-6" />
+                                  </button>
+                                </>
+                              )}
+                              {(reservation.status === 'CANCELLED' || reservation.status === 'NO_SHOW') && (
+                                <button
+                                  onClick={() => openConfirmDialog(reservation, 'CONFIRMED')}
+                                  className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                                    reservation.status === 'CANCELLED'
+                                      ? 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                                      : 'text-red-500 bg-red-50 hover:bg-red-100'
+                                  }`}
+                                >
+                                  復元
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -848,6 +984,13 @@ function AdminReservationsContent() {
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => openEditModal(reservation)}
+                                className="p-3 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                                title="編集"
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </button>
                               {reservation.status === 'CONFIRMED' && (
                                 <>
                                   <button
@@ -1292,6 +1435,248 @@ function AdminReservationsContent() {
                       className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? '予約登録中...' : '予約を登録'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 編集モーダル */}
+      <AnimatePresence>
+        {isEditModalOpen && editingReservation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsEditModalOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-gray-100 flex-shrink-0">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <Pencil className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">予約を編集</h3>
+                    <p className="text-sm text-gray-500">
+                      {formatDate(editingReservation.date)} {editingReservation.startTime}
+                    </p>
+                  </div>
+                </div>
+
+                {/* タブ */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditTab('reservation')}
+                    className={`flex-1 py-2 text-sm rounded-lg transition-colors ${
+                      editTab === 'reservation'
+                        ? 'bg-[var(--color-accent)] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    予約情報
+                  </button>
+                  <button
+                    onClick={() => setEditTab('customer')}
+                    className={`flex-1 py-2 text-sm rounded-lg transition-colors ${
+                      editTab === 'customer'
+                        ? 'bg-[var(--color-accent)] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    顧客情報
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto flex-1">
+                {editError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                    {editError}
+                  </div>
+                )}
+
+                {/* 予約情報タブ */}
+                {editTab === 'reservation' && (
+                  <div className="space-y-4">
+                    {/* 日時 */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">日付</label>
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
+                        <select
+                          value={editTime}
+                          onChange={(e) => setEditTime(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        >
+                          {TIME_OPTIONS.map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* メニュー選択 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">メニュー</label>
+                      <div className="space-y-4 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                        {MENU_CATEGORY_LIST.map(category => {
+                          const categoryMenus = MENUS.filter(m => m.category === category.id);
+                          if (categoryMenus.length === 0) return null;
+
+                          return (
+                            <div key={category.id}>
+                              <h4 className="text-xs font-medium text-gray-500 mb-2">{category.id}</h4>
+                              <div className="space-y-1">
+                                {categoryMenus.map(menu => {
+                                  const isSelected = editMenuIds.includes(menu.id);
+                                  return (
+                                    <button
+                                      key={menu.id}
+                                      onClick={() => toggleEditMenu(menu.id)}
+                                      className={`w-full p-2 rounded-lg border text-left flex items-center justify-between transition-colors text-sm ${
+                                        isSelected
+                                          ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="w-2 h-2 rounded-full"
+                                          style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
+                                        />
+                                        <span>{menu.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-500">{menu.duration}分</span>
+                                        <span className="font-medium">¥{menu.price.toLocaleString()}</span>
+                                        {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {editMenuIds.length > 0 && (
+                      <div className="p-3 bg-[var(--color-gold)]/10 rounded-lg">
+                        <div className="flex justify-between text-sm">
+                          <span>合計</span>
+                          <span className="font-medium">
+                            ¥{getEditMenusTotal().totalPrice.toLocaleString()}（{getEditMenusTotal().totalDuration}分）
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 備考 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
+                      <textarea
+                        value={editNote}
+                        onChange={(e) => setEditNote(e.target.value)}
+                        placeholder="備考"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)] resize-none"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 顧客情報タブ */}
+                {editTab === 'customer' && (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-gray-50 rounded-lg mb-4">
+                      <p className="text-xs text-gray-500 mb-1">現在の顧客</p>
+                      <p className="font-medium">{editingReservation.user.name || '名前未登録'}</p>
+                      <p className="text-sm text-gray-500">{editingReservation.user.phone}</p>
+                      {editingReservation.user.email && (
+                        <p className="text-sm text-gray-500">{editingReservation.user.email}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">お名前</label>
+                      <input
+                        type="text"
+                        value={editCustomerName}
+                        onChange={(e) => setEditCustomerName(e.target.value)}
+                        placeholder="お名前"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">電話番号</label>
+                      <input
+                        type="tel"
+                        value={editCustomerPhone}
+                        onChange={(e) => setEditCustomerPhone(e.target.value)}
+                        placeholder="電話番号"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      ※顧客情報を変更すると、この顧客の他の予約にも反映されます
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-gray-100 flex-shrink-0">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-4 py-3 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  {editTab === 'reservation' ? (
+                    <button
+                      onClick={updateReservation}
+                      disabled={isEditSubmitting || editMenuIds.length === 0 || !editDate || !editTime}
+                      className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isEditSubmitting ? '更新中...' : '予約を更新'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={updateCustomer}
+                      disabled={isEditSubmitting || !editCustomerName || !editCustomerPhone}
+                      className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isEditSubmitting ? '更新中...' : '顧客情報を更新'}
                     </button>
                   )}
                 </div>

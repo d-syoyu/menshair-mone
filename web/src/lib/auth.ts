@@ -56,7 +56,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Email Magic Link (顧客向け)
     Resend({
       apiKey: process.env.RESEND_API_KEY!,
-      from: "Hair Salon White <noreply@hairsalon-white.com>",
+      from: "Men's hair MONE <noreply@mone0601.com>",
     }),
 
     // Credentials (管理者向け)
