@@ -93,3 +93,21 @@ Uses Framer Motion with reusable variants:
 - `/contact` - お問い合わせフォーム
 
 **参考サイト:** https://beauty-salon-web.vercel.app/
+
+## Available Skills
+
+デザイン・フロントエンド開発に活用できるスキルが `.claude/skills/` に定義されています：
+
+| スキル | 用途 |
+|--------|------|
+| `backgrounds` | 奥行きのある雰囲気的な背景デザイン（レイヤードグラデーション、パターン、グラス効果） |
+| `motion` | Framer Motionを使用したアニメーション・マイクロインタラクション |
+| `themes` | 一貫したテーマデザイン（カラーパレット、CSS変数の活用） |
+| `typography` | 印象的なタイポグラフィ選択（汎用フォントの回避、コントラストの活用） |
+
+### MONË向けスキル適用指針
+
+- **Backgrounds:** ダークグレーベースに微細なグラデーション・パターンで高級感を演出
+- **Motion:** ページロード時のスタッガードアニメーション、ホバー時の控えめなエフェクト
+- **Themes:** グレー×グリーンの一貫したカラーシステム、CSS変数で管理
+- **Typography:** Cormorant Garamond（見出し）+ Zen Kaku Gothic New（本文）の組み合わせ維持
