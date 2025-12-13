@@ -1,171 +1,86 @@
 'use client';
 
-import { useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useInView, type Variants } from 'framer-motion';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
-  }
-};
-
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
+const galleryImages = [
+  { src: '/cut.jpeg', alt: 'カット' },
+  { src: '/cut2.jpeg', alt: 'カット' },
+  { src: '/shampoo2.jpeg', alt: 'ヘッドスパ' },
+  { src: '/shampoo.jpeg', alt: 'シャンプー' },
+  { src: '/design.jpeg', alt: 'デザイン' },
+];
 
 const menuCategories = [
   {
     id: 'cut',
-    title: 'Cut',
     titleJa: 'カット',
-    description: '骨格や髪質を見極め、お客様一人ひとりに似合うスタイルをご提案いたします。',
-    image: '/cut.png',
     items: [
-      { name: 'カット', price: '¥5,500' },
-      { name: '前髪カット', price: '¥1,100' },
-      { name: 'キッズカット（小学生以下）', price: '¥3,300' },
+      { name: 'カット', price: '¥4,950', duration: '40分' },
+      { name: 'カット + シャンプー', price: '¥5,500', duration: '50分' },
     ]
   },
   {
     id: 'color',
-    title: 'Color',
     titleJa: 'カラー',
-    description: 'オーガニック成分配合のカラー剤を使用。繰り返すほどに髪にツヤが生まれます。',
-    image: '/color.png',
     items: [
-      { name: 'フルカラー', price: '¥8,800' },
-      { name: 'リタッチカラー', price: '¥6,600' },
-      { name: 'イルミナカラー', price: '¥11,000' },
-      { name: 'ハイライト', price: '¥5,500〜' },
-      { name: 'グレイカラー（白髪染め）', price: '¥7,700' },
+      { name: 'カラー', price: '¥4,950〜', duration: '60分〜' },
+      { name: 'カット + カラー', price: '¥8,800', duration: '90分' },
     ]
   },
   {
     id: 'perm',
-    title: 'Perm',
     titleJa: 'パーマ',
-    description: 'ダメージを最小限に抑えながら、理想のカールを長持ちさせます。',
-    image: '/treatments.png',
     items: [
-      { name: 'パーマ', price: '¥8,800' },
-      { name: 'デジタルパーマ', price: '¥13,200' },
-      { name: 'コスメパーマ', price: '¥11,000' },
-      { name: 'ポイントパーマ', price: '¥5,500〜' },
+      { name: 'パーマ', price: '¥4,400〜', duration: '60分〜' },
+      { name: 'カット + パーマ', price: '¥8,250', duration: '90分' },
     ]
   },
   {
     id: 'straightening',
-    title: 'Straightening',
     titleJa: '縮毛矯正',
-    description: 'くせ毛やうねりを根本から改善し、自然でまっすぐなストレートヘアを実現します。',
-    image: '/treatments.png',
     items: [
-      { name: '縮毛矯正', price: '¥17,600〜' },
-      { name: 'ポイント縮毛矯正（前髪）', price: '¥5,500' },
-      { name: '酸性ストレート', price: '¥22,000' },
-    ]
-  },
-  {
-    id: 'hair-improvement',
-    title: 'Hair Improvement',
-    titleJa: '髪質改善',
-    description: '最新の技術で髪の内部構造を整え、本来の美しさを取り戻します。',
-    image: '/treatments.png',
-    items: [
-      { name: '髪質改善トリートメント', price: '¥11,000' },
-      { name: '酸熱トリートメント', price: '¥16,500' },
-      { name: 'TOKIO インカラミ', price: '¥8,800' },
-    ]
-  },
-  {
-    id: 'treatment',
-    title: 'Treatment',
-    titleJa: 'トリートメント',
-    description: '髪の内部からダメージを補修し、艶やかでまとまりのある髪へ導きます。',
-    image: '/treatments.png',
-    items: [
-      { name: 'クイックトリートメント', price: '¥2,200' },
-      { name: 'スペシャルトリートメント', price: '¥4,400' },
-      { name: 'プレミアムトリートメント', price: '¥6,600' },
+      { name: '縮毛矯正', price: '¥11,000〜', duration: '120分〜' },
+      { name: 'カット + 縮毛矯正', price: '¥14,850', duration: '150分' },
     ]
   },
   {
     id: 'spa',
-    title: 'Head Spa',
-    titleJa: 'ヘッドスパ',
-    description: '頭皮のコリをほぐし、リラックスしながら健やかな髪の土台を育てます。',
-    image: '/treatments.png',
+    titleJa: 'スパ',
     items: [
-      { name: 'クイックスパ（15分）', price: '¥2,200' },
-      { name: 'リラックススパ（30分）', price: '¥4,400' },
-      { name: 'プレミアムスパ（45分）', price: '¥6,600' },
+      { name: 'ヘッドスパ', price: '¥2,200〜', duration: '30分〜' },
     ]
   },
   {
-    id: 'arrangement',
-    title: 'Hair Arrange',
-    titleJa: 'ヘアセット',
-    description: '特別な日を彩るヘアセット。結婚式やパーティー、成人式などに。',
-    image: '/color.png',
+    id: 'shampoo-set',
+    titleJa: 'シャンプー&セット',
     items: [
-      { name: 'ヘアセット', price: '¥5,500' },
-      { name: '成人式ヘアセット', price: '¥8,800' },
-      { name: 'ブライダルヘアメイク', price: '¥33,000〜' },
+      { name: 'シャンプー&セット', price: '¥2,200', duration: '20分' },
     ]
   },
   {
-    id: 'set-menu',
-    title: 'Set Menu',
-    titleJa: 'セットメニュー',
-    description: '人気メニューをお得に組み合わせたセットプランをご用意しております。',
-    image: '/color.png',
+    id: 'mens-shaving',
+    titleJa: 'メンズシェービング',
     items: [
-      { name: 'カット + カラー', price: '¥12,100' },
-      { name: 'カット + パーマ', price: '¥12,100' },
-      { name: 'カット + 髪質改善', price: '¥14,300' },
-      { name: '美髪フルコース（カット+カラー+髪質改善+スパ）', price: '¥27,500' },
+      { name: 'フェイスシェービング', price: '¥2,200', duration: '20分' },
+      { name: 'カット + シェービング', price: '¥6,050', duration: '60分' },
     ]
   },
   {
-    id: 'goods',
-    title: 'Products',
-    titleJa: '店販商品',
-    description: 'サロン専売品やLUMINAオリジナルのヘアケア商品を取り揃えております。',
-    image: '/goods.png',
+    id: 'ladies-shaving',
+    titleJa: 'レディースシェービング',
     items: [
-      { name: 'シャンプー', price: '¥3,300〜' },
-      { name: 'トリートメント', price: '¥3,850〜' },
-      { name: 'ヘアオイル', price: '¥2,750〜' },
+      { name: 'フェイスシェービング', price: '¥3,300', duration: '30分' },
+      { name: 'フルシェービング', price: '¥5,500', duration: '40分' },
     ]
   },
 ];
 
 export default function MenuPage() {
   return (
-    <div className="min-h-screen bg-[var(--color-cream)] pt-32">
+    <div className="min-h-screen pt-32">
       {/* Hero */}
       <section className="container-wide pb-20">
         <motion.div
@@ -177,85 +92,91 @@ export default function MenuPage() {
           <p className="text-subheading mb-4">Price List</p>
           <h1 className="text-display mb-6">Menu</h1>
           <div className="divider-line mx-auto mb-8" />
-          <p className="text-[var(--color-warm-gray)] max-w-lg mx-auto">
-            すべての施術にシャンプー・ブローが含まれております。<br />
-            ご不明な点はお気軽にお問い合わせください。
+          <p className="text-body max-w-lg mx-auto">
+            すべての施術はプライベート空間で<br />
+            丁寧にご提供いたします。
           </p>
         </motion.div>
       </section>
 
-      {/* Menu Categories */}
-      {menuCategories.map((category, index) => (
-        <AnimatedSection
-          key={category.id}
-          className={`py-20 ${index % 2 === 1 ? 'bg-[var(--color-cream-dark)]' : ''}`}
-        >
-          <div className="container-wide">
-            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}>
-              {/* Image */}
-              <motion.div
-                variants={fadeInUp}
-                className={`relative ${index % 2 === 1 ? 'lg:order-2' : ''}`}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image
-                    src={category.image}
-                    alt={category.titleJa}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                {index % 2 === 0 && (
-                  <div className="absolute -bottom-4 -right-4 w-full h-full border border-[var(--color-gold)] -z-10" />
-                )}
-                {index % 2 === 1 && (
-                  <div className="absolute -bottom-4 -left-4 w-full h-full border border-[var(--color-sage)] -z-10" />
-                )}
-              </motion.div>
-
-              {/* Content */}
-              <div className={index % 2 === 1 ? 'lg:order-1' : ''}>
-                <motion.p variants={fadeInUp} className="text-subheading mb-2">
-                  {category.title}
-                </motion.p>
-                <motion.h2 variants={fadeInUp} className="text-heading mb-6">
-                  {category.titleJa}
-                </motion.h2>
-                <motion.div variants={fadeInUp} className="divider-line mb-6" />
-                <motion.p variants={fadeInUp} className="text-[var(--color-warm-gray)] mb-10 leading-relaxed">
-                  {category.description}
-                </motion.p>
-
-                {/* Price List */}
-                <div className="space-y-4">
-                  {category.items.map((item) => (
+      {/* Menu List with Gallery */}
+      <section className="py-12 section-gradient">
+        <div className="container-wide">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+            {/* Left: Gallery (モバイル: 上、デスクトップ: 左側固定) */}
+            <div className="lg:col-span-4">
+              <div className="lg:sticky lg:top-32">
+                <div className="flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+                  {galleryImages.map((image, index) => (
                     <motion.div
-                      key={item.name}
-                      variants={fadeInUp}
-                      className="flex justify-between items-center py-3 border-b border-[var(--color-light-gray)]"
+                      key={image.src}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: index * 0.1 }}
+                      viewport={{ once: true }}
+                      className="relative aspect-[4/3] min-w-[200px] lg:min-w-0 overflow-hidden glass-card group"
                     >
-                      <span className="text-[var(--color-charcoal)]">{item.name}</span>
-                      <span className="text-[var(--color-gold)] font-light text-lg">{item.price}</span>
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     </motion.div>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
-        </AnimatedSection>
-      ))}
 
-      {/* Note */}
-      <section className="py-20 bg-[var(--color-charcoal)] text-white">
-        <div className="container-narrow text-center">
-          <h2 className="text-2xl font-[family-name:var(--font-serif)] mb-6">ご予約について</h2>
-          <div className="w-12 h-[1px] bg-[var(--color-gold)] mx-auto mb-8" />
-          <div className="text-gray-300 space-y-4 mb-10">
+            {/* Right: Menu List */}
+            <div className="lg:col-span-8 space-y-10">
+              {menuCategories.map((category) => (
+                <div key={category.id} className="space-y-4">
+                  <h2 className="text-2xl font-serif text-white border-b border-glass-border pb-3">
+                    {category.titleJa}
+                  </h2>
+
+                  <div className="space-y-3">
+                    {category.items.map((item) => (
+                      <div
+                        key={item.name}
+                        className="flex flex-wrap justify-between items-center py-2 text-text-secondary hover:text-white transition-colors"
+                      >
+                        <div className="flex-1 min-w-0 mr-4">
+                          <span className="text-base">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-text-muted">
+                            {item.duration}
+                          </span>
+                          <span className="text-lg text-gold font-light min-w-[100px] text-right">{item.price}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Note & CTA */}
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-dark-gray via-dark to-dark-gray" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent opacity-[0.02] blur-[120px]" />
+        </div>
+
+        <div className="container-narrow text-center relative z-10">
+          <h2 className="text-2xl font-serif mb-6">ご予約について</h2>
+          <div className="divider-line mx-auto mb-8" />
+          <div className="text-body space-y-4 mb-10">
             <p>表示価格はすべて税込です。</p>
             <p>初回のお客様には丁寧なカウンセリングを行うため、<br className="hidden md:inline" />お時間に余裕を持ってお越しください。</p>
             <p>メニューの組み合わせにより、セット割引もございます。</p>
           </div>
-          <Link href="/contact" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[var(--color-charcoal)] text-sm tracking-[0.2em] uppercase transition-all duration-500 hover:bg-[var(--color-sage)] hover:text-white">
+          <Link href="/booking" className="btn-primary">
             ご予約はこちら
             <ArrowRight className="w-4 h-4" />
           </Link>

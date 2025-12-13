@@ -1,33 +1,49 @@
+'use client';
+
 import Link from 'next/link';
-import { Instagram, MapPin, Phone, Mail } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Instagram, MapPin, Phone, Clock } from 'lucide-react';
 
 const Footer = () => {
+  const pathname = usePathname();
+
+  // 管理画面では表示しない
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   return (
-    <footer className="bg-[var(--color-charcoal)] text-white">
+    <footer className="bg-dark-gray relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[400px] h-[400px] rounded-full bg-accent opacity-[0.02] blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] rounded-full bg-gold opacity-[0.02] blur-3xl" />
+      </div>
+
       {/* Main Footer */}
-      <div className="container-wide py-20">
+      <div className="container-wide py-20 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-block mb-6">
-              <span className="text-2xl font-[family-name:var(--font-serif)] tracking-[0.15em] text-white">
-                LUMINA
+              <span className="text-3xl font-serif tracking-[0.15em] text-white">
+                MONË
               </span>
-              <span className="block text-[10px] tracking-[0.3em] text-gray-400 uppercase">
-                HAIR STUDIO
+              <span className="block text-[9px] tracking-[0.25em] text-text-muted uppercase mt-1">
+                Men&apos;s Hair & Depilation
               </span>
             </Link>
-            <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              自然由来の成分と熟練の技術で<br />
-              あなたの美しさを引き出します
+            <p className="text-text-secondary text-sm leading-relaxed mb-6">
+              一人一人の男性に<br />
+              「光」と「印象」を...
             </p>
             {/* Social */}
             <div className="flex gap-4">
               <a
-                href="https://instagram.com"
+                href="https://instagram.com/barber_shop0601mone"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 border border-gray-600 flex items-center justify-center transition-all duration-300 hover:border-[var(--color-sage)] hover:text-[var(--color-sage)]"
+                className="w-10 h-10 border border-glass-border flex items-center justify-center transition-all duration-300 hover:border-accent hover:text-accent"
                 aria-label="Instagram"
               >
                 <Instagram className="w-4 h-4" />
@@ -37,21 +53,21 @@ const Footer = () => {
 
           {/* Navigation */}
           <div>
-            <h4 className="text-xs tracking-[0.2em] uppercase text-[var(--color-gold)] mb-6">
+            <h4 className="text-xs tracking-[0.2em] uppercase text-accent-light mb-6">
               Navigation
             </h4>
             <ul className="space-y-4">
               {[
                 { name: 'ホーム', href: '/' },
-                { name: 'メニュー', href: '/menu' },
-                { name: 'スタッフ', href: '/staff' },
-                { name: 'ブログ', href: '/blog' },
-                { name: 'ご予約・お問い合わせ', href: '/contact' },
+                { name: 'メニュー・料金', href: '/menu' },
+                { name: '店舗情報', href: '/about' },
+                { name: 'お知らせ', href: '/news' },
+                { name: 'ご予約', href: '/booking' },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className="text-gray-400 text-sm transition-colors duration-300 hover:text-white"
+                    className="text-text-secondary text-sm transition-colors duration-300 hover:text-white hover:pl-2"
                   >
                     {item.name}
                   </Link>
@@ -62,20 +78,20 @@ const Footer = () => {
 
           {/* Menu */}
           <div>
-            <h4 className="text-xs tracking-[0.2em] uppercase text-[var(--color-gold)] mb-6">
+            <h4 className="text-xs tracking-[0.2em] uppercase text-accent-light mb-6">
               Menu
             </h4>
             <ul className="space-y-4">
               {[
-                { name: 'カット', price: '¥5,500〜' },
-                { name: 'カラー', price: '¥6,600〜' },
-                { name: 'パーマ', price: '¥8,800〜' },
-                { name: '縮毛矯正', price: '¥17,600〜' },
-                { name: '髪質改善', price: '¥11,000〜' },
+                { name: 'カット', price: '¥4,950〜' },
+                { name: 'シェービング', price: '¥2,200〜' },
+                { name: 'ヘッドスパ', price: '¥2,200〜' },
+                { name: 'カラー', price: '¥4,950〜' },
+                { name: 'パーマ', price: '¥4,400〜' },
               ].map((item) => (
                 <li key={item.name} className="flex justify-between text-sm">
-                  <span className="text-gray-400">{item.name}</span>
-                  <span className="text-gray-500">{item.price}</span>
+                  <span className="text-text-secondary">{item.name}</span>
+                  <span className="text-text-muted">{item.price}</span>
                 </li>
               ))}
             </ul>
@@ -83,61 +99,90 @@ const Footer = () => {
 
           {/* Contact */}
           <div>
-            <h4 className="text-xs tracking-[0.2em] uppercase text-[var(--color-gold)] mb-6">
-              Contact
+            <h4 className="text-xs tracking-[0.2em] uppercase text-accent-light mb-6">
+              Access
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-[var(--color-sage)] mt-0.5 flex-shrink-0" />
-                <span className="text-gray-400">
-                  東京都渋谷区神宮前1-2-3<br />
-                  表参道駅 A1出口より徒歩3分
+                <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                <span className="text-text-secondary">
+                  〒570-0036<br />
+                  大阪府守口市八雲中町1-24-1
                 </span>
               </li>
               <li className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-[var(--color-sage)] flex-shrink-0" />
+                <Phone className="w-4 h-4 text-accent flex-shrink-0" />
                 <a
-                  href="tel:03-1234-5678"
-                  className="text-gray-400 transition-colors duration-300 hover:text-white"
+                  href="tel:06-6908-4859"
+                  className="text-text-secondary transition-colors duration-300 hover:text-white"
                 >
-                  03-1234-5678
+                  06-6908-4859
                 </a>
               </li>
               <li className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-[var(--color-sage)] flex-shrink-0" />
+                <Instagram className="w-4 h-4 text-accent flex-shrink-0" />
                 <a
-                  href="mailto:info@lumina-hair.jp"
-                  className="text-gray-400 transition-colors duration-300 hover:text-white"
+                  href="https://instagram.com/barber_shop0601mone"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-text-secondary transition-colors duration-300 hover:text-white"
                 >
-                  info@lumina-hair.jp
+                  @barber_shop0601mone
                 </a>
               </li>
             </ul>
 
             {/* Hours */}
-            <div className="mt-6 pt-6 border-t border-gray-700">
-              <p className="text-xs tracking-[0.15em] uppercase text-gray-500 mb-3">Hours</p>
-              <div className="text-sm text-gray-400 space-y-1">
-                <p>平日 10:00 - 20:00</p>
-                <p>土日祝 9:00 - 19:00</p>
-                <p className="text-gray-500">定休日: 毎週火曜日</p>
+            <div className="mt-6 pt-6 border-t border-glass-border">
+              <div className="flex items-center gap-3 mb-3">
+                <Clock className="w-4 h-4 text-accent" />
+                <p className="text-xs tracking-[0.15em] uppercase text-text-muted">Hours</p>
+              </div>
+              <div className="text-sm text-text-secondary space-y-2">
+                <div>
+                  <p>平日 10:00 - 21:00</p>
+                  <p className="text-xs text-text-muted">（受付20:00まで）</p>
+                </div>
+                <div>
+                  <p>土日祝 10:00 - 20:30</p>
+                  <p className="text-xs text-text-muted">（受付19:30まで）</p>
+                </div>
+                <p className="text-text-muted">定休日: 毎週月曜日（不定休あり）</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* CTA Banner */}
+      <div className="border-t border-glass-border">
+        <div className="container-wide py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-center md:text-left">
+              <p className="text-xs tracking-[0.2em] text-text-muted uppercase mb-1">Reservation</p>
+              <p className="text-text-secondary text-sm">ご予約・お問い合わせはInstagram DMまたはお電話で</p>
+            </div>
+            <Link
+              href="/booking"
+              className="btn-primary"
+            >
+              Web予約する
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Bottom Bar */}
-      <div className="border-t border-gray-800">
+      <div className="border-t border-glass-border">
         <div className="container-wide py-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500 tracking-wider">
-            &copy; {new Date().getFullYear()} LUMINA HAIR STUDIO. All rights reserved.
+          <p className="text-xs text-text-muted tracking-wider">
+            &copy; {new Date().getFullYear()} MONË. All rights reserved.
           </p>
-          <div className="flex gap-6 text-xs text-gray-500">
-            <Link href="/privacy" className="transition-colors duration-300 hover:text-gray-300">
+          <div className="flex gap-6 text-xs text-text-muted">
+            <Link href="/privacy" className="transition-colors duration-300 hover:text-text-secondary">
               プライバシーポリシー
             </Link>
-            <Link href="/terms" className="transition-colors duration-300 hover:text-gray-300">
+            <Link href="/terms" className="transition-colors duration-300 hover:text-text-secondary">
               利用規約
             </Link>
           </div>

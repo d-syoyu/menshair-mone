@@ -3,6 +3,8 @@ import { Cormorant_Garamond, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import FloatingPhoneButton from "../components/FloatingPhoneButton";
+import { SessionProvider } from "../components/providers/session-provider";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -20,8 +22,8 @@ const zenKaku = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
-  title: "LUMINA HAIR STUDIO | 表参道の美容室",
-  description: "自然由来の成分と熟練の技術で、あなたの美しさを引き出す表参道の美容室。オーガニック製品を使用した髪に優しい施術をご提供します。",
+  title: "Men's hair MONE: 守口市 メンズヘアー＆脱毛サロン",
+  description: "守口市のメンズ専用サロン Men's hair MONE。ヘッドスパ・シェービング・脱毛など、大人の男性に寄り添った施術をご提供します。",
 };
 
 export default function RootLayout({
@@ -32,11 +34,14 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`scroll-smooth ${cormorant.variable} ${zenKaku.variable}`}>
       <body className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
+        <SessionProvider>
+          <Header />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+          <FloatingPhoneButton />
+        </SessionProvider>
       </body>
     </html>
   );

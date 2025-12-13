@@ -15,7 +15,7 @@ MONË（モネ）- 印象派の画家クロード・モネから名付けられ�
 **重点メニュー:** ヘッドスパ、シェービング
 **スタイリスト:** 1名
 
-現在のコードは「LUMINA HAIR STUDIO」テンプレートをベースにしており、MONËブランド向けにカスタマイズが必要。
+現在のコードは「hairsalon_white_1」テンプレートをベースにしており、MONËブランド向けにカスタマイズが必要。
 
 ## Tech Stack
 
@@ -24,17 +24,45 @@ MONË（モネ）- 印象派の画家クロード・モネから名付けられ�
 - **Styling:** Tailwind CSS 4 (PostCSS)
 - **Animation:** Framer Motion
 - **Icons:** Lucide React
-- **Fonts:** Cormorant Garamond (serif), Zen Kaku Gothic New (sans)
+- **Database:** PostgreSQL + Prisma ORM
+- **Authentication:** NextAuth.js v5
+- **Email:** Resend
+- **Blog/CMS:** Notion API
+- **Validation:** Zod
 - **Hosting:** Vercel (planned)
 
 ## Commands
 
 ```bash
-cd web                # Navigate to web directory first
-npm install           # Install dependencies
-npm run dev           # Start development server (localhost:3000)
-npm run build         # Production build
-npm run lint          # Run ESLint
+cd web                    # Navigate to web directory first
+npm install               # Install dependencies
+npm run dev               # Start development server (localhost:3000)
+npm run build             # Production build
+npm run lint              # Run ESLint
+npm run db:seed           # Seed database with initial data
+npx prisma generate       # Generate Prisma client
+npx prisma db push        # Push schema to database
+npx prisma studio         # Open Prisma Studio (DB GUI)
+```
+
+## Environment Variables
+
+`.env.local` に以下の環境変数が必要:
+
+```env
+# Database
+DATABASE_URL="postgresql://..."
+
+# NextAuth
+AUTH_SECRET="..."
+AUTH_URL="http://localhost:3000"
+
+# Notion (Blog)
+NOTION_API_KEY="..."
+NOTION_DATABASE_ID="..."
+
+# Resend (Email)
+RESEND_API_KEY="..."
 ```
 
 ## Architecture
@@ -43,37 +71,75 @@ npm run lint          # Run ESLint
 
 ```
 web/
+├── prisma/
+│   ├── schema.prisma     # Database schema
+│   └── seed.ts           # Seed data
 ├── src/
-│   ├── app/              # App Router pages
-│   │   ├── page.tsx      # Homepage
-│   │   ├── menu/         # Menu & pricing
+│   ├── app/
+│   │   ├── (admin)/      # Admin routes (protected)
+│   │   │   └── admin/
+│   │   │       ├── page.tsx          # Dashboard
+│   │   │       ├── customers/        # Customer management
+│   │   │       ├── menus/            # Menu management
+│   │   │       ├── reservations/     # Reservation management
+│   │   │       └── login/            # Admin login
+│   │   ├── (auth)/       # Auth routes
+│   │   │   ├── login/    # Customer login
+│   │   │   └── register/ # Customer registration
+│   │   ├── (customer)/   # Customer routes (protected)
+│   │   │   ├── booking/  # Reservation flow
+│   │   │   │   ├── page.tsx      # Menu selection
+│   │   │   │   ├── confirm/      # Confirmation
+│   │   │   │   └── complete/     # Completion
+│   │   │   └── mypage/   # Customer dashboard
+│   │   │       └── reservations/ # Reservation history
+│   │   ├── api/          # API routes
+│   │   │   ├── admin/    # Admin APIs
+│   │   │   ├── auth/     # NextAuth routes
+│   │   │   ├── availability/  # Time slot availability
+│   │   │   ├── blog/     # Blog API (Notion)
+│   │   │   └── reservations/  # Reservation CRUD
+│   │   ├── blog/         # Blog pages
+│   │   ├── menu/         # Public menu page
 │   │   ├── staff/        # Staff profiles
-│   │   ├── blog/         # Blog with [slug] dynamic route
-│   │   ├── contact/      # Contact form
-│   │   ├── layout.tsx    # Root layout with Header/Footer
-│   │   └── globals.css   # Global styles & CSS variables
-│   ├── components/       # Shared components (Header, Footer)
-│   └── lib/utils.ts      # cn() utility for class merging
-├── public/               # Static assets (images)
-└── tailwind.config.ts    # Tailwind theme configuration
+│   │   ├── layout.tsx    # Root layout
+│   │   ├── page.tsx      # Homepage
+│   │   └── globals.css   # Global styles
+│   ├── components/       # Shared components
+│   │   ├── Header.tsx
+│   │   ├── Footer.tsx
+│   │   └── ui/           # UI components
+│   ├── constants/        # Constants & menu data
+│   ├── lib/              # Utilities
+│   │   ├── auth.ts       # NextAuth config
+│   │   ├── prisma.ts     # Prisma client
+│   │   └── utils.ts      # Helper functions
+│   └── middleware.ts     # Auth middleware
+├── public/               # Static assets
+└── tailwind.config.ts    # Tailwind configuration
 ```
 
-### Styling System
+### Database Models (Prisma)
 
-CSS variables defined in `globals.css` under `@theme`:
-- `--color-cream`, `--color-cream-dark` - Background colors
-- `--color-sage`, `--color-sage-light`, `--color-sage-dark` - Accent greens
-- `--color-gold`, `--color-gold-light` - Gold accents
-- `--color-charcoal`, `--color-warm-gray` - Text colors
+- **User** - ユーザー（CUSTOMER / ADMIN）
+- **Reservation** - 予約
+- **ReservationItem** - 予約アイテム（複数メニュー対応）
+- **Category** - メニューカテゴリ
+- **Menu** - メニュー
+- **News** - お知らせ
+- **Contact** - お問い合わせ
 
-Utility classes: `.container-narrow`, `.container-wide`, `.btn-primary`, `.btn-outline`, `.text-display`, `.text-heading`, `.text-subheading`
+### Authentication Flow
 
-### Animation Pattern
+1. **Customer:** メール認証（マジックリンク）またはソーシャルログイン
+2. **Admin:** メール + パスワード認証
+3. **Middleware:** `/admin/*`, `/booking/*`, `/mypage/*` を保護
 
-Uses Framer Motion with reusable variants:
-- `fadeInUp` - Fade in with upward motion
-- `staggerContainer` - Container for staggered children
-- `AnimatedSection` - Scroll-triggered section animation
+### Reservation Flow
+
+1. `/booking` - メニュー選択（複数選択可）
+2. `/booking/confirm` - 日時選択 & 確認
+3. `/booking/complete` - 予約完了
 
 ## MONË Design Requirements
 
@@ -88,9 +154,10 @@ Uses Framer Motion with reusable variants:
 - `/` - トップページ（ヒーロー、コンセプト、メニュー抜粋、お知らせ、アクセス、予約CTA）
 - `/menu` - メニュー・料金
 - `/about` - 店舗情報、コンセプト、スタイリスト紹介、アクセス
-- `/news` - お知らせ（CMS機能要）
-- `/reservation` - 予約システム
-- `/contact` - お問い合わせフォーム
+- `/blog` - お知らせ・ブログ（Notion連携）
+- `/booking` - 予約システム
+- `/mypage` - マイページ（予約履歴）
+- `/admin` - 管理画面
 
 **参考サイト:** https://beauty-salon-web.vercel.app/
 
@@ -110,4 +177,4 @@ Uses Framer Motion with reusable variants:
 - **Backgrounds:** ダークグレーベースに微細なグラデーション・パターンで高級感を演出
 - **Motion:** ページロード時のスタッガードアニメーション、ホバー時の控えめなエフェクト
 - **Themes:** グレー×グリーンの一貫したカラーシステム、CSS変数で管理
-- **Typography:** Cormorant Garamond（見出し）+ Zen Kaku Gothic New（本文）の組み合わせ維持
+- **Typography:** 見出しと本文のコントラストを活かした洗練されたタイポグラフィ

@@ -39,25 +39,14 @@ function AnimatedSection({ children, className = '' }: { children: React.ReactNo
 const staffMembers = [
   {
     id: 1,
-    name: '山田 花子',
-    nameEn: 'Hanako Yamada',
-    role: 'Director',
-    image: '/person1.png',
-    career: '15年',
-    specialties: ['ショートヘア', 'パーマスタイル', 'ヘアケア'],
-    message: '髪のお悩みに寄り添い、ライフスタイルに合った最適なスタイルをご提案いたします。一緒に「なりたい自分」を見つけましょう。',
-    instagram: '@hanako_lumina'
-  },
-  {
-    id: 2,
-    name: '佐藤 美咲',
-    nameEn: 'Misaki Sato',
-    role: 'Top Stylist',
-    image: '/person2.png',
-    career: '10年',
-    specialties: ['カラーリング', 'ハイライト', 'トリートメント'],
-    message: 'お客様の個性を活かした、再現性の高いスタイルを心がけています。カラーのことなら何でもご相談ください。',
-    instagram: '@misaki_lumina'
+    name: '大木 美奈',
+    nameEn: 'Mina Oki',
+    role: 'Owner / Stylist',
+    image: '/white_staff.png',
+    career: '5年',
+    specialties: ['縮毛矯正', 'カット', 'カラー'],
+    message: '髪のお悩みに寄り添い、ライフスタイルに合った最適なスタイルをご提案いたします。特に縮毛矯正を得意としておりますので、くせ毛でお悩みの方はぜひご相談ください。',
+    instagram: ''
   }
 ];
 
@@ -170,8 +159,8 @@ export default function StaffPage() {
             私たちと一緒に働きませんか？<br />
             経験者・未経験者問わず、やる気のある方を募集しています。
           </p>
-          <Link href="/contact" className="btn-outline">
-            お問い合わせ
+          <Link href="/booking" className="btn-outline">
+            ご予約はこちら
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -192,7 +181,7 @@ export default function StaffPage() {
             お気軽にご希望のスタイリストをお伝えください。
           </p>
           <Link
-            href="/contact"
+            href="/booking"
             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[var(--color-charcoal)] text-sm tracking-[0.2em] uppercase transition-all duration-500 hover:bg-[var(--color-sage)] hover:text-white"
           >
             ご予約はこちら

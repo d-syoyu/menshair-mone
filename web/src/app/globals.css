@@ -1,24 +1,61 @@
 @import "tailwindcss";
 
-@theme {
-  /* Primary Colors */
-  --color-cream: #FDFCFA;
-  --color-cream-dark: #F7F4F0;
-  --color-sage: #6B8E6B;
-  --color-sage-light: #8BAF8B;
-  --color-sage-dark: #4A6B4A;
-  --color-gold: #B8956E;
-  --color-gold-light: #D4B896;
+/* ============================================
+   MONË - Men's Hair & Depilation Salon
+   Theme: Dark luxury for modern gentlemen
+   ============================================ */
 
-  /* Neutrals */
-  --color-charcoal: #1A1A1A;
-  --color-warm-gray: #5A5550;
-  --color-light-gray: #E5E0DB;
+@theme {
+  /* Primary Colors - Sophisticated Dark with Warmth */
+  --color-dark: #1E1E1E;
+  --color-dark-gray: #242424;
+  --color-dark-lighter: #2C2C2C;
+  --color-charcoal: #333333;
+  --color-gray: #454545;
+  --color-medium-gray: #707070;
+
+  /* Light - 光が差すプライベート空間 */
+  --color-light: rgba(255, 252, 245, 0.95);
+  --color-light-soft: rgba(255, 250, 240, 0.7);
+  --color-light-glow: rgba(255, 248, 235, 0.2);
+  --color-light-beam: rgba(255, 250, 242, 0.12);
+
+  /* Accent - Green (rich and elegant) */
+  --color-accent: #5A9A6B;
+  --color-accent-light: #6DB37F;
+  --color-accent-dark: #458555;
+  --color-accent-muted: rgba(90, 154, 107, 0.15);
+
+  /* Text Colors - Warmer and brighter */
+  --color-text-primary: #FAFAF8;
+  --color-text-secondary: #D0CBC3;
+  --color-text-muted: #9E9890;
+
+  /* Gold accent (richer) */
+  --color-gold: #E0BC70;
+  --color-gold-muted: rgba(224, 188, 112, 0.2);
+
+  /* Glass effects - more visible */
+  --color-glass: rgba(255, 255, 255, 0.06);
+  --color-glass-border: rgba(255, 255, 255, 0.12);
+  --color-glass-light: rgba(255, 252, 245, 0.08);
 }
 
-* {
+/* ============================================
+   Base Styles
+   ============================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 html {
@@ -26,26 +63,85 @@ html {
 }
 
 body {
-  font-family: var(--font-sans), sans-serif;
-  color: var(--color-charcoal);
-  background-color: var(--color-cream);
+  font-family: var(--font-sans), "Zen Kaku Gothic New", sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-dark);
   line-height: 1.8;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  margin: 0;
+  padding: 0;
 }
 
+/* Cursor styles for interactive elements */
+a,
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+input[type="checkbox"],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Atmospheric Background with Light Beams - 光が差すプライベート空間 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    /* Soft light beam from top-left corner */
+    radial-gradient(ellipse 80% 50% at 15% 0%, var(--color-light-beam) 0%, transparent 50%),
+    /* Secondary light from top-right */
+    radial-gradient(ellipse 60% 40% at 85% 5%, rgba(255, 250, 240, 0.08) 0%, transparent 45%),
+    /* Subtle center glow */
+    radial-gradient(ellipse 100% 80% at 50% 20%, rgba(255, 252, 245, 0.05) 0%, transparent 50%),
+    /* Accent color hint */
+    linear-gradient(135deg, rgba(90, 154, 107, 0.04) 0%, transparent 50%, rgba(224, 188, 112, 0.025) 100%),
+    /* Soft vignette for depth */
+    radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.1) 100%),
+    /* Base gradient */
+    linear-gradient(to bottom, var(--color-dark) 0%, var(--color-dark-gray) 50%, var(--color-dark) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Additional light overlay for depth */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    /* Diagonal light streak */
+    linear-gradient(125deg, rgba(255, 250, 242, 0.06) 0%, transparent 30%, transparent 70%, rgba(255, 250, 242, 0.03) 100%);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.9;
+}
+
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif), serif;
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 0.02em;
+  font-family: var(--font-serif), "Cormorant Garamond", serif;
+  font-weight: 300;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  color: var(--color-text-primary);
 }
 
 ::selection {
-  background-color: var(--color-sage);
+  background-color: var(--color-accent);
   color: white;
 }
 
-/* Container utilities */
+/* ============================================
+   Container Utilities
+   ============================================ */
+
 .container-narrow {
   max-width: 64rem;
   margin-left: auto;
@@ -62,23 +158,45 @@ h1, h2, h3, h4, h5, h6 {
   padding-right: 1.5rem;
 }
 
-/* Button styles */
+/* ============================================
+   Button Components
+   ============================================ */
+
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem 2rem;
-  background-color: var(--color-charcoal);
+  padding: 1rem 2.5rem;
+  background: var(--color-accent);
   color: white;
   font-size: 0.875rem;
-  letter-spacing: 0.2em;
+  font-weight: 400;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  transition: all 0.5s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .btn-primary:hover {
-  background-color: var(--color-sage-dark);
+  background: var(--color-accent-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(78, 139, 95, 0.35);
+}
+
+.btn-primary:hover::before {
+  opacity: 1;
 }
 
 .btn-outline {
@@ -86,70 +204,218 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem 2rem;
-  border: 1px solid var(--color-charcoal);
-  color: var(--color-charcoal);
+  padding: 1rem 2.5rem;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: var(--color-text-primary);
   font-size: 0.875rem;
-  letter-spacing: 0.2em;
+  font-weight: 400;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  transition: all 0.5s;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .btn-outline:hover {
-  background-color: var(--color-charcoal);
-  color: white;
+  border-color: var(--color-accent-light);
+  color: var(--color-accent-light);
+  background: rgba(90, 154, 107, 0.25);
 }
 
-/* Typography utilities */
+/* ============================================
+   Glass Card Components
+   ============================================ */
+
+.glass-card {
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top light highlight - 光が差し込む効果 */
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-light-glow), transparent);
+  opacity: 0.6;
+}
+
+.glass-card:hover {
+  background: var(--color-glass-light);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.glass-card:hover::before {
+  opacity: 1;
+  height: 2px;
+}
+
+/* ============================================
+   Section Backgrounds
+   ============================================ */
+
+.section-dark {
+  background: var(--color-dark);
+  position: relative;
+}
+
+.section-dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    /* Soft light from top */
+    radial-gradient(ellipse 120% 60% at 50% 0%, var(--color-light-beam) 0%, transparent 50%),
+    /* Accent hint */
+    radial-gradient(ellipse at 50% 0%, rgba(78, 139, 95, 0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.section-gradient {
+  background: linear-gradient(180deg, var(--color-dark-gray) 0%, var(--color-dark) 100%);
+  position: relative;
+}
+
+.section-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 100% 50% at 30% 0%, rgba(255, 250, 242, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Section with light beam effect - 光が差すセクション */
+.section-light-beam {
+  position: relative;
+}
+
+.section-light-beam::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  width: 80%;
+  height: 300px;
+  background: radial-gradient(ellipse 100% 100% at 50% 0%, var(--color-light-glow) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ============================================
+   Typography Utilities
+   ============================================ */
+
 .text-display {
-  font-family: var(--font-serif), serif;
-  font-size: 3rem;
-  letter-spacing: -0.025em;
-}
-
-@media (min-width: 768px) {
-  .text-display {
-    font-size: 4.5rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .text-display {
-    font-size: 6rem;
-  }
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
 }
 
 .text-heading {
-  font-family: var(--font-serif), serif;
-  font-size: 1.875rem;
-}
-
-@media (min-width: 768px) {
-  .text-heading {
-    font-size: 2.25rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .text-heading {
-    font-size: 3rem;
-  }
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 300;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
 }
 
 .text-subheading {
   font-size: 0.75rem;
-  letter-spacing: 0.3em;
+  font-weight: 400;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-warm-gray);
+  color: var(--color-accent-light);
 }
+
+.text-body {
+  font-size: 0.9375rem;
+  line-height: 2;
+  color: var(--color-text-secondary);
+}
+
+/* ============================================
+   Decorative Elements
+   ============================================ */
 
 .divider-line {
-  width: 4rem;
+  width: 60px;
   height: 1px;
-  background-color: var(--color-gold);
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
 }
 
-/* Animation utilities */
+/* Light divider - 光のディバイダー */
+.divider-light {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-light-soft), transparent);
+}
+
+/* Light overlay utility - コンテンツ上の光オーバーレイ */
+.light-overlay {
+  position: relative;
+}
+
+.light-overlay::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: radial-gradient(ellipse 80% 100% at 50% 0%, var(--color-light-beam) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================
+   Menu Card Component
+   ============================================ */
+
+.menu-card {
+  padding: 1.5rem;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top light highlight */
+.menu-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-light-glow), transparent);
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.menu-card:hover {
+  border-color: rgba(78, 139, 95, 0.25);
+  background: rgba(78, 139, 95, 0.06);
+}
+
+.menu-card:hover::before {
+  left: 10%;
+  right: 10%;
+  opacity: 0.8;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -166,6 +432,34 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; }
 }
 
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(78, 139, 95, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(78, 139, 95, 0.5);
+  }
+}
+
+/* Light shimmer animation - 光のゆらめき (opacity only to prevent overflow) */
+@keyframes light-shimmer {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes subtle-glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
 .animate-fade-up {
   animation: fadeUp 0.8s ease-out forwards;
 }
@@ -174,20 +468,127 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeIn 1s ease-out forwards;
 }
 
-/* Custom scrollbar */
+.animate-light-shimmer {
+  animation: light-shimmer 8s ease-in-out infinite;
+}
+
+.animate-subtle-glow {
+  animation: subtle-glow 4s ease-in-out infinite;
+}
+
+/* ============================================
+   Ken Burns Effect - Elegant Image Slideshow
+   30s cycle: each image displays for ~10 seconds
+   ============================================ */
+
+/* Image 1: Slow zoom in */
+@keyframes ken-burns-1 {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  33% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  95% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Image 2: Slow zoom out */
+@keyframes ken-burns-2 {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  28% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  33% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  61% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  66% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+/* Image 3: Subtle zoom effect */
+@keyframes ken-burns-3 {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  61% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  66% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  95% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+.ken-burns-1 {
+  animation: ken-burns-1 30s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+.ken-burns-2 {
+  animation: ken-burns-2 30s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+.ken-burns-3 {
+  animation: ken-burns-3 30s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-cream-dark);
+  background: var(--color-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-sage);
+  background: var(--color-charcoal);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-sage-dark);
+  background: var(--color-gray);
 }

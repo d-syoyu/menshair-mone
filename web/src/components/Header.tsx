@@ -2,18 +2,26 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navItems = [
   { name: 'Menu', href: '/menu', nameJa: 'メニュー' },
-  { name: 'Staff', href: '/staff', nameJa: 'スタッフ' },
-  { name: 'Blog', href: '/blog', nameJa: 'ブログ' },
-  { name: 'Contact', href: '/contact', nameJa: 'ご予約' },
+  { name: 'About', href: '/about', nameJa: '店舗情報' },
+  { name: 'News', href: '/news', nameJa: 'お知らせ' },
+  { name: 'Products', href: '/products', nameJa: '商品紹介' },
+  { name: 'My Page', href: '/mypage', nameJa: 'マイページ' },
 ];
 
 const Header = () => {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // 管理画面では表示しない
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,12 +34,12 @@ const Header = () => {
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflowY = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflowY = '';
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflowY = '';
     };
   }, [mobileMenuOpen]);
 
@@ -43,7 +51,7 @@ const Header = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
-            ? 'bg-[var(--color-cream)]/95 backdrop-blur-md py-4 shadow-sm'
+            ? 'bg-dark/95 backdrop-blur-md py-4 shadow-lg shadow-black/20'
             : 'bg-transparent py-6'
         }`}
       >
@@ -53,36 +61,42 @@ const Header = () => {
             href="/"
             className="relative z-50 group"
           >
-            <span className="text-xl md:text-2xl font-[family-name:var(--font-serif)] tracking-[0.15em] text-[var(--color-charcoal)] transition-colors duration-300">
-              LUMINA
+            <span className="text-2xl md:text-3xl font-serif tracking-[0.15em] text-white transition-colors duration-300">
+              MONË
             </span>
-            <span className="block text-[10px] tracking-[0.3em] text-[var(--color-warm-gray)] uppercase">
-              HAIR STUDIO
+            <span className="block text-[9px] tracking-[0.25em] text-text-muted uppercase mt-0.5">
+              Men&apos;s Hair Salon
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:block">
+          <nav className="hidden lg:block">
             <ul className="flex items-center gap-10">
               {navItems.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}
-                    className="group relative text-[var(--color-charcoal)] transition-colors duration-300 hover:text-[var(--color-sage-dark)]"
+                    className={`group relative transition-colors duration-300 ${
+                      pathname === item.href
+                        ? 'text-accent-light'
+                        : 'text-text-secondary hover:text-white'
+                    }`}
                   >
                     <span className="text-xs tracking-[0.2em] uppercase">
                       {item.name}
                     </span>
-                    <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-[var(--color-gold)] transition-all duration-300 group-hover:w-full" />
+                    <span className={`absolute -bottom-1 left-0 h-[1px] bg-gradient-to-r from-accent to-gold transition-all duration-300 ${
+                      pathname === item.href ? 'w-full' : 'w-0 group-hover:w-full'
+                    }`} />
                   </Link>
                 </li>
               ))}
               <li>
                 <Link
-                  href="/contact"
-                  className="ml-4 px-6 py-3 bg-[var(--color-charcoal)] text-white text-xs tracking-[0.15em] uppercase transition-all duration-300 hover:bg-[var(--color-sage-dark)]"
+                  href="/booking"
+                  className="ml-4 px-6 py-3 bg-accent text-white text-xs tracking-[0.15em] uppercase transition-all duration-300 hover:bg-accent-light hover:shadow-lg hover:shadow-accent/30"
                 >
-                  予約する
+                  ご予約
                 </Link>
               </li>
             </ul>
@@ -90,7 +104,7 @@ const Header = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden relative z-50 w-10 h-10 flex items-center justify-center"
+            className="lg:hidden relative z-50 w-10 h-10 flex items-center justify-center"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="メニューを開く"
           >
@@ -102,14 +116,14 @@ const Header = () => {
                   translateY: mobileMenuOpen ? '-50%' : '0%',
                 }}
                 transition={{ duration: 0.3 }}
-                className="absolute left-0 w-full h-[1px] bg-[var(--color-charcoal)]"
+                className="absolute left-0 w-full h-[1px] bg-white"
               />
               <motion.span
                 animate={{
                   opacity: mobileMenuOpen ? 0 : 1,
                 }}
                 transition={{ duration: 0.2 }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[1px] bg-[var(--color-charcoal)]"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[1px] bg-white"
               />
               <motion.span
                 animate={{
@@ -118,7 +132,7 @@ const Header = () => {
                   translateY: mobileMenuOpen ? '50%' : '0%',
                 }}
                 transition={{ duration: 0.3 }}
-                className="absolute left-0 bottom-0 w-full h-[1px] bg-[var(--color-charcoal)]"
+                className="absolute left-0 bottom-0 w-full h-[1px] bg-white"
               />
             </div>
           </button>
@@ -133,12 +147,12 @@ const Header = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-40 bg-[var(--color-cream)] md:hidden"
+            className="fixed inset-0 z-40 bg-dark lg:hidden"
           >
             {/* Decorative background */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute top-1/4 -right-20 w-[300px] h-[300px] rounded-full bg-[var(--color-sage-light)] opacity-10 blur-3xl" />
-              <div className="absolute bottom-1/4 -left-20 w-[250px] h-[250px] rounded-full bg-[var(--color-gold-light)] opacity-10 blur-3xl" />
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-1/4 right-0 w-[200px] h-[200px] rounded-full bg-accent opacity-5 blur-3xl translate-x-1/2" />
+              <div className="absolute bottom-1/4 left-0 w-[200px] h-[200px] rounded-full bg-gold opacity-5 blur-3xl -translate-x-1/2" />
             </div>
 
             <nav className="relative h-full flex flex-col items-center justify-center">
@@ -156,15 +170,29 @@ const Header = () => {
                       className="group flex flex-col items-center"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span className="text-3xl font-[family-name:var(--font-serif)] text-[var(--color-charcoal)] transition-colors duration-300 group-hover:text-[var(--color-sage-dark)]">
+                      <span className="text-3xl font-serif text-white transition-colors duration-300 group-hover:text-accent-light">
                         {item.nameJa}
                       </span>
-                      <span className="text-xs tracking-[0.3em] uppercase text-[var(--color-warm-gray)] mt-1">
+                      <span className="text-xs tracking-[0.3em] uppercase text-text-muted mt-1">
                         {item.name}
                       </span>
                     </Link>
                   </motion.li>
                 ))}
+                <motion.li
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Link
+                    href="/booking"
+                    className="mt-4 px-8 py-4 bg-accent text-white text-sm tracking-[0.15em] uppercase"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    ご予約はこちら
+                  </Link>
+                </motion.li>
               </ul>
 
               {/* Contact info */}
@@ -172,17 +200,17 @@ const Header = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.6 }}
                 className="absolute bottom-12 text-center"
               >
-                <p className="text-xs tracking-[0.2em] text-[var(--color-warm-gray)] mb-2">
+                <p className="text-xs tracking-[0.2em] text-text-muted mb-2">
                   RESERVATION
                 </p>
                 <a
-                  href="tel:03-1234-5678"
-                  className="text-lg text-[var(--color-charcoal)] font-light tracking-wider"
+                  href="tel:06-6908-4859"
+                  className="text-lg text-white font-light tracking-wider"
                 >
-                  03-1234-5678
+                  06-6908-4859
                 </a>
               </motion.div>
             </nav>

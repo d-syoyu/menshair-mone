@@ -1,15 +1,20 @@
 'use client';
 
 import { useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, type Variants } from 'framer-motion';
-import { ArrowRight, Leaf, Sparkles, Clock, MapPin } from 'lucide-react';
+import { ArrowRight, Clock, MapPin, Calendar } from 'lucide-react';
 
 // Animation variants
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } }
+};
+
+const fadeIn: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 1 } }
 };
 
 const staggerContainer: Variants = {
@@ -38,6 +43,54 @@ function AnimatedSection({ children, className = '' }: { children: React.ReactNo
   );
 }
 
+// メニューデータ
+const featuredMenus = [
+  {
+    title: 'Cut',
+    titleJa: 'カット',
+    price: '¥4,950〜',
+    duration: '60分',
+    description: '骨格や髪質を見極め、大人の男性に相応しいスタイルをご提案',
+  },
+  {
+    title: 'Shaving',
+    titleJa: 'シェービング',
+    price: '¥2,200〜',
+    duration: '15分〜',
+    description: 'コラーゲン配合シェービングソープで清潔感のある印象を',
+  },
+  {
+    title: 'Head Spa',
+    titleJa: 'ヘッドスパ',
+    price: '¥2,200〜',
+    duration: '10分〜',
+    description: '頭皮の血行を促進し、日々の疲れを癒す極上のリラクゼーション',
+  },
+  {
+    title: 'Color',
+    titleJa: 'カラー',
+    price: '¥4,950〜',
+    duration: '90分〜',
+    description: 'デザインカット込みのカラーリングで理想のスタイルを実現',
+  },
+];
+
+// お知らせデータ（ダミー）
+const newsItems = [
+  {
+    date: '2025.12.10',
+    title: '年末年始の営業時間のお知らせ',
+  },
+  {
+    date: '2025.12.01',
+    title: '新メニュー「プレミアムヘッドスパ」登場',
+  },
+  {
+    date: '2025.11.20',
+    title: '公式Webサイトをリニューアルしました',
+  },
+];
+
 export default function Home() {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -45,74 +98,91 @@ export default function Home() {
     offset: ['start start', 'end end']
   });
 
-  const heroImageScale = useTransform(scrollYProgress, [0, 0.3], [1, 1.1]);
-  const heroTextY = useTransform(scrollYProgress, [0, 0.3], [0, -100]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const heroTextY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[var(--color-cream)]">
+    <div ref={containerRef} className="min-h-screen overflow-x-clip">
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <motion.div
-          style={{ scale: heroImageScale }}
-          className="absolute inset-0 z-0"
-        >
-          <Image
-            src="/full.png"
-            alt="LUMINA HAIR STUDIO サロン内観"
-            fill
-            className="object-cover"
-            priority
+      <section className="relative min-h-[70vh] md:min-h-screen md:h-screen flex items-center justify-center overflow-hidden overflow-x-clip pt-24 pb-12 md:pt-0 md:pb-0">
+        {/* Ken Burns Background Images */}
+        <div className="absolute inset-0 z-0 overflow-hidden overflow-x-clip">
+          {/* Image 1 - Zoom In */}
+          <div
+            className="absolute inset-0 bg-cover bg-center ken-burns-1"
+            style={{ backgroundImage: 'url(/image1.jpeg)' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/70 via-[var(--color-cream)]/40 to-[var(--color-cream)]" />
-        </motion.div>
+          {/* Image 2 - Zoom Out */}
+          <div
+            className="absolute inset-0 bg-cover bg-center ken-burns-2"
+            style={{ backgroundImage: 'url(/image2.jpeg)' }}
+          />
+          {/* Image 3 - Pan */}
+          <div
+            className="absolute inset-0 bg-cover bg-center ken-burns-3"
+            style={{ backgroundImage: 'url(/image3.jpeg)' }}
+          />
+
+          {/* Overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/45 to-black/60" />
+
+          {/* Accent glow effects - contained within viewport */}
+          <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent opacity-[0.06] blur-[80px] md:blur-[100px]" />
+          <div className="absolute bottom-1/3 right-[10%] w-[150px] md:w-[300px] h-[150px] md:h-[300px] rounded-full bg-gold opacity-[0.04] blur-[60px] md:blur-[80px]" />
+
+          {/* Subtle vignette */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
+        </div>
 
         <motion.div style={{ y: heroTextY, opacity: heroOpacity }} className="relative z-10 text-center px-6">
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-subheading mb-8"
+            className="text-subheading mb-4 md:mb-8"
           >
-            LUMINA HAIR STUDIO
+            Men&apos;s Private Salon
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.5 }}
-            className="text-display mb-6"
+            className="mb-6 md:mb-8"
           >
-            <span className="block">あなたの美しさを</span>
-            <span className="block italic text-[var(--color-charcoal)] drop-shadow-sm">引き出す</span>
+            <span className="text-display block mb-2 md:mb-4">
+              一人一人の男性に
+            </span>
+            <span className="text-display block">
+              <span className="text-accent-light">「光」</span>と<span className="text-gold">「印象」</span>を...
+            </span>
           </motion.h1>
 
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ duration: 0.8, delay: 1 }}
-            className="divider-line mx-auto mb-8"
+            className="divider-line mx-auto mb-6 md:mb-8"
           />
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.2 }}
-            className="text-[var(--color-warm-gray)] max-w-md mx-auto mb-12 font-light"
+            className="text-text-secondary max-w-lg mx-auto mb-8 md:mb-12 text-body"
           >
-            自然由来の成分と熟練の技術で<br />
-            心と髪に優しいサロン体験を
+            守口市のメンズ専門プライベートサロン<br />
+            大人の男性に上質な休息をご提供します
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
           >
-            <Link href="/contact" className="btn-primary">
+            <Link href="/booking" className="btn-primary">
               ご予約はこちら
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -127,56 +197,63 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2 }}
-          className="absolute bottom-12 left-1/2 -translate-x-1/2"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden md:block"
         >
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-[1px] h-16 bg-gradient-to-b from-[var(--color-charcoal)] to-transparent"
-          />
+            className="flex flex-col items-center gap-2"
+          >
+            <span className="text-[10px] tracking-[0.3em] text-text-muted uppercase">Scroll</span>
+            <div className="w-[1px] h-8 bg-gradient-to-b from-text-muted to-transparent" />
+          </motion.div>
         </motion.div>
       </section>
 
       {/* Concept Section */}
-      <AnimatedSection className="py-32 md:py-40">
+      <AnimatedSection className="py-16 md:py-32 lg:py-40 section-gradient overflow-hidden">
         <div className="container-wide">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            {/* Image */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center">
+            {/* Decorative Element */}
             <motion.div variants={fadeInUp} className="relative">
-              <div className="relative aspect-[4/5] overflow-hidden">
+              <div className="relative aspect-[4/5] glass-card overflow-hidden">
                 <Image
-                  src="/seet.png"
-                  alt="LUMINA HAIR STUDIO スタイリングステーション"
+                  src="/entrance.jpeg"
+                  alt="MONË店舗入口"
                   fill
                   className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               </div>
-              {/* Decorative frame */}
-              <div className="absolute -bottom-6 -right-6 w-full h-full border border-[var(--color-gold)] -z-10" />
+              {/* Decorative frame - hidden on mobile to prevent overflow */}
+              <div className="hidden md:block absolute -bottom-4 -right-4 w-full h-full border border-accent/30 -z-10" />
+              <div className="hidden md:block absolute -bottom-8 -right-8 w-full h-full border border-gold/20 -z-20" />
             </motion.div>
 
             {/* Content */}
             <div className="lg:pl-8">
               <motion.p variants={fadeInUp} className="text-subheading mb-4">
-                Our Concept
+                Concept
               </motion.p>
               <motion.h2 variants={fadeInUp} className="text-heading mb-8">
-                自然と調和する<br />
-                <span className="italic">美しさ</span>を
+                上質な休息を、<br />
+                <span className="text-accent-light">あなたに。</span>
               </motion.h2>
               <motion.div variants={fadeInUp} className="divider-line mb-8" />
-              <motion.p variants={fadeInUp} className="text-[var(--color-warm-gray)] mb-6 leading-relaxed">
-                私たちのサロンは、オーガニック成分と環境に配慮した製品を使用し、
-                お客様の髪本来の美しさを引き出すことを大切にしています。
+              <motion.p variants={fadeInUp} className="text-body mb-6">
+                柔らかな「光」が差すプライベート空間で
+                一人のスタッフが最初から最後まで丁寧にお客様と向き合い、
+                大人の男性に相応しい凜とした「印象」と
+                「光」のような清潔感をご提供致します。
               </motion.p>
-              <motion.p variants={fadeInUp} className="text-[var(--color-warm-gray)] mb-10 leading-relaxed">
-                熟練のスタイリストが一人ひとりの髪質や骨格を見極め、
-                あなただけの最適なスタイルをご提案いたします。
+              <motion.p variants={fadeInUp} className="text-body mb-10">
+                日々忙しい大人の男性にカット、シェービング、ヘッドスパなど
+                様々なメニューを通じ「上質な休息」をご提供します。
               </motion.p>
               <motion.div variants={fadeInUp}>
-                <Link href="/staff" className="group inline-flex items-center gap-2 text-[var(--color-charcoal)] font-medium">
-                  <span className="border-b border-[var(--color-charcoal)] pb-1 group-hover:border-[var(--color-sage)] transition-colors">
-                    スタッフを見る
+                <Link href="/about" className="btn-ghost group">
+                  <span className="border-b border-text-muted pb-1 group-hover:border-accent transition-colors">
+                    店舗情報を見る
                   </span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
@@ -186,80 +263,45 @@ export default function Home() {
         </div>
       </AnimatedSection>
 
-      {/* Services Section */}
-      <AnimatedSection className="py-32 bg-[var(--color-cream-dark)]">
-        <div className="container-wide">
+      {/* Menu Section */}
+      <AnimatedSection className="py-16 md:py-32 section-dark overflow-hidden">
+        <div className="container-wide relative z-10">
           <div className="text-center mb-20">
             <motion.p variants={fadeInUp} className="text-subheading mb-4">
-              Services
+              Menu
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-heading mb-6">
               メニュー
             </motion.h2>
-            <motion.div variants={fadeInUp} className="divider-line mx-auto" />
+            <motion.div variants={fadeInUp} className="divider-line-long mx-auto" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-            {[
-              {
-                icon: <Leaf className="w-8 h-8" />,
-                title: 'Cut',
-                titleJa: 'カット',
-                price: '¥5,500〜',
-                description: '骨格や髪質を見極め、似合うスタイルをご提案',
-                image: '/cut.png'
-              },
-              {
-                icon: <Sparkles className="w-8 h-8" />,
-                title: 'Color',
-                titleJa: 'カラー',
-                price: '¥6,600〜',
-                description: 'イルミナカラー・バレイヤージュなど豊富なメニュー',
-                image: '/color.png'
-              },
-              {
-                icon: <Sparkles className="w-8 h-8" />,
-                title: 'Hair Improvement',
-                titleJa: '髪質改善',
-                price: '¥11,000〜',
-                description: '酸熱トリートメント・TOKIOで美髪へ導く',
-                image: '/treatments.png'
-              }
-            ].map((service) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {featuredMenus.map((menu) => (
               <motion.div
-                key={service.title}
+                key={menu.title}
                 variants={fadeInUp}
-                className="group relative bg-[var(--color-cream)] overflow-hidden transition-all duration-500 hover:shadow-xl"
+                className="menu-card"
               >
-                {/* Image */}
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image
-                    src={service.image}
-                    alt={service.titleJa}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="mb-4">
+                <p className="text-xs tracking-[0.2em] text-accent-light uppercase mb-1">
+                  {menu.title}
+                </p>
+                <h3 className="text-2xl font-serif">
+                  {menu.titleJa}
+                </h3>
+              </div>
+                <p className="text-body mb-4">
+                  {menu.description}
+                </p>
+                <div className="flex justify-between items-center pt-4 border-t border-glass-border">
+                  <span className="text-xl text-gold font-light">
+                    {menu.price}
+                  </span>
+                  <span className="text-sm text-text-muted">
+                    {menu.duration}
+                  </span>
                 </div>
-
-                {/* Content */}
-                <div className="p-8">
-                  <p className="text-xs tracking-[0.2em] text-[var(--color-sage)] mb-2">
-                    {service.title}
-                  </p>
-                  <h3 className="text-2xl font-[family-name:var(--font-serif)] mb-2">
-                    {service.titleJa}
-                  </h3>
-                  <p className="text-xl text-[var(--color-gold)] font-light mb-4">
-                    {service.price}
-                  </p>
-                  <p className="text-sm text-[var(--color-warm-gray)] leading-relaxed">
-                    {service.description}
-                  </p>
-                </div>
-
-                {/* Hover accent */}
-                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--color-gold)] scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
               </motion.div>
             ))}
           </div>
@@ -273,100 +315,43 @@ export default function Home() {
         </div>
       </AnimatedSection>
 
-      {/* Stylists Section */}
-      <AnimatedSection className="py-32">
-        <div className="container-wide">
-          <div className="text-center mb-20">
-            <motion.p variants={fadeInUp} className="text-subheading mb-4">
-              Stylists
-            </motion.p>
-            <motion.h2 variants={fadeInUp} className="text-heading mb-6">
-              スタッフ紹介
-            </motion.h2>
-            <motion.div variants={fadeInUp} className="divider-line mx-auto" />
+      {/* News Section */}
+      <AnimatedSection className="py-16 md:py-32 section-gradient overflow-hidden">
+        <div className="container-narrow">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-12">
+            <div>
+              <motion.p variants={fadeInUp} className="text-subheading mb-4">
+                News
+              </motion.p>
+              <motion.h2 variants={fadeInUp} className="text-heading">
+                お知らせ
+              </motion.h2>
+            </div>
+            <motion.div variants={fadeIn} className="mt-6 md:mt-0">
+              <Link href="/news" className="btn-ghost group">
+                <span>一覧を見る</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            {[
-              {
-                name: '山田 花子',
-                role: 'Director',
-                image: '/person1.png',
-                description: '15年のキャリアを持つトップスタイリスト'
-              },
-              {
-                name: '佐藤 美咲',
-                role: 'Top Stylist',
-                image: '/person2.png',
-                description: 'カラーリングのスペシャリスト'
-              }
-            ].map((stylist) => (
+          <motion.div variants={fadeInUp} className="divider-line-long mb-8" />
+
+          <div className="space-y-0">
+            {newsItems.map((news, index) => (
               <motion.div
-                key={stylist.name}
+                key={index}
                 variants={fadeInUp}
-                className="group"
+                className="news-card group cursor-pointer"
               >
-                <div className="relative aspect-[3/4] overflow-hidden mb-6">
-                  <Image
-                    src={stylist.image}
-                    alt={stylist.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                </div>
-                <p className="text-xs tracking-[0.2em] text-[var(--color-sage)] mb-2 uppercase">
-                  {stylist.role}
-                </p>
-                <h3 className="text-xl font-[family-name:var(--font-serif)] mb-2">
-                  {stylist.name}
-                </h3>
-                <p className="text-sm text-[var(--color-warm-gray)]">
-                  {stylist.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div variants={fadeInUp} className="text-center mt-16">
-            <Link href="/staff" className="btn-outline">
-              全てのスタッフを見る
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </motion.div>
-        </div>
-      </AnimatedSection>
-
-      {/* Features Section */}
-      <AnimatedSection className="py-32 bg-[var(--color-cream-dark)]">
-        <div className="container-wide">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-            {[
-              {
-                number: '01',
-                title: 'オーガニック製品',
-                description: '厳選された自然由来成分を使用。髪と頭皮に優しい施術をお約束します。'
-              },
-              {
-                number: '02',
-                title: '完全予約制',
-                description: 'お一人おひとりに十分な時間を確保。落ち着いた空間でリラックスいただけます。'
-              },
-              {
-                number: '03',
-                title: '丁寧なカウンセリング',
-                description: 'ライフスタイルやお悩みをしっかりヒアリング。最適なスタイルをご提案。'
-              }
-            ].map((feature) => (
-              <motion.div key={feature.number} variants={fadeInUp} className="relative">
-                <span className="text-7xl font-[family-name:var(--font-serif)] text-[var(--color-light-gray)] absolute -top-4 -left-2">
-                  {feature.number}
-                </span>
-                <div className="pt-12 pl-8">
-                  <h3 className="text-xl mb-4">{feature.title}</h3>
-                  <p className="text-[var(--color-warm-gray)] text-sm leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
+                <Link href="/news" className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
+                  <span className="text-sm text-text-muted font-light tracking-wider">
+                    {news.date}
+                  </span>
+                  <span className="text-text-secondary group-hover:text-white transition-colors">
+                    {news.title}
+                  </span>
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -374,75 +359,96 @@ export default function Home() {
       </AnimatedSection>
 
       {/* Access Section */}
-      <AnimatedSection className="py-32 bg-[var(--color-charcoal)] text-white">
-        <div className="container-wide">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <AnimatedSection className="py-16 md:py-32 section-dark overflow-hidden">
+        <div className="container-wide relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
             <div>
-              <motion.p variants={fadeInUp} className="text-xs tracking-[0.3em] uppercase text-[var(--color-sage-light)] mb-4">
+              <motion.p variants={fadeInUp} className="text-subheading mb-4">
                 Access
               </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-heading text-white mb-8">
-                サロン情報
+              <motion.h2 variants={fadeInUp} className="text-heading mb-8">
+                アクセス
               </motion.h2>
-              <motion.div variants={fadeInUp} className="w-16 h-[1px] bg-[var(--color-gold)] mb-10" />
+              <motion.div variants={fadeInUp} className="divider-line mb-10" />
 
               <motion.div variants={fadeInUp} className="space-y-8">
                 <div className="flex items-start gap-4">
-                  <MapPin className="w-5 h-5 text-[var(--color-sage-light)] mt-1 flex-shrink-0" />
+                  <MapPin className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-xs tracking-[0.2em] uppercase text-gray-400 mb-2">Address</p>
-                    <p className="text-lg">東京都渋谷区神宮前1-2-3</p>
-                    <p className="text-sm text-gray-400 mt-1">表参道駅 A1出口より徒歩3分</p>
+                    <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Address</p>
+                    <p className="text-lg text-text-secondary">
+                      〒570-0036<br />
+                      大阪府守口市八雲中町1-24-1
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Clock className="w-5 h-5 text-[var(--color-sage-light)] mt-1 flex-shrink-0" />
+                  <Clock className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-xs tracking-[0.2em] uppercase text-gray-400 mb-2">Hours</p>
+                    <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Hours</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between max-w-xs">
-                        <span>平日</span>
-                        <span className="text-gray-300">10:00 - 20:00</span>
+                      <div className="text-text-secondary">
+                        <div className="flex justify-between max-w-xs">
+                          <span>平日</span>
+                          <span>10:00 - 21:00</span>
+                        </div>
+                        <p className="text-xs text-text-muted mt-1">（受付20:00まで）</p>
                       </div>
-                      <div className="flex justify-between max-w-xs">
-                        <span>土日祝</span>
-                        <span className="text-gray-300">9:00 - 19:00</span>
+                      <div className="text-text-secondary">
+                        <div className="flex justify-between max-w-xs">
+                          <span>土日祝</span>
+                          <span>10:00 - 20:30</span>
+                        </div>
+                        <p className="text-xs text-text-muted mt-1">（受付19:30まで）</p>
                       </div>
-                      <p className="text-sm text-gray-400 mt-2">定休日: 毎週火曜日</p>
+                      <p className="text-sm text-text-muted mt-2">定休日: 毎週月曜日（不定休あり）</p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <Calendar className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Reservation</p>
+                    <p className="text-text-secondary">完全予約制</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div variants={fadeInUp} className="mt-12">
                 <Link
-                  href="/contact"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[var(--color-charcoal)] text-sm tracking-[0.2em] uppercase transition-all duration-500 hover:bg-[var(--color-sage)] hover:text-white"
+                  href="/about"
+                  className="btn-outline"
                 >
-                  ご予約・お問い合わせ
+                  店舗情報を見る
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </motion.div>
             </div>
 
-            {/* Map image */}
-            <motion.div variants={fadeInUp} className="relative aspect-square lg:aspect-[4/3] overflow-hidden">
-              <Image
-                src="/counter.png"
-                alt="LUMINA HAIR STUDIO 受付カウンター"
-                fill
-                className="object-cover opacity-80"
+            {/* Google Maps Embed */}
+            <motion.div variants={fadeInUp} className="relative w-full aspect-square lg:aspect-[4/3] glass-card overflow-hidden">
+              <iframe
+                src="https://maps.google.com/maps?q=%E5%A4%A7%E9%98%AA%E5%BA%9C%E5%AE%88%E5%8F%A3%E5%B8%82%E5%85%AB%E9%9B%B2%E4%B8%AD%E7%94%BA1-24-1&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="MONË 店舗所在地"
+                className="absolute inset-0 grayscale-[30%] contrast-[1.1]"
               />
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute bottom-4 right-4">
                 <a
-                  href="https://maps.google.com"
+                  href="https://www.google.com/maps/search/?api=1&query=men's+hair+MONE+大阪府守口市八雲中町1-24-1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white transition-all duration-300 hover:bg-white hover:text-[var(--color-charcoal)]"
+                  className="flex items-center gap-2 px-4 py-2 bg-dark/90 border border-glass-border text-white text-sm transition-all duration-300 hover:bg-accent hover:border-accent backdrop-blur-sm"
                 >
-                  <MapPin className="w-5 h-5" />
-                  <span className="text-sm tracking-[0.15em]">Google Mapsで開く</span>
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-xs tracking-[0.1em]">大きな地図で見る</span>
                 </a>
               </div>
             </motion.div>
@@ -451,15 +457,11 @@ export default function Home() {
       </AnimatedSection>
 
       {/* CTA Section */}
-      <AnimatedSection className="py-32 relative overflow-hidden">
-        {/* Background Image */}
+      <AnimatedSection className="py-16 md:py-32 relative overflow-hidden">
+        {/* Background */}
         <div className="absolute inset-0 z-0">
-          <Image
-            src="/full.png"
-            alt="LUMINA HAIR STUDIO サロン内装"
-            fill
-            className="object-cover opacity-15"
-          />
+          <div className="absolute inset-0 bg-gradient-to-b from-dark-gray via-dark to-dark-gray" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-accent opacity-[0.02] blur-[150px]" />
         </div>
 
         <div className="container-narrow relative z-10 text-center">
@@ -470,17 +472,17 @@ export default function Home() {
             ご予約をお待ちしております
           </motion.h2>
           <motion.div variants={fadeInUp} className="divider-line mx-auto mb-8" />
-          <motion.p variants={fadeInUp} className="text-[var(--color-warm-gray)] max-w-lg mx-auto mb-12">
+          <motion.p variants={fadeInUp} className="text-body max-w-lg mx-auto mb-12">
             当サロンは完全予約制となっております。<br />
-            お電話またはオンラインフォームよりご予約ください。
+            お電話またはWebからご予約ください。
           </motion.p>
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/contact" className="btn-primary">
-              オンライン予約
+            <Link href="/booking" className="btn-primary">
+              Web予約する
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <a href="tel:03-1234-5678" className="btn-outline">
-              03-1234-5678
+            <a href="tel:06-6908-4859" className="btn-outline">
+              06-6908-4859
             </a>
           </motion.div>
         </div>

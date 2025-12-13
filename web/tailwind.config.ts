@@ -1,4 +1,3 @@
-// temp-nextjs/tailwind.config.ts
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
@@ -10,26 +9,91 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Modern Palette
-        'brand-black': '#1A1A1A',
-        'brand-gray': '#F4F4F4',
-        'brand-accent': '#C8B6A6', // Taupe/Greige
-        'brand-accent-dark': '#A89686',
-        'text-main': '#1A1A1A',
-        'text-sub': '#666666',
-        // Keeping these mapped for compatibility if needed, but should be phased out in usage
-        'primary-light': '#FAFAFA',
-        'primary-medium': '#C8B6A6',
-        'primary-dark': '#1A1A1A',
-        'secondary': '#A89686',
+        // MONË Dark Theme - 光が差すプライベート空間
+        dark: {
+          DEFAULT: '#161616',
+          gray: '#1A1A1A',
+          charcoal: '#252525',
+        },
+        charcoal: '#252525',
+        gray: {
+          DEFAULT: '#353535',
+          medium: '#606060',
+        },
+        // Light - 光
+        light: {
+          DEFAULT: 'rgba(255, 252, 245, 0.9)',
+          soft: 'rgba(255, 250, 240, 0.6)',
+          glow: 'rgba(255, 248, 235, 0.15)',
+          beam: 'rgba(255, 250, 242, 0.08)',
+        },
+        accent: {
+          DEFAULT: '#4E8B5F',
+          light: '#62A574',
+          dark: '#3D6E4A',
+          muted: 'rgba(78, 139, 95, 0.12)',
+        },
+        gold: {
+          DEFAULT: '#D4B06A',
+          muted: 'rgba(212, 176, 106, 0.18)',
+        },
+        text: {
+          primary: '#F8F6F2',
+          secondary: '#C5C0B8',
+          muted: '#908A82',
+        },
+        glass: {
+          DEFAULT: 'rgba(255, 255, 255, 0.04)',
+          border: 'rgba(255, 255, 255, 0.08)',
+          light: 'rgba(255, 252, 245, 0.06)',
+        },
       },
       fontFamily: {
-        sans: ['var(--font-noto-sans-jp)', 'sans-serif'],
-        serif: ['var(--font-playfair-display)', 'serif'],
+        sans: ['var(--font-sans)', 'Zen Kaku Gothic New', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Cormorant Garamond', 'serif'],
       },
       letterSpacing: {
         widest: '.25em',
-      }
+        wider: '.15em',
+      },
+      animation: {
+        'fade-up': 'fadeUp 0.8s ease-out forwards',
+        'fade-in': 'fadeIn 1s ease-out forwards',
+        'slide-in-left': 'slideInLeft 0.8s ease-out forwards',
+        'scale-in': 'scaleIn 0.6s ease-out forwards',
+        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'light-shimmer': 'lightShimmer 8s ease-in-out infinite',
+        'subtle-glow': 'subtleGlow 4s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeUp: {
+          from: { opacity: '0', transform: 'translateY(30px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        slideInLeft: {
+          from: { opacity: '0', transform: 'translateX(-30px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        scaleIn: {
+          from: { opacity: '0', transform: 'scale(0.95)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        lightShimmer: {
+          '0%, 100%': { opacity: '0.3', transform: 'translateX(-10%)' },
+          '50%': { opacity: '0.6', transform: 'translateX(10%)' },
+        },
+        subtleGlow: {
+          '0%, 100%': { opacity: '0.5' },
+          '50%': { opacity: '0.8' },
+        },
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
     },
   },
   plugins: [],

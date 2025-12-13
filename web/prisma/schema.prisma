@@ -1,0 +1,198 @@
+// prisma/schema.prisma
+// Hair Salon White - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// 認証関連（NextAuth.js）
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  phone         String?
+  password      String?   // 管理者用
+  role          UserRole  @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  reservations  Reservation[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+// ============================================
+// 予約関連
+// ============================================
+
+model Reservation {
+  id            String            @id @default(cuid())
+  userId        String
+
+  // 集計フィールド（パフォーマンス用に非正規化）
+  totalPrice    Int               // 合計金額
+  totalDuration Int               // 合計所要時間（分）
+  menuSummary   String            // 表示用: "カット + カラー"
+
+  date          DateTime          @db.Date
+  startTime     String            // "10:00"
+  endTime       String            // "11:30"
+  status        ReservationStatus @default(CONFIRMED)
+  note          String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         ReservationItem[]
+
+  @@index([date])
+  @@index([userId])
+  @@index([status])
+}
+
+// 予約アイテム（複数メニュー対応）
+model ReservationItem {
+  id            String      @id @default(cuid())
+  reservationId String
+  menuId        String      // MENU_ITEMS からの ID
+  menuName      String      // 予約時点のメニュー名（スナップショット）
+  category      String      // カテゴリ（カラーコード表示用）
+  price         Int         // 予約時点の価格
+  duration      Int         // 予約時点の所要時間（分）
+  orderIndex    Int         // 施術順序（0から開始）
+
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@unique([reservationId, orderIndex])
+}
+
+enum ReservationStatus {
+  CONFIRMED   // 確定
+  CANCELLED   // キャンセル
+  COMPLETED   // 完了
+  NO_SHOW     // 無断キャンセル
+}
+
+// ============================================
+// カテゴリー
+// ============================================
+
+model Category {
+  id           String   @id @default(cuid())
+  name         String   @unique // カテゴリ名（カット、カラー、パーマ等）
+  nameEn       String   // 英語名（Cut, Color, Perm等）
+  color        String   // カラーコード（#8B7355等）
+  displayOrder Int      @default(0) // 表示順
+  isActive     Boolean  @default(true) // 有効/無効
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  menus Menu[]
+
+  @@index([isActive])
+}
+
+// ============================================
+// メニュー
+// ============================================
+
+model Menu {
+  id              String   @id @default(cuid())
+  name            String   // メニュー名
+  categoryId      String   // カテゴリID
+  price           Int      // 価格
+  duration        Int      // 所要時間（分）
+  lastBookingTime String   // 最終受付時間 (例: "19:00")
+  displayOrder    Int      @default(0) // 表示順
+  isActive        Boolean  @default(true) // 有効/無効
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+// ============================================
+// お知らせ
+// ============================================
+
+model News {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  content     String    @db.Text
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+}
+
+// ============================================
+// お問い合わせ
+// ============================================
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+}
