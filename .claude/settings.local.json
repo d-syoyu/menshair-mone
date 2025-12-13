@@ -14,7 +14,8 @@
       "Bash(curl:*)",
       "Bash(ls:*)",
       "Bash(npm run db:seed:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

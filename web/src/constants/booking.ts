@@ -2,9 +2,9 @@
 // Hair Salon White - 予約システム設定
 
 export const BOOKING_CONFIG = {
-  // 営業時間
+  // 営業時間（最大値。実際の営業時間は曜日により異なる）
   openTime: "10:00",
-  closeTime: "20:00",
+  closeTime: "21:00", // 平日の閉店時間（土日祝は20:30）
 
   // 予約枠
   slotInterval: 30, // 30分刻み
