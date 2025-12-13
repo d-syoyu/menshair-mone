@@ -834,8 +834,8 @@ export default function AdminMenusPage() {
                         value={menuForm.duration}
                         onChange={(e) => setMenuForm({ ...menuForm, duration: parseInt(e.target.value) || 0 })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        min="15"
-                        step="15"
+                        min="10"
+                        step="10"
                         required
                       />
                     </div>
