@@ -29,18 +29,18 @@ const config: Config = {
         },
         accent: {
           DEFAULT: '#1F3D30',
-          light: '#2A5040',
+          light: '#3A7058',
           dark: '#162B22',
           muted: 'rgba(31, 61, 48, 0.12)',
         },
         gold: {
-          DEFAULT: '#D4B06A',
-          muted: 'rgba(212, 176, 106, 0.18)',
+          DEFAULT: '#D4A64A',
+          muted: 'rgba(212, 166, 74, 0.18)',
         },
         text: {
-          primary: '#F8F6F2',
-          secondary: '#C5C0B8',
-          muted: '#908A82',
+          primary: '#FFFFFF',
+          secondary: '#E0DCD4',
+          muted: '#A8A29A',
         },
         glass: {
           DEFAULT: 'rgba(255, 255, 255, 0.04)',

@@ -22,18 +22,18 @@
 
   /* Accent - Green (MONË brand color - deep forest green like entrance chairs) */
   --color-accent: #1F3D30;
-  --color-accent-light: #2A5040;
+  --color-accent-light: #3A7058;
   --color-accent-dark: #162B22;
   --color-accent-muted: rgba(31, 61, 48, 0.15);
 
-  /* Text Colors - Warmer and brighter */
-  --color-text-primary: #FAFAF8;
-  --color-text-secondary: #D0CBC3;
-  --color-text-muted: #9E9890;
+  /* Text Colors - Optimized for monochrome background */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #E0DCD4;
+  --color-text-muted: #A8A29A;
 
-  /* Gold accent (richer) */
-  --color-gold: #E0BC70;
-  --color-gold-muted: rgba(224, 188, 112, 0.2);
+  /* Gold accent (richer, more visible) */
+  --color-gold: #D4A64A;
+  --color-gold-muted: rgba(212, 166, 74, 0.2);
 
   /* Glass effects - more visible */
   --color-glass: rgba(255, 255, 255, 0.06);

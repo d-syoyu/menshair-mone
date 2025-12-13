@@ -106,26 +106,26 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative min-h-[70vh] md:min-h-screen md:h-screen flex items-center justify-center overflow-hidden overflow-x-clip pt-24 pb-12 md:pt-0 md:pb-0">
-        {/* Ken Burns Background Images */}
+        {/* Ken Burns Background Images - Monochrome */}
         <div className="absolute inset-0 z-0 overflow-hidden overflow-x-clip">
           {/* Image 1 - Zoom In */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-1"
+            className="absolute inset-0 bg-cover bg-center ken-burns-1 grayscale"
             style={{ backgroundImage: 'url(/image1.jpeg)' }}
           />
           {/* Image 2 - Zoom Out */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-2"
+            className="absolute inset-0 bg-cover bg-center ken-burns-2 grayscale"
             style={{ backgroundImage: 'url(/image2.jpeg)' }}
           />
           {/* Image 3 - Pan */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-3"
+            className="absolute inset-0 bg-cover bg-center ken-burns-3 grayscale"
             style={{ backgroundImage: 'url(/image3.jpeg)' }}
           />
 
-          {/* Overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/45 to-black/60" />
+          {/* Overlay for text readability - adjusted for monochrome background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/35 to-black/50" />
 
           {/* Accent glow effects - contained within viewport */}
           <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent opacity-[0.06] blur-[80px] md:blur-[100px]" />
