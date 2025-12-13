@@ -28,10 +28,10 @@ const config: Config = {
           beam: 'rgba(255, 250, 242, 0.08)',
         },
         accent: {
-          DEFAULT: '#4E8B5F',
-          light: '#62A574',
-          dark: '#3D6E4A',
-          muted: 'rgba(78, 139, 95, 0.12)',
+          DEFAULT: '#325C47',
+          light: '#3D6F56',
+          dark: '#274A39',
+          muted: 'rgba(50, 92, 71, 0.12)',
         },
         gold: {
           DEFAULT: '#D4B06A',

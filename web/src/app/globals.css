@@ -20,11 +20,11 @@
   --color-light-glow: rgba(255, 248, 235, 0.2);
   --color-light-beam: rgba(255, 250, 242, 0.12);
 
-  /* Accent - Green (rich and elegant) */
-  --color-accent: #5A9A6B;
-  --color-accent-light: #6DB37F;
-  --color-accent-dark: #458555;
-  --color-accent-muted: rgba(90, 154, 107, 0.15);
+  /* Accent - Green (MONË brand color) */
+  --color-accent: #325C47;
+  --color-accent-light: #3D6F56;
+  --color-accent-dark: #274A39;
+  --color-accent-muted: rgba(50, 92, 71, 0.15);
 
   /* Text Colors - Warmer and brighter */
   --color-text-primary: #FAFAF8;
@@ -102,7 +102,7 @@ body::before {
     /* Subtle center glow */
     radial-gradient(ellipse 100% 80% at 50% 20%, rgba(255, 252, 245, 0.05) 0%, transparent 50%),
     /* Accent color hint */
-    linear-gradient(135deg, rgba(90, 154, 107, 0.04) 0%, transparent 50%, rgba(224, 188, 112, 0.025) 100%),
+    linear-gradient(135deg, rgba(50, 92, 71, 0.04) 0%, transparent 50%, rgba(224, 188, 112, 0.025) 100%),
     /* Soft vignette for depth */
     radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.1) 100%),
     /* Base gradient */
@@ -192,7 +192,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover {
   background: var(--color-accent-light);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(78, 139, 95, 0.35);
+  box-shadow: 0 8px 24px rgba(50, 92, 71, 0.35);
 }
 
 .btn-primary:hover::before {
@@ -220,7 +220,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-outline:hover {
   border-color: var(--color-accent-light);
   color: var(--color-accent-light);
-  background: rgba(90, 154, 107, 0.25);
+  background: rgba(50, 92, 71, 0.25);
 }
 
 /* ============================================
@@ -275,7 +275,7 @@ h1, h2, h3, h4, h5, h6 {
     /* Soft light from top */
     radial-gradient(ellipse 120% 60% at 50% 0%, var(--color-light-beam) 0%, transparent 50%),
     /* Accent hint */
-    radial-gradient(ellipse at 50% 0%, rgba(78, 139, 95, 0.04) 0%, transparent 60%);
+    radial-gradient(ellipse at 50% 0%, rgba(50, 92, 71, 0.04) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -402,8 +402,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .menu-card:hover {
-  border-color: rgba(78, 139, 95, 0.25);
-  background: rgba(78, 139, 95, 0.06);
+  border-color: rgba(50, 92, 71, 0.25);
+  background: rgba(50, 92, 71, 0.06);
 }
 
 .menu-card:hover::before {
@@ -434,10 +434,10 @@ h1, h2, h3, h4, h5, h6 {
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(78, 139, 95, 0.3);
+    box-shadow: 0 0 20px rgba(50, 92, 71, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(78, 139, 95, 0.5);
+    box-shadow: 0 0 40px rgba(50, 92, 71, 0.5);
   }
 }
 
