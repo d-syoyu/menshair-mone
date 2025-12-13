@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Colors */
+  --color-cream: #FDFCFA;
+  --color-cream-dark: #F7F4F0;
+  --color-sage: #6B8E6B;
+  --color-sage-light: #8BAF8B;
+  --color-sage-dark: #4A6B4A;
+  --color-gold: #B8956E;
+  --color-gold-light: #D4B896;
+
+  /* Neutrals */
+  --color-charcoal: #1A1A1A;
+  --color-warm-gray: #5A5550;
+  --color-light-gray: #E5E0DB;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans), sans-serif;
+  color: var(--color-charcoal);
+  background-color: var(--color-cream);
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif), serif;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+::selection {
+  background-color: var(--color-sage);
+  color: white;
+}
+
+/* Container utilities */
+.container-narrow {
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.container-wide {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Button styles */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  background-color: var(--color-charcoal);
+  color: white;
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transition: all 0.5s;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-sage-dark);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border: 1px solid var(--color-charcoal);
+  color: var(--color-charcoal);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transition: all 0.5s;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-charcoal);
+  color: white;
+}
+
+/* Typography utilities */
+.text-display {
+  font-family: var(--font-serif), serif;
+  font-size: 3rem;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 768px) {
+  .text-display {
+    font-size: 4.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-display {
+    font-size: 6rem;
+  }
+}
+
+.text-heading {
+  font-family: var(--font-serif), serif;
+  font-size: 1.875rem;
+}
+
+@media (min-width: 768px) {
+  .text-heading {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-heading {
+    font-size: 3rem;
+  }
+}
+
+.text-subheading {
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-warm-gray);
+}
+
+.divider-line {
+  width: 4rem;
+  height: 1px;
+  background-color: var(--color-gold);
+}
+
+/* Animation utilities */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out forwards;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-sage);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sage-dark);
+}
