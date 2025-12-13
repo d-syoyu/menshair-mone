@@ -155,7 +155,7 @@ export default function Home() {
               一人一人の男性に
             </span>
             <span className="text-display block">
-              <span className="text-accent-light">「光」</span>と<span className="text-gold">「印象」</span>を...
+              <span className="text-gold">「光」</span>と<span className="text-accent-light">「印象」</span>を...
             </span>
           </motion.h1>
 
