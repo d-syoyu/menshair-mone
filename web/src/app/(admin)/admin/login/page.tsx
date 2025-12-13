@@ -69,7 +69,7 @@ function AdminLoginContent() {
           <Shield className="w-8 h-8 text-white" />
         </div>
         <p className="text-sm tracking-wider text-gray-500 uppercase mb-2">Staff Only</p>
-        <h1 className="text-3xl font-medium mb-4">スタッフログイン</h1>
+        <h1 className="text-3xl font-medium mb-4 text-gray-900">スタッフログイン</h1>
         <div className="w-12 h-px bg-gray-300 mx-auto mb-6" />
         <p className="text-gray-600 text-sm">
           管理者・スタッフ専用のログインページです

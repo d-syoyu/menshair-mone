@@ -510,7 +510,6 @@ export default function AdminMenusPage() {
                                     <Clock className="w-3.5 h-3.5" />
                                     {menu.duration}分
                                   </span>
-                                  <span>最終受付 {menu.lastBookingTime}</span>
                                 </div>
                               </div>
 
@@ -822,7 +821,7 @@ export default function AdminMenusPage() {
                         onChange={(e) => setMenuForm({ ...menuForm, price: parseInt(e.target.value) || 0 })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
                         min="0"
-                        step="100"
+                        step="1"
                         required
                       />
                     </div>
@@ -840,19 +839,6 @@ export default function AdminMenusPage() {
                         required
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      最終受付時間 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      value={menuForm.lastBookingTime}
-                      onChange={(e) => setMenuForm({ ...menuForm, lastBookingTime: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                      required
-                    />
                   </div>
 
                   <div>

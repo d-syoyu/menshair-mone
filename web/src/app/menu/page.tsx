@@ -1,79 +1,96 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-
-const galleryImages = [
-  { src: '/cut.jpeg', alt: 'カット' },
-  { src: '/cut2.jpeg', alt: 'カット' },
-  { src: '/shampoo2.jpeg', alt: 'ヘッドスパ' },
-  { src: '/shampoo.jpeg', alt: 'シャンプー' },
-  { src: '/design.jpeg', alt: 'デザイン' },
-];
 
 const menuCategories = [
   {
     id: 'cut',
     titleJa: 'カット',
+    titleEn: 'Cut',
     items: [
       { name: 'カット', price: '¥4,950', duration: '40分' },
-      { name: 'カット + シャンプー', price: '¥5,500', duration: '50分' },
+      { name: 'カット＋ケアSV', price: '¥5,500', duration: '50分' },
+      { name: 'カット＋メンズエステSV', price: '¥7,150', duration: '60分' },
+      { name: 'カット＋メンズエステSV〜美顔器エステ〜', price: '¥8,800', duration: '70分' },
+      { name: 'フェードカット', price: '¥5,500', duration: '50分' },
+      { name: 'フェードカット＋ケアSV', price: '¥6,050', duration: '60分' },
+      { name: 'フェードカット＋メンズエステSV', price: '¥7,700', duration: '70分' },
+      { name: 'フェードカット＋メンズエステSV〜美顔器エステ〜', price: '¥9,350', duration: '80分' },
+      { name: 'ジュニア', price: '¥2,420', duration: '30分' },
+      { name: '小学生', price: '¥2,970', duration: '30分' },
+      { name: '中学生', price: '¥3,520', duration: '35分' },
+      { name: '高校生', price: '¥4,070', duration: '40分' },
     ]
   },
   {
     id: 'color',
     titleJa: 'カラー',
+    titleEn: 'Color',
     items: [
       { name: 'カラー', price: '¥4,950〜', duration: '60分〜' },
-      { name: 'カット + カラー', price: '¥8,800', duration: '90分' },
+      { name: '白髪染', price: '¥4,400〜', duration: '60分〜' },
+      { name: '白髪ぼかし', price: '¥3,850', duration: '45分' },
+      { name: 'ブリーチ', price: '¥7,150〜', duration: '90分〜' },
+      { name: 'ハイライト・メッシュ', price: '¥7,150〜', duration: '90分〜' },
     ]
   },
   {
     id: 'perm',
     titleJa: 'パーマ',
+    titleEn: 'Perm',
     items: [
-      { name: 'パーマ', price: '¥4,400〜', duration: '60分〜' },
-      { name: 'カット + パーマ', price: '¥8,250', duration: '90分' },
+      { name: 'ポイントパーマ', price: '¥4,400', duration: '60分' },
+      { name: 'デザインパーマ', price: '¥7,700〜', duration: '90分〜' },
+      { name: 'スパイラルパーマ', price: '¥7,700〜', duration: '90分〜' },
+      { name: 'ツイスト・波巻き系パーマ', price: '¥10,450〜', duration: '120分〜' },
+      { name: 'アイロンパーマハーフ', price: '¥4,400', duration: '60分' },
+      { name: 'アイロンパーマ', price: '¥7,700', duration: '90分' },
+      { name: 'ボリュームダウンパーマ', price: '¥4,400', duration: '60分' },
     ]
   },
   {
-    id: 'straightening',
+    id: 'straight',
     titleJa: '縮毛矯正',
+    titleEn: 'Straight Perm',
     items: [
-      { name: '縮毛矯正', price: '¥11,000〜', duration: '120分〜' },
-      { name: 'カット + 縮毛矯正', price: '¥14,850', duration: '150分' },
+      { name: 'フロント矯正', price: '¥4,400', duration: '90分' },
+      { name: 'フロント＋サイド', price: '¥6,600', duration: '120分' },
+      { name: '全頭矯正', price: '¥11,000〜', duration: '150分〜' },
     ]
   },
   {
     id: 'spa',
-    titleJa: 'スパ',
+    titleJa: 'スパ＆トリートメント',
+    titleEn: 'Spa & Treatment',
     items: [
-      { name: 'ヘッドスパ', price: '¥2,200〜', duration: '30分〜' },
+      { name: 'もみほぐしクレンジングSPA', price: '¥2,200', duration: '30分' },
+      { name: '頭皮エイジング予防ヘッドスパ〜皮脂・フケ・ニオイ改善〜', price: '¥4,400', duration: '50分' },
+      { name: 'とろとろスパミルクの頭皮柔らかトリートメントスパ', price: '¥2,200', duration: '30分' },
+      { name: 'オーガニックノートシステムトリートメント3step', price: '¥3,300', duration: '40分' },
+      { name: 'オーガニックノートシステムトリートメント5step', price: '¥5,500', duration: '60分' },
+      { name: '魔法のナノバブル', price: '¥1,100', duration: '15分' },
     ]
   },
   {
     id: 'shampoo-set',
-    titleJa: 'シャンプー&セット',
+    titleJa: 'シャンプー＆セット',
+    titleEn: 'Sp & Set',
     items: [
-      { name: 'シャンプー&セット', price: '¥2,200', duration: '20分' },
+      { name: 'シャンプーブロー', price: '¥1,650', duration: '20分' },
+      { name: 'ヘアセット', price: '¥1,100', duration: '15分' },
     ]
   },
   {
-    id: 'mens-shaving',
+    id: 'mens-sv',
     titleJa: 'メンズシェービング',
+    titleEn: "Men's SV",
     items: [
-      { name: 'フェイスシェービング', price: '¥2,200', duration: '20分' },
-      { name: 'カット + シェービング', price: '¥6,050', duration: '60分' },
-    ]
-  },
-  {
-    id: 'ladies-shaving',
-    titleJa: 'レディースシェービング',
-    items: [
-      { name: 'フェイスシェービング', price: '¥3,300', duration: '30分' },
-      { name: 'フルシェービング', price: '¥5,500', duration: '40分' },
+      { name: 'ケアSV', price: '¥2,200', duration: '25分' },
+      { name: 'メンズエステSV', price: '¥3,850', duration: '35分' },
+      { name: 'メンズエステSV〜美顔器エステ〜', price: '¥5,500', duration: '45分' },
+      { name: 'ノーズワックス', price: '¥1,000', duration: '10分' },
     ]
   },
 ];
@@ -99,64 +116,43 @@ export default function MenuPage() {
         </motion.div>
       </section>
 
-      {/* Menu List with Gallery */}
+      {/* Menu List */}
       <section className="py-12 section-gradient">
-        <div className="container-wide">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Left: Gallery (モバイル: 上、デスクトップ: 左側固定) */}
-            <div className="lg:col-span-4">
-              <div className="lg:sticky lg:top-32">
-                <div className="flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-                  {galleryImages.map((image, index) => (
-                    <motion.div
-                      key={image.src}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      viewport={{ once: true }}
-                      className="relative aspect-[4/3] min-w-[200px] lg:min-w-0 overflow-hidden glass-card group"
+        <div className="container-narrow">
+          <div className="space-y-10 md:space-y-12">
+            {menuCategories.map((category) => (
+              <motion.div
+                key={category.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true }}
+                className="space-y-4"
+              >
+                <div className="border-b border-glass-border pb-3">
+                  <h2 className="text-xl md:text-2xl font-serif text-white">{category.titleEn}</h2>
+                </div>
+
+                <div className="space-y-3">
+                  {category.items.map((item) => (
+                    <div
+                      key={item.name}
+                      className="flex flex-wrap sm:flex-nowrap justify-between items-start sm:items-center py-3 text-text-secondary hover:text-white transition-colors"
                     >
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </motion.div>
+                      <div className="w-full sm:w-auto sm:flex-1 sm:min-w-0 sm:mr-4 mb-2 sm:mb-0">
+                        <span className="text-base md:text-lg">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <span className="text-sm text-text-muted whitespace-nowrap">
+                          {item.duration}
+                        </span>
+                        <span className="text-lg md:text-xl text-gold font-light min-w-[100px] text-right">{item.price}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            {/* Right: Menu List */}
-            <div className="lg:col-span-8 space-y-10">
-              {menuCategories.map((category) => (
-                <div key={category.id} className="space-y-4">
-                  <h2 className="text-2xl font-serif text-white border-b border-glass-border pb-3">
-                    {category.titleJa}
-                  </h2>
-
-                  <div className="space-y-3">
-                    {category.items.map((item) => (
-                      <div
-                        key={item.name}
-                        className="flex flex-wrap justify-between items-center py-2 text-text-secondary hover:text-white transition-colors"
-                      >
-                        <div className="flex-1 min-w-0 mr-4">
-                          <span className="text-base">{item.name}</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm text-text-muted">
-                            {item.duration}
-                          </span>
-                          <span className="text-lg text-gold font-light min-w-[100px] text-right">{item.price}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>

@@ -63,7 +63,7 @@ export default function AboutPage() {
               </motion.p>
               <motion.h2 variants={fadeInUp} className="text-heading mb-8">
                 一人一人の男性に<br />
-                <span className="text-accent-light">「光」</span>と<span className="text-gold">「印象」</span>を…
+                <span className="text-gold">「光」</span>と<span style={{ color: '#3A7058' }}>「印象」</span>を…
               </motion.h2>
               <motion.div variants={fadeInUp} className="divider-line mx-auto mb-8" />
             </div>

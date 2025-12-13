@@ -16,8 +16,12 @@ import {
   Clock,
   AlertTriangle,
   X,
+  Plus,
+  User,
+  Check,
 } from 'lucide-react';
-import { CATEGORY_COLORS } from '@/constants/menu';
+import { AnimatePresence } from 'framer-motion';
+import { CATEGORY_COLORS, MENUS, MENU_CATEGORY_LIST, type MenuItem } from '@/constants/menu';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -91,6 +95,20 @@ interface ConfirmDialog {
   action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED';
 }
 
+interface CustomerOption {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+// 時間選択肢を生成（10:00〜20:00、30分刻み）
+const TIME_OPTIONS = Array.from({ length: 21 }, (_, i) => {
+  const hours = Math.floor(i / 2) + 10;
+  const minutes = (i % 2) * 30;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+});
+
 function AdminReservationsContent() {
   const searchParams = useSearchParams();
   const dateParam = searchParams.get('date');
@@ -127,6 +145,21 @@ function AdminReservationsContent() {
     customerName: '',
     action: 'CANCELLED',
   });
+
+  // 予約追加モーダル
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addStep, setAddStep] = useState<'customer' | 'menu' | 'datetime'>('customer');
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
+  const [reservationDate, setReservationDate] = useState('');
+  const [reservationTime, setReservationTime] = useState('10:00');
+  const [reservationNote, setReservationNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReservations();
@@ -204,6 +237,131 @@ function AdminReservationsContent() {
       console.error('Failed to update status:', error);
     } finally {
       closeConfirmDialog();
+    }
+  };
+
+  // 予約追加モーダルを開く
+  const openAddModal = () => {
+    setIsAddModalOpen(true);
+    setAddStep('customer');
+    setSelectedCustomer(null);
+    setNewCustomer({ name: '', phone: '' });
+    setIsCreatingCustomer(false);
+    setSelectedMenuIds([]);
+    setReservationDate(selectedDate ? formatDateForInput(selectedDate) : formatDateForInput(new Date()));
+    setReservationTime('10:00');
+    setReservationNote('');
+    setAddError(null);
+    fetchCustomers();
+  };
+
+  // 日付をinput用にフォーマット
+  const formatDateForInput = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // 顧客一覧を取得
+  const fetchCustomers = async (query = '') => {
+    try {
+      const url = query ? `/api/admin/customers?q=${encodeURIComponent(query)}` : '/api/admin/customers';
+      const res = await fetch(url);
+      const data = await res.json();
+      setCustomers(data);
+    } catch {
+      console.error('Failed to fetch customers');
+    }
+  };
+
+  // 顧客検索
+  useEffect(() => {
+    if (isAddModalOpen && customerSearch) {
+      const timer = setTimeout(() => fetchCustomers(customerSearch), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [customerSearch, isAddModalOpen]);
+
+  // 新規顧客を作成
+  const createCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.phone) return;
+    setIsCreatingCustomer(true);
+    setAddError(null);
+
+    try {
+      const res = await fetch('/api/admin/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAddError(data.error);
+        return;
+      }
+
+      setSelectedCustomer(data);
+      setAddStep('menu');
+    } catch {
+      setAddError('顧客の作成に失敗しました');
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
+  // メニュー選択を切り替え
+  const toggleMenu = (menuId: string) => {
+    setSelectedMenuIds(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  // 選択中のメニュー合計
+  const getSelectedMenusTotal = () => {
+    const menus = selectedMenuIds.map(id => MENUS.find(m => m.id === id)).filter((m): m is MenuItem => !!m);
+    const totalPrice = menus.reduce((sum, m) => sum + m.price, 0);
+    const totalDuration = menus.reduce((sum, m) => sum + m.duration, 0);
+    return { totalPrice, totalDuration, menus };
+  };
+
+  // 予約を作成
+  const createReservation = async () => {
+    if (!selectedCustomer || selectedMenuIds.length === 0 || !reservationDate || !reservationTime) return;
+    setIsSubmitting(true);
+    setAddError(null);
+
+    try {
+      const res = await fetch('/api/admin/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedCustomer.id,
+          menuIds: selectedMenuIds,
+          date: reservationDate,
+          startTime: reservationTime,
+          note: reservationNote || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAddError(data.error);
+        return;
+      }
+
+      // 成功したら予約リストを更新してモーダルを閉じる
+      fetchReservations();
+      setIsAddModalOpen(false);
+    } catch {
+      setAddError('予約の作成に失敗しました');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -286,7 +444,16 @@ function AdminReservationsContent() {
             ダッシュボードに戻る
           </Link>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h1 className="text-2xl md:text-3xl font-medium">予約管理</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl md:text-3xl font-medium">予約管理</h1>
+              <button
+                onClick={openAddModal}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">予約追加</span>
+              </button>
+            </div>
             {selectedDate && (
               <div className="flex items-center gap-3">
                 <span className="text-base md:text-xl text-gray-600">
@@ -802,6 +969,312 @@ function AdminReservationsContent() {
           </motion.div>
         </div>
       )}
+
+      {/* 予約追加モーダル */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsAddModalOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-gray-100 flex-shrink-0">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[var(--color-accent)]/10 rounded-full">
+                    <Calendar className="w-5 h-5 text-[var(--color-accent)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">電話予約を追加</h3>
+                    <p className="text-sm text-gray-500">
+                      {addStep === 'customer' && '顧客を選択または新規追加'}
+                      {addStep === 'menu' && 'メニューを選択'}
+                      {addStep === 'datetime' && '日時を確認'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ステップインジケーター */}
+                <div className="flex gap-2 mt-4">
+                  {['customer', 'menu', 'datetime'].map((step, i) => (
+                    <div
+                      key={step}
+                      className={`h-1 flex-1 rounded-full ${
+                        ['customer', 'menu', 'datetime'].indexOf(addStep) >= i
+                          ? 'bg-[var(--color-accent)]'
+                          : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto flex-1">
+                {addError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                    {addError}
+                  </div>
+                )}
+
+                {/* Step 1: Customer Selection */}
+                {addStep === 'customer' && (
+                  <div className="space-y-4">
+                    {/* 既存顧客検索 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        既存のお客様を検索
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => setCustomerSearch(e.target.value)}
+                          placeholder="名前・電話番号で検索"
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 顧客リスト */}
+                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                      {customers.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          {customerSearch ? '該当するお客様がいません' : '顧客が登録されていません'}
+                        </div>
+                      ) : (
+                        customers.slice(0, 10).map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setAddStep('menu');
+                            }}
+                            className="w-full p-3 hover:bg-gray-50 text-left flex items-center gap-3"
+                          >
+                            <div className="w-8 h-8 bg-[var(--color-accent)]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-[var(--color-accent)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{c.name || '名前未登録'}</p>
+                              <p className="text-xs text-gray-500">{c.phone}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="relative py-2">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200"></div>
+                      </div>
+                      <div className="relative flex justify-center">
+                        <span className="bg-white px-4 text-sm text-gray-500">または</span>
+                      </div>
+                    </div>
+
+                    {/* 新規顧客追加 */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        新しいお客様を登録
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomer.name}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                        placeholder="お名前"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                      <input
+                        type="tel"
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                        placeholder="電話番号"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                      <button
+                        onClick={createCustomer}
+                        disabled={!newCustomer.name || !newCustomer.phone || isCreatingCustomer}
+                        className="w-full py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isCreatingCustomer ? '登録中...' : '新規登録して次へ'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Menu Selection */}
+                {addStep === 'menu' && (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-3">
+                      <User className="w-5 h-5 text-gray-500" />
+                      <div>
+                        <p className="font-medium text-sm">{selectedCustomer?.name || '名前未登録'}</p>
+                        <p className="text-xs text-gray-500">{selectedCustomer?.phone}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {MENU_CATEGORY_LIST.map(category => {
+                        const categoryMenus = MENUS.filter(m => m.category === category.id);
+                        if (categoryMenus.length === 0) return null;
+
+                        return (
+                          <div key={category.id}>
+                            <h4 className="text-sm font-medium text-gray-500 mb-2">{category.id}</h4>
+                            <div className="space-y-2">
+                              {categoryMenus.map(menu => {
+                                const isSelected = selectedMenuIds.includes(menu.id);
+                                return (
+                                  <button
+                                    key={menu.id}
+                                    onClick={() => toggleMenu(menu.id)}
+                                    className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                                      isSelected
+                                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
+                                      />
+                                      <div>
+                                        <p className="font-medium text-sm">{menu.name}</p>
+                                        <p className="text-xs text-gray-500">{menu.duration}分</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">¥{menu.price.toLocaleString()}</span>
+                                      {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {selectedMenuIds.length > 0 && (
+                      <div className="p-3 bg-[var(--color-gold)]/10 rounded-lg">
+                        <div className="flex justify-between text-sm">
+                          <span>合計</span>
+                          <span className="font-medium">
+                            ¥{getSelectedMenusTotal().totalPrice.toLocaleString()}（{getSelectedMenusTotal().totalDuration}分）
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3: Date/Time Selection */}
+                {addStep === 'datetime' && (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <User className="w-5 h-5 text-gray-500" />
+                        <p className="font-medium text-sm">{selectedCustomer?.name || '名前未登録'}</p>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {getSelectedMenusTotal().menus.map(m => m.name).join(' + ')}
+                      </div>
+                      <div className="text-sm font-medium text-[var(--color-gold)] mt-1">
+                        ¥{getSelectedMenusTotal().totalPrice.toLocaleString()}（{getSelectedMenusTotal().totalDuration}分）
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">日付</label>
+                        <input
+                          type="date"
+                          value={reservationDate}
+                          onChange={(e) => setReservationDate(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
+                        <select
+                          value={reservationTime}
+                          onChange={(e) => setReservationTime(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        >
+                          {TIME_OPTIONS.map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
+                      <textarea
+                        value={reservationNote}
+                        onChange={(e) => setReservationNote(e.target.value)}
+                        placeholder="電話予約、初回など"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)] resize-none"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-gray-100 flex-shrink-0">
+                <div className="flex gap-3">
+                  {addStep !== 'customer' && (
+                    <button
+                      onClick={() => setAddStep(addStep === 'datetime' ? 'menu' : 'customer')}
+                      className="px-4 py-3 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      戻る
+                    </button>
+                  )}
+                  {addStep === 'menu' && (
+                    <button
+                      onClick={() => setAddStep('datetime')}
+                      disabled={selectedMenuIds.length === 0}
+                      className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      次へ
+                    </button>
+                  )}
+                  {addStep === 'datetime' && (
+                    <button
+                      onClick={createReservation}
+                      disabled={isSubmitting || !reservationDate || !reservationTime}
+                      className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? '予約登録中...' : '予約を登録'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

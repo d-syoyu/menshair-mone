@@ -76,7 +76,7 @@ interface ConfirmDialog {
 }
 
 export default function AdminDashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [todayReservations, setTodayReservations] = useState<Reservation[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -89,7 +89,22 @@ export default function AdminDashboard() {
     action: 'CANCELLED',
   });
 
+  // 認証チェック - 未ログインまたは管理者でない場合はリダイレクト
   useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') {
+      router.replace('/admin/login');
+      return;
+    }
+    if (session?.user?.role !== 'ADMIN') {
+      router.replace('/admin/login');
+      return;
+    }
+  }, [status, session, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || session?.user?.role !== 'ADMIN') return;
+
     const fetchData = async () => {
       try {
         // 今日の予約を取得
@@ -149,7 +164,7 @@ export default function AdminDashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [status, session]);
 
   const openConfirmDialog = (
     reservation: Reservation,

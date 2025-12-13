@@ -106,21 +106,21 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative min-h-[70vh] md:min-h-screen md:h-screen flex items-center justify-center overflow-hidden overflow-x-clip pt-24 pb-12 md:pt-0 md:pb-0">
-        {/* Ken Burns Background Images - Monochrome */}
+        {/* Ken Burns Background Images */}
         <div className="absolute inset-0 z-0 overflow-hidden overflow-x-clip">
           {/* Image 1 - Zoom In */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-1 grayscale"
+            className="absolute inset-0 bg-cover bg-center ken-burns-1"
             style={{ backgroundImage: 'url(/image1.jpeg)' }}
           />
           {/* Image 2 - Zoom Out */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-2 grayscale"
+            className="absolute inset-0 bg-cover bg-center ken-burns-2"
             style={{ backgroundImage: 'url(/image2.jpeg)' }}
           />
           {/* Image 3 - Pan */}
           <div
-            className="absolute inset-0 bg-cover bg-center ken-burns-3 grayscale"
+            className="absolute inset-0 bg-cover bg-center ken-burns-3"
             style={{ backgroundImage: 'url(/image3.jpeg)' }}
           />
 

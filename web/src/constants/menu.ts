@@ -1,5 +1,5 @@
 // constants/menu.ts
-// Hair Salon White - メニュー定義
+// MONË - メニュー定義
 
 export type MenuItem = {
   id: string;
@@ -13,114 +13,328 @@ export type MenuItem = {
 export const MENUS: MenuItem[] = [
   // カット
   {
-    id: "cut",
+    id: "cut-basic",
     category: "カット",
     name: "カット",
+    price: 4950,
+    duration: 40,
+    lastBookingTime: "19:20",
+  },
+  {
+    id: "cut-care-sv",
+    category: "カット",
+    name: "カット＋ケアSV",
+    price: 5500,
+    duration: 50,
+    lastBookingTime: "19:10",
+  },
+  {
+    id: "cut-mens-esth-sv",
+    category: "カット",
+    name: "カット＋メンズエステSV",
+    price: 7150,
+    duration: 60,
+    lastBookingTime: "19:00",
+  },
+  {
+    id: "cut-mens-esth-sv-beauty",
+    category: "カット",
+    name: "カット＋メンズエステSV〜美顔器エステ〜",
+    price: 8800,
+    duration: 70,
+    lastBookingTime: "18:50",
+  },
+  {
+    id: "fade-cut",
+    category: "カット",
+    name: "フェードカット",
+    price: 5500,
+    duration: 50,
+    lastBookingTime: "19:10",
+  },
+  {
+    id: "fade-cut-care-sv",
+    category: "カット",
+    name: "フェードカット＋ケアSV",
+    price: 6050,
+    duration: 60,
+    lastBookingTime: "19:00",
+  },
+  {
+    id: "fade-cut-mens-esth-sv",
+    category: "カット",
+    name: "フェードカット＋メンズエステSV",
+    price: 7700,
+    duration: 70,
+    lastBookingTime: "18:50",
+  },
+  {
+    id: "fade-cut-mens-esth-sv-beauty",
+    category: "カット",
+    name: "フェードカット＋メンズエステSV〜美顔器エステ〜",
+    price: 9350,
+    duration: 80,
+    lastBookingTime: "18:40",
+  },
+  {
+    id: "cut-junior",
+    category: "カット",
+    name: "ジュニア",
+    price: 2420,
+    duration: 30,
+    lastBookingTime: "19:30",
+  },
+  {
+    id: "cut-elementary",
+    category: "カット",
+    name: "小学生",
+    price: 2970,
+    duration: 30,
+    lastBookingTime: "19:30",
+  },
+  {
+    id: "cut-junior-high",
+    category: "カット",
+    name: "中学生",
+    price: 3520,
+    duration: 35,
+    lastBookingTime: "19:25",
+  },
+  {
+    id: "cut-high-school",
+    category: "カット",
+    name: "高校生",
+    price: 4070,
+    duration: 40,
+    lastBookingTime: "19:20",
+  },
+
+  // カラー
+  {
+    id: "color-basic",
+    category: "カラー",
+    name: "カラー",
     price: 4950,
     duration: 60,
     lastBookingTime: "19:00",
   },
-  // カラー
   {
-    id: "color-short",
+    id: "color-gray",
     category: "カラー",
-    name: "カラー（ショート）",
-    price: 4950,
-    duration: 90,
-    lastBookingTime: "18:00",
+    name: "白髪染",
+    price: 4400,
+    duration: 60,
+    lastBookingTime: "19:00",
   },
   {
-    id: "color-medium",
+    id: "color-gray-blend",
     category: "カラー",
-    name: "カラー（ミディアム）",
-    price: 5500,
-    duration: 90,
-    lastBookingTime: "18:00",
+    name: "白髪ぼかし",
+    price: 3850,
+    duration: 45,
+    lastBookingTime: "19:15",
   },
   {
-    id: "color-long",
+    id: "color-bleach",
     category: "カラー",
-    name: "カラー（ロング）",
-    price: 6050,
+    name: "ブリーチ",
+    price: 7150,
     duration: 90,
-    lastBookingTime: "18:00",
+    lastBookingTime: "18:30",
   },
   {
-    id: "color-superlong",
+    id: "color-highlight",
     category: "カラー",
-    name: "カラー（スーパーロング）",
-    price: 6600,
+    name: "ハイライト・メッシュ",
+    price: 7150,
     duration: 90,
-    lastBookingTime: "18:00",
+    lastBookingTime: "18:30",
   },
+
   // パーマ
   {
     id: "perm-point",
     category: "パーマ",
     name: "ポイントパーマ",
     price: 4400,
-    duration: 90,
-    lastBookingTime: "18:00",
+    duration: 60,
+    lastBookingTime: "19:00",
   },
   {
-    id: "perm-all",
+    id: "perm-design",
     category: "パーマ",
-    name: "パーマオール",
+    name: "デザインパーマ",
     price: 7700,
     duration: 90,
+    lastBookingTime: "18:30",
+  },
+  {
+    id: "perm-spiral",
+    category: "パーマ",
+    name: "スパイラルパーマ",
+    price: 7700,
+    duration: 90,
+    lastBookingTime: "18:30",
+  },
+  {
+    id: "perm-twist",
+    category: "パーマ",
+    name: "ツイスト・波巻き系パーマ",
+    price: 10450,
+    duration: 120,
     lastBookingTime: "18:00",
   },
-  // トリートメント
   {
-    id: "treatment",
-    category: "トリートメント",
-    name: "トリートメント",
-    price: 3300,
+    id: "perm-iron-half",
+    category: "パーマ",
+    name: "アイロンパーマハーフ",
+    price: 4400,
     duration: 60,
     lastBookingTime: "19:00",
   },
+  {
+    id: "perm-iron",
+    category: "パーマ",
+    name: "アイロンパーマ",
+    price: 7700,
+    duration: 90,
+    lastBookingTime: "18:30",
+  },
+  {
+    id: "perm-volume-down",
+    category: "パーマ",
+    name: "ボリュームダウンパーマ",
+    price: 4400,
+    duration: 60,
+    lastBookingTime: "19:00",
+  },
+
   // 縮毛矯正
   {
-    id: "straightening",
+    id: "straight-front",
     category: "縮毛矯正",
-    name: "縮毛矯正",
-    price: 11000,
-    duration: 100,
+    name: "フロント矯正",
+    price: 4400,
+    duration: 90,
+    lastBookingTime: "18:30",
+  },
+  {
+    id: "straight-front-side",
+    category: "縮毛矯正",
+    name: "フロント＋サイド",
+    price: 6600,
+    duration: 120,
     lastBookingTime: "18:00",
   },
-  // スパ
   {
-    id: "spa-massage",
-    category: "スパ",
-    name: "もみほぐしスパ",
+    id: "straight-full",
+    category: "縮毛矯正",
+    name: "全頭矯正",
+    price: 11000,
+    duration: 150,
+    lastBookingTime: "17:30",
+  },
+
+  // スパ＆トリートメント
+  {
+    id: "spa-cleansing",
+    category: "スパ＆トリートメント",
+    name: "もみほぐしクレンジングSPA",
     price: 2200,
+    duration: 30,
+    lastBookingTime: "19:30",
+  },
+  {
+    id: "spa-aging",
+    category: "スパ＆トリートメント",
+    name: "頭皮エイジング予防ヘッドスパ〜皮脂・フケ・ニオイ改善〜",
+    price: 4400,
+    duration: 50,
+    lastBookingTime: "19:10",
+  },
+  {
+    id: "spa-milk",
+    category: "スパ＆トリートメント",
+    name: "とろとろスパミルクの頭皮柔らかトリートメントスパ",
+    price: 2200,
+    duration: 30,
+    lastBookingTime: "19:30",
+  },
+  {
+    id: "treatment-organic-3",
+    category: "スパ＆トリートメント",
+    name: "オーガニックノートシステムトリートメント3step",
+    price: 3300,
+    duration: 40,
+    lastBookingTime: "19:20",
+  },
+  {
+    id: "treatment-organic-5",
+    category: "スパ＆トリートメント",
+    name: "オーガニックノートシステムトリートメント5step",
+    price: 5500,
     duration: 60,
     lastBookingTime: "19:00",
   },
   {
-    id: "spa-treatment",
-    category: "スパ",
-    name: "トリートメントスパ",
-    price: 2200,
-    duration: 60,
-    lastBookingTime: "19:00",
+    id: "treatment-nano",
+    category: "スパ＆トリートメント",
+    name: "魔法のナノバブル",
+    price: 1100,
+    duration: 15,
+    lastBookingTime: "19:45",
   },
-  // その他
+
+  // シャンプー＆セット
   {
     id: "shampoo-blow",
-    category: "その他",
+    category: "シャンプー＆セット",
     name: "シャンプーブロー",
     price: 1650,
-    duration: 60,
-    lastBookingTime: "19:00",
+    duration: 20,
+    lastBookingTime: "19:40",
   },
   {
     id: "hair-set",
-    category: "その他",
+    category: "シャンプー＆セット",
     name: "ヘアセット",
     price: 1100,
-    duration: 60,
-    lastBookingTime: "19:00",
+    duration: 15,
+    lastBookingTime: "19:45",
+  },
+
+  // メンズシェービング
+  {
+    id: "sv-care",
+    category: "メンズシェービング",
+    name: "ケアSV",
+    price: 2200,
+    duration: 25,
+    lastBookingTime: "19:35",
+  },
+  {
+    id: "sv-mens-esth",
+    category: "メンズシェービング",
+    name: "メンズエステSV",
+    price: 3850,
+    duration: 35,
+    lastBookingTime: "19:25",
+  },
+  {
+    id: "sv-mens-esth-beauty",
+    category: "メンズシェービング",
+    name: "メンズエステSV〜美顔器エステ〜",
+    price: 5500,
+    duration: 45,
+    lastBookingTime: "19:15",
+  },
+  {
+    id: "sv-nose-wax",
+    category: "メンズシェービング",
+    name: "ノーズワックス",
+    price: 1000,
+    duration: 10,
+    lastBookingTime: "19:50",
   },
 ] as const;
 
@@ -151,10 +365,10 @@ export const MENU_CATEGORY_LIST = [
   { id: "カット", title: "Cut" },
   { id: "カラー", title: "Color" },
   { id: "パーマ", title: "Perm" },
-  { id: "トリートメント", title: "Treatment" },
-  { id: "縮毛矯正", title: "Straightening" },
-  { id: "スパ", title: "Head Spa" },
-  { id: "その他", title: "Other" },
+  { id: "縮毛矯正", title: "Straight Perm" },
+  { id: "スパ＆トリートメント", title: "Spa & Treatment" },
+  { id: "シャンプー＆セット", title: "Sp & Set" },
+  { id: "メンズシェービング", title: "Men's SV" },
 ] as const;
 
 // カテゴリ別カラー（タイムライン表示用）
@@ -162,10 +376,10 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "カット": "#8B7355",      // 茶色系
   "カラー": "#9F86C0",      // 紫色系
   "パーマ": "#E0B1CB",      // ピンク系
-  "トリートメント": "#98C1D9", // 水色系
   "縮毛矯正": "#F4A261",    // オレンジ系
-  "スパ": "#2A9D8F",        // ティール系
-  "その他": "#ADB5BD",      // グレー系
+  "スパ＆トリートメント": "#2A9D8F", // ティール系
+  "シャンプー＆セット": "#98C1D9",   // 水色系
+  "メンズシェービング": "#ADB5BD",   // グレー系
 };
 
 // 複数メニューの合計を計算

@@ -16,6 +16,8 @@ import {
   Clock,
   X,
   XCircle,
+  Plus,
+  UserPlus,
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/constants/menu';
 
@@ -73,6 +75,12 @@ export default function AdminCustomersPage() {
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
   const INITIAL_VISIBLE = 5;
   const LOAD_MORE_COUNT = 10;
+
+  // 顧客追加モーダル
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -174,6 +182,47 @@ export default function AdminCustomersPage() {
       .reduce((sum, r) => sum + r.totalPrice, 0);
   };
 
+  // 顧客追加
+  const handleAddCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setAddError(null);
+
+    try {
+      const res = await fetch('/api/admin/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          email: newCustomer.email || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAddError(data.error || '顧客の追加に失敗しました');
+        return;
+      }
+
+      // 成功したら顧客リストを更新
+      setCustomers(prev => [{
+        ...data,
+        reservations: [],
+        _count: { reservations: 0 },
+      }, ...prev]);
+
+      // モーダルを閉じてフォームをリセット
+      setIsAddModalOpen(false);
+      setNewCustomer({ name: '', phone: '', email: '' });
+    } catch {
+      setAddError('顧客の追加に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-4xl mx-auto px-4">
@@ -192,8 +241,17 @@ export default function AdminCustomersPage() {
             ダッシュボードに戻る
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-medium">顧客管理</h1>
-            <p className="text-gray-500">{customers.length}名</p>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-medium">顧客管理</h1>
+              <p className="text-gray-500">{customers.length}名</p>
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
+            >
+              <UserPlus className="w-5 h-5" />
+              <span className="hidden sm:inline">新規顧客追加</span>
+            </button>
           </div>
         </motion.div>
 
@@ -435,6 +493,105 @@ export default function AdminCustomersPage() {
           )}
         </motion.div>
       </div>
+
+      {/* 顧客追加モーダル */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsAddModalOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-[var(--color-accent)]/10 rounded-full">
+                  <UserPlus className="w-6 h-6 text-[var(--color-accent)]" />
+                </div>
+                <h3 className="text-xl font-medium text-gray-900">新規顧客追加</h3>
+              </div>
+
+              {addError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                  {addError}
+                </div>
+              )}
+
+              <form onSubmit={handleAddCustomer} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    名前 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="山田 太郎"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    電話番号 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="090-1234-5678"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    メールアドレス（任意）
+                  </label>
+                  <input
+                    type="email"
+                    value={newCustomer.email}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="example@email.com"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="flex-1 py-3 px-4 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !newCustomer.name || !newCustomer.phone}
+                    className="flex-1 py-3 px-4 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? '追加中...' : '追加する'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

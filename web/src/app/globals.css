@@ -190,7 +190,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary:hover {
-  background: var(--color-accent-light);
+  background: #2D5544;
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(31, 61, 48, 0.35);
 }
