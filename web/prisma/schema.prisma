@@ -196,3 +196,19 @@ model Contact {
 
   @@index([isRead])
 }
+
+// ============================================
+// 不定休（臨時休業日・時間帯休業）
+// ============================================
+
+model Holiday {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  startTime String?  // 開始時間（"10:00"）nullの場合は全日休業
+  endTime   String?  // 終了時間（"18:00"）nullの場合は全日休業
+  reason    String?  // 休業理由（任意）
+  createdAt DateTime @default(now())
+
+  @@unique([date, startTime, endTime])
+  @@index([date])
+}

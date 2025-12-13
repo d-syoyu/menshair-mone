@@ -105,10 +105,27 @@ export default function BookingPage() {
   const [availability, setAvailability] = useState<AvailabilityData | null>(null);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [holidays, setHolidays] = useState<Array<{ date: string; startTime: string | null; endTime: string | null }>>([]);
 
   // 選択されたメニューの合計を計算
   const selectedMenus = selectedMenuIds.map(id => MENU_ITEMS.find(m => m.id === id)).filter((m): m is MenuItem => m !== undefined);
   const totals = selectedMenuIds.length > 0 ? calculateMenuTotals(selectedMenuIds) : null;
+
+  // 月が変わったら不定休を取得
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1;
+        const res = await fetch(`/api/holidays?year=${year}&month=${month}`);
+        const data = await res.json();
+        setHolidays(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Failed to fetch holidays:', error);
+      }
+    };
+    fetchHolidays();
+  }, [currentMonth]);
 
   // 日付選択時に空き状況を取得
   useEffect(() => {
@@ -117,11 +134,19 @@ export default function BookingPage() {
     }
   }, [selectedDate, selectedMenuIds]);
 
+  // ローカル日付をYYYY-MM-DD形式に変換（タイムゾーン問題を回避）
+  const formatDateLocal = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const fetchAvailability = async (date: Date, menuIds: string[]) => {
     setIsLoadingSlots(true);
     setSelectedTime(null);
     try {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(date);
       const res = await fetch(`/api/availability?date=${dateStr}&menuIds=${menuIds.join(',')}`);
       const data = await res.json();
       setAvailability(data);
@@ -159,12 +184,25 @@ export default function BookingPage() {
     return days;
   };
 
+  // 不定休かどうかを確認（全日休業のみ）
+  const isHoliday = (date: Date) => {
+    const dateStr = formatDateLocal(date);
+    return holidays.some(h => h.date === dateStr && !h.startTime && !h.endTime);
+  };
+
+  // 時間帯休業があるかを確認
+  const hasTimeRangeHoliday = (date: Date) => {
+    const dateStr = formatDateLocal(date);
+    return holidays.some(h => h.date === dateStr && h.startTime && h.endTime);
+  };
+
   const isDateSelectable = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (date < today) return false;
     if (date.getDay() === CLOSED_DAY) return false;
+    if (isHoliday(date)) return false; // 全日休業のみ選択不可
 
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 60);
@@ -194,6 +232,8 @@ export default function BookingPage() {
     }
     setSelectedDate(null);
     setSelectedTime(null);
+    // 選択後にプルダウンを閉じる
+    setExpandedCategory(null);
   };
 
   const handleProceedToDateTime = () => {
@@ -215,7 +255,7 @@ export default function BookingPage() {
   const handleConfirm = () => {
     if (selectedMenuIds.length === 0 || !selectedDate || !selectedTime) return;
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(selectedDate);
     const params = new URLSearchParams({
       menuIds: selectedMenuIds.join(','),
       date: dateStr,
@@ -552,7 +592,7 @@ export default function BookingPage() {
               </span>
               <button
                 onClick={() => setStep(1)}
-                className="text-xs sm:text-sm text-accent hover:text-accent-light self-start sm:self-auto"
+                className="text-xs sm:text-sm px-4 py-2 bg-accent hover:bg-accent-light text-white border border-accent-light hover:border-accent rounded transition-all self-start sm:self-auto"
               >
                 メニューを変更
               </button>
@@ -562,40 +602,40 @@ export default function BookingPage() {
           {/* Calendar */}
           <motion.div
             variants={fadeInUp}
-            className="bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 md:p-8 mb-6 sm:mb-8"
+            className="bg-dark-lighter border border-glass-border rounded p-3 sm:p-4 mb-4 sm:mb-6 max-w-sm mx-auto"
           >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <button
                 onClick={() =>
                   setCurrentMonth(
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
                   )
                 }
-                className="p-1.5 sm:p-2 hover:bg-glass-light transition-colors rounded text-white"
+                className="p-1 hover:bg-glass-light transition-colors rounded text-white"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <h3 className="text-base sm:text-lg font-medium flex items-center gap-2 sm:gap-3 text-white">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+              <div className="text-sm sm:text-lg font-medium flex items-center gap-1.5 sm:gap-2 text-white">
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
-              </h3>
+              </div>
               <button
                 onClick={() =>
                   setCurrentMonth(
                     new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
                   )
                 }
-                className="p-1.5 sm:p-2 hover:bg-glass-light transition-colors rounded text-white"
+                className="p-1 hover:bg-glass-light transition-colors rounded text-white"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2">
+            <div className="grid grid-cols-7 gap-0.5 mb-0.5">
               {WEEKDAYS.map((day, i) => (
                 <div
                   key={day}
-                  className={`text-center text-xs sm:text-sm py-1.5 sm:py-2 font-medium ${
+                  className={`text-center text-[10px] sm:text-xs py-1 font-medium ${
                     i === 0
                       ? 'text-red-400'
                       : i === 6
@@ -608,37 +648,50 @@ export default function BookingPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+            <div className="grid grid-cols-7 gap-0.5">
               {generateCalendarDays().map((date, i) => {
                 if (!date) {
-                  return <div key={i} />;
+                  return <div key={i} className="aspect-square" />;
                 }
                 const isSelectable = isDateSelectable(date);
                 const isSelected = selectedDate?.toDateString() === date.toDateString();
                 const isClosed = date.getDay() === CLOSED_DAY;
+                const holiday = isHoliday(date);
+                const hasTimeHoliday = hasTimeRangeHoliday(date);
+
+                const getTitle = () => {
+                  if (isClosed) return '定休日';
+                  if (holiday) return '臨時休業';
+                  if (hasTimeHoliday) return '一部時間帯休業';
+                  return undefined;
+                };
 
                 return (
                   <button
                     key={i}
                     onClick={() => handleDateSelect(date)}
                     disabled={!isSelectable}
-                    className={`aspect-square flex items-center justify-center text-xs sm:text-sm font-medium transition-all rounded-sm ${
+                    title={getTitle()}
+                    className={`aspect-square flex items-center justify-center text-[11px] sm:text-xs font-medium transition-all rounded relative ${
                       isSelected
                         ? 'bg-accent text-white'
                         : isSelectable
                           ? 'text-white hover:bg-glass-light'
                           : 'text-text-muted/30 cursor-not-allowed'
-                    } ${isClosed ? 'text-text-muted/30' : ''} ${
+                    } ${isClosed || holiday ? 'text-text-muted/30' : ''} ${
                       date.getDay() === 0 && isSelectable ? 'text-red-400' : ''
                     } ${date.getDay() === 6 && isSelectable ? 'text-blue-400' : ''}`}
                   >
                     {date.getDate()}
+                    {hasTimeHoliday && isSelectable && (
+                      <span className="absolute bottom-0.5 right-0.5 w-1 h-1 bg-yellow-400 rounded-full" />
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            <p className="text-[10px] sm:text-xs text-text-muted mt-3 sm:mt-4 text-center">
+            <p className="text-[9px] sm:text-[10px] text-text-muted mt-2 text-center">
               ※ 月曜日は定休日です
             </p>
           </motion.div>
@@ -650,13 +703,13 @@ export default function BookingPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 md:p-8"
             >
-              <h3 className="text-sm sm:text-lg font-medium mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 text-white">
+              <div className="text-sm sm:text-lg font-medium mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 text-white">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                 <span>
                   {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（
                   {WEEKDAYS[selectedDate.getDay()]}）の空き状況
                 </span>
-              </h3>
+              </div>
 
               {isLoadingSlots ? (
                 <div className="text-center py-8 sm:py-12 text-text-muted">

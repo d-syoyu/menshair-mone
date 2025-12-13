@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Calendar,
+  CalendarOff,
   Clock,
   XCircle,
   LogOut,
@@ -295,44 +296,57 @@ export default function AdminDashboard() {
           initial="hidden"
           animate="visible"
           variants={fadeInUp}
-          className="grid grid-cols-3 gap-4 mb-8"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8"
         >
           <Link
             href="/admin/reservations"
-            className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="p-2 bg-[var(--color-accent)]/10 rounded-lg">
               <Calendar className="w-5 h-5 text-[var(--color-accent)]" />
             </div>
             <div>
               <p className="font-medium text-sm">予約管理</p>
-              <p className="text-xs text-gray-500">予約一覧・編集</p>
+              <p className="text-xs text-gray-500 hidden sm:block">予約一覧・編集</p>
             </div>
           </Link>
 
           <Link
             href="/admin/menus"
-            className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="p-2 bg-[var(--color-gold)]/10 rounded-lg">
               <Menu className="w-5 h-5 text-[var(--color-gold)]" />
             </div>
             <div>
               <p className="font-medium text-sm">メニュー管理</p>
-              <p className="text-xs text-gray-500">メニュー・カテゴリ</p>
+              <p className="text-xs text-gray-500 hidden sm:block">メニュー・カテゴリ</p>
             </div>
           </Link>
 
           <Link
             href="/admin/customers"
-            className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="p-2 bg-blue-500/10 rounded-lg">
               <Users className="w-5 h-5 text-blue-500" />
             </div>
             <div>
               <p className="font-medium text-sm">顧客管理</p>
-              <p className="text-xs text-gray-500">顧客情報</p>
+              <p className="text-xs text-gray-500 hidden sm:block">顧客情報</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/holidays"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="p-2 bg-red-500/10 rounded-lg">
+              <CalendarOff className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">不定休設定</p>
+              <p className="text-xs text-gray-500 hidden sm:block">臨時休業日</p>
             </div>
           </Link>
         </motion.div>

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { MENU_ITEMS, calculateMenuTotals } from "@/constants/menu";
-import { BUSINESS_HOURS, CLOSED_DAY } from "@/constants/salon";
+import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import {
   generateTimeSlots,
   isWithinBookingWindow,
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const dayOfWeek = date.getDay();
 
-    // 定休日チェック
+    // 定休日チェック（月曜日）
     if (dayOfWeek === CLOSED_DAY) {
       return NextResponse.json<AvailabilityResponse>({
         date: dateStr,
@@ -58,6 +58,27 @@ export async function GET(request: NextRequest) {
         slots: [],
       });
     }
+
+    // 不定休チェック（全日休業と時間帯休業を区別）
+    const holidayDate = new Date(dateStr);
+    holidayDate.setHours(0, 0, 0, 0);
+    const holidays = await prisma.holiday.findMany({
+      where: { date: holidayDate },
+    });
+
+    // 全日休業（startTimeとendTimeがnull）がある場合は完全に休業
+    const hasAllDayHoliday = holidays.some(h => !h.startTime && !h.endTime);
+    if (hasAllDayHoliday) {
+      return NextResponse.json<AvailabilityResponse>({
+        date: dateStr,
+        dayOfWeek,
+        isClosed: true,
+        slots: [],
+      });
+    }
+
+    // 時間帯休業のリスト（startTimeとendTimeが両方あるもの）
+    const timeRangeHolidays = holidays.filter(h => h.startTime && h.endTime);
 
     // 予約可能期間チェック
     if (!isWithinBookingWindow(date)) {
@@ -72,7 +93,12 @@ export async function GET(request: NextRequest) {
     // メニュー情報取得（複数対応）
     let totalDuration = 60;
     let totalPrice = 0;
-    let earliestLastBookingTime: string = BUSINESS_HOURS.close;
+
+    // 日付に応じた営業時間を取得（土日祝は19:30まで、平日は20:00まで）
+    const businessHours = getBusinessHours(date);
+
+    // 最終受付時間の初期値は曜日別の最終受付時間
+    let earliestLastBookingTime: string = businessHours.lastBooking;
 
     if (menuIdsParam) {
       const menuIds = menuIdsParam.split(",").filter(Boolean);
@@ -90,7 +116,19 @@ export async function GET(request: NextRequest) {
       const totals = calculateMenuTotals(menuIds);
       totalDuration = totals.totalDuration;
       totalPrice = totals.totalPrice;
-      earliestLastBookingTime = totals.earliestLastBookingTime;
+
+      // 閉店時間から施術時間を引いて、計算上の最終受付時間を算出
+      const closeTimeMinutes = businessHours.close.split(':').map(Number);
+      const closeMinutes = closeTimeMinutes[0] * 60 + closeTimeMinutes[1];
+      const calculatedLastBookingMinutes = closeMinutes - totalDuration;
+      const calculatedLastBookingHours = Math.floor(calculatedLastBookingMinutes / 60);
+      const calculatedLastBookingMins = calculatedLastBookingMinutes % 60;
+      const calculatedLastBookingTime = `${calculatedLastBookingHours.toString().padStart(2, '0')}:${calculatedLastBookingMins.toString().padStart(2, '0')}`;
+
+      // 計算上の最終受付時間と営業時間の最終受付時間のうち、早い方を使用
+      earliestLastBookingTime = calculatedLastBookingTime < businessHours.lastBooking
+        ? calculatedLastBookingTime
+        : businessHours.lastBooking;
     }
 
     // その日の予約を取得
@@ -121,15 +159,12 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
 
-    const slots: TimeSlot[] = allSlots
-      .filter((slot) => {
-        // 最終受付時間を超えている場合は除外
-        if (slot >= earliestLastBookingTime) {
-          return false;
+    const slots: TimeSlot[] = allSlots.map((slotTime) => {
+        // 最終受付時間を超えている場合は利用不可（最終受付時間ちょうどは予約可能）
+        if (slotTime > earliestLastBookingTime) {
+          return { time: slotTime, available: false };
         }
-        return true;
-      })
-      .map((slotTime) => {
+
         // 今日の場合、過去の時間は除外
         if (isToday) {
           const [hours, minutes] = slotTime.split(":").map(Number);
@@ -147,8 +182,8 @@ export async function GET(request: NextRequest) {
         const endMins = endMinutes % 60;
         const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
 
-        // 営業時間外チェック
-        if (endTime > BUSINESS_HOURS.close) {
+        // 営業時間外チェック（曜日に応じた閉店時間）
+        if (endTime > businessHours.close) {
           return { time: slotTime, available: false };
         }
 
@@ -161,7 +196,16 @@ export async function GET(request: NextRequest) {
           return slotTime < resEnd && endTime > resStart;
         });
 
-        return { time: slotTime, available: !hasConflict };
+        // 時間帯休業との重複チェック
+        const hasHolidayConflict = timeRangeHolidays.some((holiday) => {
+          const holidayStart = holiday.startTime!;
+          const holidayEnd = holiday.endTime!;
+
+          // 重複判定: 新予約の開始 < 休業終了 && 新予約の終了 > 休業開始
+          return slotTime < holidayEnd && endTime > holidayStart;
+        });
+
+        return { time: slotTime, available: !hasConflict && !hasHolidayConflict };
       });
 
     return NextResponse.json<AvailabilityResponse>({
