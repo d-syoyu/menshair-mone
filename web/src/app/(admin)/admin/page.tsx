@@ -212,7 +212,7 @@ export default function AdminDashboard() {
   // 各メニューアイテムのセグメント位置を計算
   const calculateSegments = (reservation: Reservation) => {
     const startMin = timeToMinutes(reservation.startTime) - 600;
-    const totalMin = 600;
+    const totalMin = 660;
     let currentOffset = 0;
 
     return reservation.items.map((item) => {
@@ -455,11 +455,11 @@ export default function AdminDashboard() {
                 <div className="mb-6 px-6 lg:px-8">
                   {/* Time labels */}
                   <div className="relative h-7 mb-2">
-                    {Array.from({ length: 11 }, (_, i) => {
-                      const left = (i / 10) * 100;
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const left = (i / 11) * 100;
                       const translateClass = i === 0
                         ? 'translate-x-0'
-                        : i === 10
+                        : i === 11
                           ? '-translate-x-full'
                           : '-translate-x-1/2';
                       return (
@@ -478,9 +478,9 @@ export default function AdminDashboard() {
                   <div className="relative h-14 md:h-16 lg:h-20 bg-gray-50 rounded-lg overflow-hidden">
                     {/* Grid lines - 20分刻み */}
                     <div className="absolute inset-0">
-                      {Array.from({ length: 31 }, (_, i) => {
+                      {Array.from({ length: 34 }, (_, i) => {
                         const isHourLine = i % 3 === 0;
-                        const left = (i / 30) * 100;
+                        const left = (i / 33) * 100;
                         return (
                           <div
                             key={i}
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                     {todayReservations.map((reservation) => {
                       const startMin = timeToMinutes(reservation.startTime) - 600;
                       const endMin = timeToMinutes(reservation.endTime) - 600;
-                      const totalMin = 600;
+                      const totalMin = 660;
                       const left = (startMin / totalMin) * 100;
                       const width = ((endMin - startMin) / totalMin) * 100;
                       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
