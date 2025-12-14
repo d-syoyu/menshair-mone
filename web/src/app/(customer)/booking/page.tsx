@@ -18,6 +18,7 @@ import {
   getSelectedCategories,
   calculateMenuTotals,
   CATEGORY_COLORS,
+  getCategoryTextColor,
   type MenuItem
 } from '@/constants/menu';
 import { CLOSED_DAY } from '@/constants/salon';
@@ -498,8 +499,11 @@ export default function BookingPage() {
                     >
                       <div className="flex items-start gap-2.5 sm:gap-4 min-w-0 flex-1">
                         <span
-                          className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm text-white font-medium flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
+                          className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0 mt-0.5"
+                          style={{
+                            backgroundColor: CATEGORY_COLORS[menu.category],
+                            color: getCategoryTextColor(menu.category)
+                          }}
                         >
                           {index + 1}
                         </span>
@@ -574,8 +578,11 @@ export default function BookingPage() {
                   }}
                 >
                   <span
-                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs text-white flex-shrink-0"
-                    style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
+                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs flex-shrink-0"
+                    style={{
+                      backgroundColor: CATEGORY_COLORS[menu.category],
+                      color: getCategoryTextColor(menu.category)
+                    }}
                   >
                     {index + 1}
                   </span>

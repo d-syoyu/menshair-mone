@@ -306,9 +306,9 @@ export default function AdminMenusPage() {
         >
           <Link
             href="/admin"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             ダッシュボードに戻る
           </Link>
           <div className="flex items-center justify-between">
@@ -382,7 +382,7 @@ export default function AdminMenusPage() {
         >
           <button
             onClick={() => activeTab === 'categories' ? openCategoryModal() : openMenuModal()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" />
             {activeTab === 'categories' ? 'カテゴリを追加' : 'メニューを追加'}
@@ -437,20 +437,20 @@ export default function AdminMenusPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => openCategoryModal(category)}
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                           title="編集"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => openDeleteModal('category', category.id, category.name)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                           title="削除"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
@@ -521,20 +521,20 @@ export default function AdminMenusPage() {
                               </div>
 
                               {/* Actions */}
-                              <div className="flex items-center gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-1 flex-shrink-0">
                                 <button
                                   onClick={() => openMenuModal(menu)}
-                                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                   title="編集"
                                 >
-                                  <Edit2 className="w-4 h-4" />
+                                  <Edit2 className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => openDeleteModal('menu', menu.id, menu.name)}
-                                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                   title="削除"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
                             </div>
@@ -565,7 +565,7 @@ export default function AdminMenusPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-md md:max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -734,7 +734,7 @@ export default function AdminMenusPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
                     >
                       {editingCategory ? '更新' : '作成'}
                     </button>
@@ -761,7 +761,7 @@ export default function AdminMenusPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-md md:max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -877,7 +877,7 @@ export default function AdminMenusPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
                     >
                       {editingMenu ? '更新' : '作成'}
                     </button>
@@ -904,7 +904,7 @@ export default function AdminMenusPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
             >
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">

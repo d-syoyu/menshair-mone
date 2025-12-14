@@ -194,9 +194,9 @@ export default function AdminDiscountsPage() {
         >
           <Link
             href="/admin/pos"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             POSダッシュボードに戻る
           </Link>
           <div className="flex items-center justify-between">
@@ -239,7 +239,7 @@ export default function AdminDiscountsPage() {
         >
           <button
             onClick={() => openDiscountModal()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" />
             割引を追加
@@ -351,7 +351,7 @@ export default function AdminDiscountsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-md md:max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -475,7 +475,7 @@ export default function AdminDiscountsPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
                     >
                       {editingDiscount ? '更新' : '作成'}
                     </button>
@@ -502,7 +502,7 @@ export default function AdminDiscountsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
             >
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">

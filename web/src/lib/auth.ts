@@ -1,5 +1,5 @@
 // src/lib/auth.ts
-// Hair Salon White - NextAuth.js v5 Configuration
+// MONË - NextAuth.js v5 Configuration
 
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";

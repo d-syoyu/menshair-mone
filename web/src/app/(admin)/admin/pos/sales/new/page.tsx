@@ -49,6 +49,15 @@ interface Reservation {
   totalPrice: number;
   totalDuration: number;
   menuSummary: string;
+  couponCode?: string | null;
+  couponDiscount?: number;
+  coupon?: {
+    id: string;
+    code: string;
+    name: string;
+    type: 'PERCENTAGE' | 'FIXED';
+    value: number;
+  } | null;
   user: {
     id: string;
     name: string | null;
@@ -174,6 +183,7 @@ export default function NewSalePage() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [autoAppliedCoupon, setAutoAppliedCoupon] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
   const [payments, setPayments] = useState<Payment[]>([
     { paymentMethod: 'CASH', amount: 0 },
@@ -216,6 +226,14 @@ export default function NewSalePage() {
     }
   }, [customerSearch, sourceType]);
 
+  // 予約切り替え時にクーポン状態をリセット
+  useEffect(() => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+    setAutoAppliedCoupon(false);
+  }, [selectedReservation]);
+
   // 予約からのメニュー自動設定（menusがロードされた後に実行）
   useEffect(() => {
     if (step === 2 && selectedReservation && menus.length > 0 && selectedMenuIds.length === 0) {
@@ -237,6 +255,19 @@ export default function NewSalePage() {
       }
     }
   }, [step, selectedReservation, menus, selectedMenuIds.length]);
+
+  // 予約に紐づくクーポンを会計ステップで自動適用
+  useEffect(() => {
+    if (step !== 3 || appliedCoupon || autoAppliedCoupon) return;
+    if (!selectedReservation) return;
+
+    const code = selectedReservation.coupon?.code || selectedReservation.couponCode || '';
+    if (code) {
+      setCouponCode(code);
+      setAutoAppliedCoupon(true);
+      validateCoupon(code);
+    }
+  }, [step, selectedReservation, appliedCoupon, autoAppliedCoupon, selectedMenuIds, productQuantities]);
 
   const fetchTodayReservations = async () => {
     try {
@@ -329,8 +360,9 @@ export default function NewSalePage() {
     }
   };
 
-  const validateCoupon = async () => {
-    if (!couponCode.trim()) {
+  const validateCoupon = async (codeOverride?: string) => {
+    const normalizedCode = (codeOverride ?? couponCode).trim();
+    if (!normalizedCode) {
       setCouponError('クーポンコードを入力してください');
       return;
     }
@@ -343,14 +375,24 @@ export default function NewSalePage() {
       const customerId = sourceType === 'reservation'
         ? selectedReservation?.user.id
         : selectedCustomer?.id;
+      const selectedMenus = selectedMenuIds
+        .map((id) => menus.find((m) => m.id === id))
+        .filter((m): m is Menu => Boolean(m));
+      const categories = selectedMenus.map((m) => m.category.name);
+      const menuIds = selectedMenus.map((m) => m.id);
+      const weekday = saleDate ? new Date(saleDate).getDay() : new Date().getDay();
 
       const res = await fetch('/api/admin/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: couponCode,
+          code: normalizedCode,
           subtotal,
           customerId,
+          menuIds,
+          categories,
+          weekday,
+          time: saleTime,
         }),
       });
 
@@ -382,6 +424,7 @@ export default function NewSalePage() {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError(null);
+    setAutoAppliedCoupon(true); // 手動で解除した場合は自動適用を抑止
   };
 
   const handleNextStep = () => {

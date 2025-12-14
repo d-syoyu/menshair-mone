@@ -1,5 +1,5 @@
 // src/lib/validations.ts
-// Hair Salon White - Zod Validation Schemas
+// MONË - Zod Validation Schemas
 
 import { z } from "zod";
 
@@ -9,6 +9,7 @@ export const createReservationSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません"),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません"),
   note: z.string().max(500, "備考は500文字以内で入力してください").optional(),
+  couponCode: z.string().max(50, "クーポンコードは50文字以内で入力してください").optional(),
 });
 
 // 予約キャンセルスキーマ

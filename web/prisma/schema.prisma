@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// Hair Salon White - Database Schema
+// MONË - Database Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -79,6 +79,10 @@ enum UserRole {
 model Reservation {
   id            String            @id @default(cuid())
   userId        String
+  // 予約時に使用したクーポン（会計自動適用用）
+  couponId      String?
+  couponCode    String?
+  couponDiscount Int               @default(0)
 
   // 集計フィールド（パフォーマンス用に非正規化）
   totalPrice    Int               // 合計金額
@@ -94,6 +98,7 @@ model Reservation {
   updatedAt     DateTime          @updatedAt
 
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon        Coupon?           @relation(fields: [couponId], references: [id])
   items         ReservationItem[]
   sale          Sale?             // この予約の会計
 
@@ -101,6 +106,7 @@ model Reservation {
   @@index([userId])
   @@index([status])
   @@index([date, status]) // Compound index for reservation queries
+  @@index([couponId])
 }
 
 // 予約アイテム（複数メニュー対応）
@@ -382,6 +388,15 @@ model Coupon {
   value                 Int           // 割引値
   description           String?       @db.Text
 
+  // 適用条件
+  applicableMenuIds     String[]      @default([]) // 特定メニューIDのみ有効（空なら制限なし）
+  applicableCategoryIds String[]      @default([]) // 特定カテゴリID/名のみ有効（空なら制限なし）
+  applicableWeekdays    Int[]         @default([]) // 0-6（日〜土）に限定（空なら制限なし）
+  startTime             String?       // 利用可能開始時刻 "10:00"
+  endTime               String?       // 利用可能終了時刻 "20:00"
+  onlyFirstTime         Boolean       @default(false) // 初回来店のみ
+  onlyReturning         Boolean       @default(false) // リピーターのみ
+
   // 有効期間
   validFrom             DateTime      // 有効開始日
   validUntil            DateTime      // 有効終了日
@@ -401,6 +416,7 @@ model Coupon {
   // リレーション
   usages                CouponUsage[]
   sales                 Sale[]
+  reservations          Reservation[]
 
   @@index([code])
   @@index([isActive, validFrom, validUntil])

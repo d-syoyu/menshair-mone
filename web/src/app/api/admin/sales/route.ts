@@ -239,6 +239,64 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // 追加条件チェック
+      const menuIds = data.items.filter((i) => i.itemType === "MENU" && i.menuId).map((i) => i.menuId!) ;
+      const categories = data.items.filter((i) => i.category).map((i) => i.category as string);
+      const saleDateObj = parseLocalDate(data.saleDate);
+      const weekday = saleDateObj.getDay();
+      const currentTime = data.saleTime;
+
+      if (coupon.applicableMenuIds.length > 0 && !menuIds.every((id) => coupon.applicableMenuIds.includes(id))) {
+        return NextResponse.json(
+          { error: "対象メニューにのみ利用できるクーポンです" },
+          { status: 400 }
+        );
+      }
+      if (coupon.applicableCategoryIds.length > 0 && !categories.every((c) => coupon.applicableCategoryIds.includes(c))) {
+        return NextResponse.json(
+          { error: "対象カテゴリにのみ利用できるクーポンです" },
+          { status: 400 }
+        );
+      }
+      if (coupon.applicableWeekdays.length > 0 && !coupon.applicableWeekdays.includes(weekday)) {
+        return NextResponse.json(
+          { error: "利用できない曜日のクーポンです" },
+          { status: 400 }
+        );
+      }
+      if (coupon.startTime && coupon.endTime) {
+        if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
+          return NextResponse.json(
+            { error: `利用可能時間は${coupon.startTime}〜${coupon.endTime}です` },
+            { status: 400 }
+          );
+        }
+      }
+      if (coupon.minimumAmount !== null && subtotal < coupon.minimumAmount) {
+        return NextResponse.json(
+          { error: `このクーポンは¥${coupon.minimumAmount.toLocaleString()}以上のご購入で利用可能です` },
+          { status: 400 }
+        );
+      }
+      if (coupon.onlyFirstTime && data.userId) {
+        const saleCount = await prisma.sale.count({ where: { userId: data.userId } });
+        if (saleCount > 0) {
+          return NextResponse.json(
+            { error: "初回来店限定のクーポンです" },
+            { status: 400 }
+          );
+        }
+      }
+      if (coupon.onlyReturning && data.userId) {
+        const saleCount = await prisma.sale.count({ where: { userId: data.userId } });
+        if (saleCount === 0) {
+          return NextResponse.json(
+            { error: "リピーター限定のクーポンです" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // 支払総額チェック

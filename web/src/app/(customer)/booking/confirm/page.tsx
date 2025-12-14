@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, Scissors, ArrowLeft, Check } from 'lucide-react';
-import { MENU_ITEMS, calculateMenuTotals, CATEGORY_COLORS, type MenuItem } from '@/constants/menu';
+import { MENU_ITEMS, calculateMenuTotals, CATEGORY_COLORS, getCategoryTextColor, type MenuItem } from '@/constants/menu';
 import { SALON_INFO } from '@/constants/salon';
 
 const fadeInUp = {
@@ -161,8 +161,11 @@ function BookingConfirmContent() {
                     <div key={menu.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white"
-                          style={{ backgroundColor: CATEGORY_COLORS[menu.category] || '#888' }}
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                          style={{
+                            backgroundColor: CATEGORY_COLORS[menu.category] || '#888',
+                            color: getCategoryTextColor(menu.category)
+                          }}
                         >
                           {index + 1}
                         </span>

@@ -1,5 +1,5 @@
 // constants/booking.ts
-// Hair Salon White - 予約システム設定
+// MONË - 予約システム設定
 
 export const BOOKING_CONFIG = {
   // 営業時間（最大値。実際の営業時間は曜日により異なる）

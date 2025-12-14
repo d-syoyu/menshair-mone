@@ -26,7 +26,7 @@ const fallbackPosts: BlogPost[] = [
     category: "ヘアケア",
     coverImage: "/white_goods.png",
     excerpt:
-      "サロンクオリティの髪を自宅でも。Hair Salon Whiteオリジナルのシャンプー＆トリートメントをご紹介。",
+      "サロンクオリティの髪を自宅でも。MONËオリジナルのシャンプー＆トリートメントをご紹介。",
   },
   {
     id: "3",

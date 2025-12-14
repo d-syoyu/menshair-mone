@@ -1,5 +1,5 @@
 // src/app/api/reservations/[id]/route.ts
-// Hair Salon White - Individual Reservation API
+// MONË - Individual Reservation API
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";

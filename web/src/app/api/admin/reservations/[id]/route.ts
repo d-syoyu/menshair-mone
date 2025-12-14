@@ -19,6 +19,7 @@ const updateReservationSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません").optional(),
   note: z.string().optional().nullable(),
   status: z.enum(["CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"]).optional(),
+  couponCode: z.string().max(50, "クーポンコードは50文字以内で入力してください").optional().nullable(),
 });
 
 // 時間を分に変換
@@ -33,6 +34,94 @@ const minutesToTime = (minutes: number): string => {
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
+
+// クーポン検証（予約時点。利用回数の更新は会計時に実施）
+async function validateCouponForReservation({
+  code,
+  subtotal,
+  customerId,
+  menuIds = [],
+  categories = [],
+  weekday,
+  time,
+}: {
+  code: string;
+  subtotal: number;
+  customerId?: string;
+  menuIds?: string[];
+  categories?: string[];
+  weekday?: number;
+  time?: string;
+}) {
+  const normalizedCode = code.toUpperCase();
+  const coupon = await prisma.coupon.findUnique({
+    where: { code: normalizedCode },
+  });
+
+  if (!coupon) {
+    throw new Error("クーポンが見つかりません");
+  }
+
+  const now = new Date();
+  const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
+  const currentTime = time || now.toTimeString().slice(0, 5);
+  if (!coupon.isActive) {
+    throw new Error("このクーポンは現在無効です");
+  }
+  if (now < coupon.validFrom) {
+    throw new Error("このクーポンはまだ利用開始前です");
+  }
+  if (now > coupon.validUntil) {
+    throw new Error("このクーポンの有効期限が切れています");
+  }
+  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+    throw new Error("このクーポンは利用上限に達しています");
+  }
+  if (coupon.minimumAmount !== null && subtotal < coupon.minimumAmount) {
+    throw new Error(`このクーポンは¥${coupon.minimumAmount.toLocaleString()}以上のご利用で適用できます`);
+  }
+  if (coupon.applicableMenuIds.length > 0 && !menuIds.every((id) => coupon.applicableMenuIds.includes(id))) {
+    throw new Error("対象メニューにのみ利用できます");
+  }
+  if (coupon.applicableCategoryIds.length > 0 && !categories.every((c) => coupon.applicableCategoryIds.includes(c))) {
+    throw new Error("対象カテゴリにのみ利用できます");
+  }
+  if (coupon.applicableWeekdays.length > 0 && !coupon.applicableWeekdays.includes(currentWeekday)) {
+    throw new Error("利用できない曜日です");
+  }
+  if (coupon.startTime && coupon.endTime) {
+    if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
+      throw new Error(`利用可能時間は${coupon.startTime}〜${coupon.endTime}です`);
+    }
+  }
+  if (customerId && coupon.usageLimitPerCustomer !== null) {
+    const usageCount = await prisma.couponUsage.count({
+      where: { couponId: coupon.id, customerId },
+    });
+    if (usageCount >= coupon.usageLimitPerCustomer) {
+      throw new Error("このお客様はクーポンの利用上限に達しています");
+    }
+  }
+  if (customerId && coupon.onlyFirstTime) {
+    const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+    if (saleCount > 0) {
+      throw new Error("初回来店限定のクーポンです");
+    }
+  }
+  if (customerId && coupon.onlyReturning) {
+    const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+    if (saleCount === 0) {
+      throw new Error("リピーター限定のクーポンです");
+    }
+  }
+
+  const discount =
+    coupon.type === "PERCENTAGE"
+      ? Math.floor((subtotal * coupon.value) / 100)
+      : Math.min(coupon.value, subtotal);
+
+  return { coupon, discount };
+}
 
 // GET /api/admin/reservations/[id] - 予約詳細取得
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -54,6 +143,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            type: true,
+            value: true,
           },
         },
         items: {
@@ -99,7 +197,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { menuIds, date, startTime, note, status } = validationResult.data;
+    const { menuIds, date, startTime, note, status, couponCode } = validationResult.data;
 
     // 予約が存在するか確認
     const existingReservation = await prisma.reservation.findUnique({
@@ -124,6 +222,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       menuSummary?: string;
       note?: string | null;
       status?: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+      couponId?: string | null;
+      couponCode?: string | null;
+      couponDiscount?: number;
     } = {};
 
     // メニューが変更された場合
@@ -221,6 +322,42 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // クーポン（任意）: 入力がある場合やメニュー変更時は割引額を再計算
+    const effectiveTotalPrice = updateData.totalPrice ?? existingReservation.totalPrice;
+    const nextCouponCode = couponCode !== undefined ? couponCode : existingReservation.couponCode ?? undefined;
+    const effectiveDate = updateData.date || existingReservation.date;
+    const effectiveStartTime = updateData.startTime || existingReservation.startTime;
+    const effectiveWeekday = effectiveDate.getDay();
+    const effectiveMenuIds = menuIds ?? existingReservation.items.map((i) => i.menuId);
+    const effectiveCategories =
+      newMenus?.map((m) => m.category) ?? existingReservation.items.map((i) => i.category);
+
+    if (nextCouponCode !== undefined) {
+      if (!nextCouponCode || nextCouponCode.trim() === "") {
+        updateData.couponId = null;
+        updateData.couponCode = null;
+        updateData.couponDiscount = 0;
+      } else {
+        try {
+          const { coupon, discount } = await validateCouponForReservation({
+            code: nextCouponCode,
+            subtotal: effectiveTotalPrice,
+            customerId: existingReservation.userId,
+            menuIds: effectiveMenuIds,
+            categories: effectiveCategories,
+            weekday: effectiveWeekday,
+            time: effectiveStartTime,
+          });
+          updateData.couponId = coupon.id;
+          updateData.couponCode = coupon.code;
+          updateData.couponDiscount = discount;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "クーポンの検証に失敗しました";
+          return NextResponse.json({ error: message }, { status: 400 });
+        }
+      }
+    }
+
     // トランザクションで予約を更新
     const updatedReservation = await prisma.$transaction(async (tx) => {
       // メニューが変更された場合、既存のアイテムを削除して新規作成
@@ -253,6 +390,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
               name: true,
               email: true,
               phone: true,
+            },
+          },
+          coupon: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              type: true,
+              value: true,
             },
           },
           items: {

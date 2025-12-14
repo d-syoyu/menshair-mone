@@ -1,5 +1,5 @@
 // prisma/seed.ts
-// Database seeding script for Hair Salon White
+// Database seeding script for MONË
 
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";

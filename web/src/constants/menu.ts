@@ -382,6 +382,22 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "メンズシェービング": "#ADB5BD",   // グレー系
 };
 
+// カテゴリ別文字色（背景色に対して最適な文字色）
+export const CATEGORY_TEXT_COLORS: Record<string, string> = {
+  "カット": "#FFFFFF",      // 白 - 暗い茶色背景
+  "カラー": "#FFFFFF",      // 白 - 紫背景
+  "パーマ": "#1F2937",      // ダークグレー - 明るいピンク背景
+  "縮毛矯正": "#1F2937",    // ダークグレー - 明るいオレンジ背景
+  "スパ＆トリートメント": "#FFFFFF", // 白 - 暗いティール背景
+  "シャンプー＆セット": "#1F2937",   // ダークグレー - 明るい水色背景
+  "メンズシェービング": "#1F2937",   // ダークグレー - グレー背景
+};
+
+// カテゴリの文字色を取得（カスタムカテゴリはデフォルトで白）
+export const getCategoryTextColor = (category: string): string => {
+  return CATEGORY_TEXT_COLORS[category] || "#FFFFFF";
+};
+
 // 複数メニューの合計を計算
 export const calculateMenuTotals = (menuIds: string[]): {
   totalPrice: number;

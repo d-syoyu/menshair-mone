@@ -37,6 +37,13 @@ interface Coupon {
   usageCount: number;
   minimumAmount: number | null;
   isActive: boolean;
+  applicableMenuIds?: string[];
+  applicableCategoryIds?: string[];
+  applicableWeekdays?: number[];
+  startTime?: string | null;
+  endTime?: string | null;
+  onlyFirstTime?: boolean;
+  onlyReturning?: boolean;
   _count?: {
     usages: number;
   };
@@ -67,6 +74,13 @@ export default function AdminCouponsPage() {
     usageLimitPerCustomer: null as number | null,
     minimumAmount: null as number | null,
     isActive: true,
+    applicableMenuIds: '' as string,
+    applicableCategoryIds: '' as string,
+    applicableWeekdays: '' as string,
+    startTime: '',
+    endTime: '',
+    onlyFirstTime: false,
+    onlyReturning: false,
   });
 
   useEffect(() => {
@@ -135,6 +149,13 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: coupon.usageLimitPerCustomer,
         minimumAmount: coupon.minimumAmount,
         isActive: coupon.isActive,
+        applicableMenuIds: (coupon.applicableMenuIds || []).join(','),
+        applicableCategoryIds: (coupon.applicableCategoryIds || []).join(','),
+        applicableWeekdays: (coupon.applicableWeekdays || []).join(','),
+        startTime: coupon.startTime || '',
+        endTime: coupon.endTime || '',
+        onlyFirstTime: coupon.onlyFirstTime ?? false,
+        onlyReturning: coupon.onlyReturning ?? false,
       });
     } else {
       setEditingCoupon(null);
@@ -153,6 +174,13 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: null,
         minimumAmount: null,
         isActive: true,
+        applicableMenuIds: '',
+        applicableCategoryIds: '',
+        applicableWeekdays: '',
+        startTime: '',
+        endTime: '',
+        onlyFirstTime: false,
+        onlyReturning: false,
       });
     }
     setIsCouponModalOpen(true);
@@ -178,6 +206,23 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: couponForm.usageLimitPerCustomer,
         minimumAmount: couponForm.minimumAmount,
         isActive: couponForm.isActive,
+        applicableMenuIds: couponForm.applicableMenuIds
+          ? couponForm.applicableMenuIds.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        applicableCategoryIds: couponForm.applicableCategoryIds
+          ? couponForm.applicableCategoryIds.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        applicableWeekdays: couponForm.applicableWeekdays
+          ? couponForm.applicableWeekdays
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((n) => parseInt(n, 10))
+          : [],
+        startTime: couponForm.startTime || undefined,
+        endTime: couponForm.endTime || undefined,
+        onlyFirstTime: couponForm.onlyFirstTime,
+        onlyReturning: couponForm.onlyReturning,
       };
 
       const res = await fetch(url, {
@@ -585,6 +630,83 @@ export default function AdminCouponsPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">空欄で条件なし</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">対象メニューID（カンマ区切り）</label>
+                      <input
+                        type="text"
+                        value={couponForm.applicableMenuIds}
+                        onChange={(e) => setCouponForm({ ...couponForm, applicableMenuIds: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="menu-cut,menu-color"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">対象カテゴリID/名（カンマ区切り）</label>
+                      <input
+                        type="text"
+                        value={couponForm.applicableCategoryIds}
+                        onChange={(e) => setCouponForm({ ...couponForm, applicableCategoryIds: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="cut,color,spa"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">対象曜日（0=日〜6=土、カンマ区切り）</label>
+                      <input
+                        type="text"
+                        value={couponForm.applicableWeekdays}
+                        onChange={(e) => setCouponForm({ ...couponForm, applicableWeekdays: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="0,6"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">利用開始時間</label>
+                        <input
+                          type="time"
+                          value={couponForm.startTime}
+                          onChange={(e) => setCouponForm({ ...couponForm, startTime: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">利用終了時間</label>
+                        <input
+                          type="time"
+                          value={couponForm.endTime}
+                          onChange={(e) => setCouponForm({ ...couponForm, endTime: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={couponForm.onlyFirstTime}
+                        onChange={(e) => setCouponForm({ ...couponForm, onlyFirstTime: e.target.checked })}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      初回来店限定
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={couponForm.onlyReturning}
+                        onChange={(e) => setCouponForm({ ...couponForm, onlyReturning: e.target.checked })}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      リピーター限定
+                    </label>
                   </div>
 
                   <div>

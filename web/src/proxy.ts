@@ -1,5 +1,5 @@
 // src/proxy.ts
-// Hair Salon White - Route Protection Proxy
+// MONË - Route Protection Proxy
 // Simple token-based check for Edge Runtime compatibility
 
 import { NextResponse } from "next/server";

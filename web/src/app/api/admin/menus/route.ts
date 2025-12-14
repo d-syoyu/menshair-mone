@@ -1,5 +1,5 @@
 // src/app/api/admin/menus/route.ts
-// Hair Salon White - Menus Admin API
+// MONË - Menus Admin API
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";

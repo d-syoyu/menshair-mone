@@ -1,5 +1,5 @@
 // src/app/api/reservations/route.ts
-// Hair Salon White - Reservations API
+// MONË - Reservations API
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
@@ -9,6 +9,94 @@ import { MENU_ITEMS, calculateMenuTotals, hasDuplicateCategories, getMenuById } 
 import { CLOSED_DAY, BUSINESS_HOURS } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
 import { parseLocalDate } from "@/lib/date-utils";
+
+// クーポン検証（予約時点。利用回数の更新は会計時に実施）
+async function validateCouponForReservation({
+  code,
+  subtotal,
+  customerId,
+  menuIds = [],
+  categories = [],
+  weekday,
+  time,
+}: {
+  code: string;
+  subtotal: number;
+  customerId: string;
+  menuIds?: string[];
+  categories?: string[];
+  weekday?: number;
+  time?: string;
+}) {
+  const normalizedCode = code.toUpperCase();
+  const coupon = await prisma.coupon.findUnique({
+    where: { code: normalizedCode },
+  });
+
+  if (!coupon) {
+    throw new Error("クーポンが見つかりません");
+  }
+
+  const now = new Date();
+  const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
+  const currentTime = time || now.toTimeString().slice(0, 5);
+  if (!coupon.isActive) {
+    throw new Error("このクーポンは現在無効です");
+  }
+  if (now < coupon.validFrom) {
+    throw new Error("このクーポンはまだ利用開始前です");
+  }
+  if (now > coupon.validUntil) {
+    throw new Error("このクーポンの有効期限が切れています");
+  }
+  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+    throw new Error("このクーポンは利用上限に達しています");
+  }
+  if (coupon.minimumAmount !== null && subtotal < coupon.minimumAmount) {
+    throw new Error(`このクーポンは¥${coupon.minimumAmount.toLocaleString()}以上のご利用で適用できます`);
+  }
+  if (coupon.applicableMenuIds.length > 0 && !menuIds.every((id) => coupon.applicableMenuIds.includes(id))) {
+    throw new Error("対象メニューにのみ利用できます");
+  }
+  if (coupon.applicableCategoryIds.length > 0 && !categories.every((c) => coupon.applicableCategoryIds.includes(c))) {
+    throw new Error("対象カテゴリにのみ利用できます");
+  }
+  if (coupon.applicableWeekdays.length > 0 && !coupon.applicableWeekdays.includes(currentWeekday)) {
+    throw new Error("利用できない曜日です");
+  }
+  if (coupon.startTime && coupon.endTime) {
+    if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
+      throw new Error(`利用可能時間は${coupon.startTime}〜${coupon.endTime}です`);
+    }
+  }
+  if (coupon.usageLimitPerCustomer !== null) {
+    const usageCount = await prisma.couponUsage.count({
+      where: { couponId: coupon.id, customerId },
+    });
+    if (usageCount >= coupon.usageLimitPerCustomer) {
+      throw new Error("このお客様はクーポンの利用上限に達しています");
+    }
+  }
+  if (coupon.onlyFirstTime) {
+    const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+    if (saleCount > 0) {
+      throw new Error("初回来店限定のクーポンです");
+    }
+  }
+  if (coupon.onlyReturning) {
+    const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+    if (saleCount === 0) {
+      throw new Error("リピーター限定のクーポンです");
+    }
+  }
+
+  const discount =
+    coupon.type === "PERCENTAGE"
+      ? Math.floor((subtotal * coupon.value) / 100)
+      : Math.min(coupon.value, subtotal);
+
+  return { coupon, discount };
+}
 
 // GET /api/reservations - 予約一覧取得
 export async function GET(request: NextRequest) {
@@ -43,6 +131,15 @@ export async function GET(request: NextRequest) {
               name: true,
               email: true,
               phone: true,
+            },
+          },
+          coupon: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              type: true,
+              value: true,
             },
           },
           items: {
@@ -93,7 +190,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { menuIds, date: dateStr, startTime, note } = validationResult.data;
+    const { menuIds, date: dateStr, startTime, note, couponCode } = validationResult.data;
 
     // 全メニューが存在するか確認
     const menus = menuIds.map(id => getMenuById(id)).filter((m): m is NonNullable<typeof m> => m !== undefined);
@@ -154,6 +251,31 @@ export async function POST(request: NextRequest) {
     const endHours = Math.floor(endMinutes / 60);
     const endMins = endMinutes % 60;
     const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
+    const weekday = date.getDay();
+
+    // クーポン検証（任意）
+    let appliedCouponId: string | null = null;
+    let appliedCouponCode: string | null = null;
+    let appliedCouponDiscount = 0;
+    if (couponCode) {
+      try {
+        const { coupon, discount } = await validateCouponForReservation({
+          code: couponCode,
+          subtotal: totalPrice,
+          customerId: session.user.id,
+          menuIds,
+          categories: menus.map((m) => m.category),
+          weekday,
+          time: startTime,
+        });
+        appliedCouponId = coupon.id;
+        appliedCouponCode = coupon.code;
+        appliedCouponDiscount = discount;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "クーポンの検証に失敗しました";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+    }
 
     // 営業時間内チェック
     if (endTime > BUSINESS_HOURS.close) {
@@ -203,6 +325,9 @@ export async function POST(request: NextRequest) {
           totalPrice,
           totalDuration,
           menuSummary,
+          couponId: appliedCouponId,
+          couponCode: appliedCouponCode,
+          couponDiscount: appliedCouponDiscount,
           date: parseLocalDate(dateStr),
           startTime,
           endTime,
@@ -233,6 +358,15 @@ export async function POST(request: NextRequest) {
               id: true,
               name: true,
               email: true,
+            },
+          },
+          coupon: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              type: true,
+              value: true,
             },
           },
           items: {

@@ -1,12 +1,12 @@
 // constants/salon.ts
-// Hair Salon White - 店舗情報
+// MONË - 店舗情報
 
 import HolidayJp from '@holiday-jp/holiday_jp';
 
 export const SALON_INFO = {
-  name: "Hair Salon White",
-  address: "大阪府茨木市中津町",
-  phone: "070-5266-7994",
+  name: "MONË",
+  address: "〒570-0036 大阪府守口市八雲中町1-24-1",
+  phone: "06-6908-4859",
   hours: {
     open: "10:00",
     // 平日（火〜金）: 最終受付 20:00、閉店 21:00

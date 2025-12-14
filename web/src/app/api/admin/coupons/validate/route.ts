@@ -11,6 +11,10 @@ const validateCouponSchema = z.object({
   code: z.string().min(1, "クーポンコードは必須です"),
   subtotal: z.number().int().nonnegative(), // 税抜小計
   customerId: z.string().optional().nullable(), // 顧客ID（オプション）
+  menuIds: z.array(z.string()).optional(),
+  categories: z.array(z.string()).optional(),
+  weekday: z.number().int().min(0).max(6).optional(),
+  time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
 });
 
 // POST /api/admin/coupons/validate - クーポン検証
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { code, subtotal, customerId } = validationResult.data;
+    const { code, subtotal, customerId, menuIds = [], categories = [], weekday, time } = validationResult.data;
     const now = new Date();
 
     // クーポンを検索
@@ -93,12 +97,74 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 顧客属性（初回/リピーター）
+    if (customerId && coupon.onlyFirstTime) {
+      const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+      if (saleCount > 0) {
+        return NextResponse.json({
+          valid: false,
+          error: "初回来店限定のクーポンです",
+        });
+      }
+    }
+    if (customerId && coupon.onlyReturning) {
+      const saleCount = await prisma.sale.count({ where: { userId: customerId } });
+      if (saleCount === 0) {
+        return NextResponse.json({
+          valid: false,
+          error: "リピーター限定のクーポンです",
+        });
+      }
+    }
+
     // 最低購入金額チェック
     if (coupon.minimumAmount !== null && subtotal < coupon.minimumAmount) {
       return NextResponse.json({
         valid: false,
         error: `このクーポンは¥${coupon.minimumAmount.toLocaleString()}以上のご購入で利用可能です`,
       });
+    }
+
+    // メニュー・カテゴリ制限
+    if (coupon.applicableMenuIds.length > 0) {
+      const allAllowed = menuIds.every((id) => coupon.applicableMenuIds.includes(id));
+      if (!allAllowed) {
+        return NextResponse.json({
+          valid: false,
+          error: "対象メニューにのみ利用できます",
+        });
+      }
+    }
+    if (coupon.applicableCategoryIds.length > 0) {
+      const allAllowed = categories.every((cat) => coupon.applicableCategoryIds.includes(cat));
+      if (!allAllowed) {
+        return NextResponse.json({
+          valid: false,
+          error: "対象カテゴリにのみ利用できます",
+        });
+      }
+    }
+
+    // 曜日制限
+    if (coupon.applicableWeekdays.length > 0) {
+      const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
+      if (!coupon.applicableWeekdays.includes(currentWeekday)) {
+        return NextResponse.json({
+          valid: false,
+          error: "利用できない曜日です",
+        });
+      }
+    }
+
+    // 時間帯制限
+    if (coupon.startTime && coupon.endTime) {
+      const currentTime = time || now.toTimeString().slice(0, 5);
+      if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
+        return NextResponse.json({
+          valid: false,
+          error: `利用可能時間は${coupon.startTime}〜${coupon.endTime}です`,
+        });
+      }
     }
 
     // 割引額を計算

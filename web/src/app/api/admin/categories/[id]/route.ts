@@ -1,5 +1,5 @@
 // src/app/api/admin/categories/[id]/route.ts
-// Hair Salon White - Single Category Admin API
+// MONË - Single Category Admin API
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";

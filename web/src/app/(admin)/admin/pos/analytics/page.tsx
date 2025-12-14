@@ -70,6 +70,8 @@ interface AnalyticsData {
     averagePerCustomer: number;
     totalMenuAmount: number;
     totalProductAmount: number;
+    businessDays: number;
+    averagePerBusinessDay: number;
   };
   paymentMethod: {
     data: Record<string, { count: number; amount: number; percentage: number }>;
@@ -226,9 +228,9 @@ export default function AnalyticsPage() {
         >
           <Link
             href="/admin/pos"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             POSダッシュボードに戻る
           </Link>
           <h1 className="text-2xl font-medium">売上分析</h1>
@@ -252,19 +254,19 @@ export default function AnalyticsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setPresetPeriod(7)}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px]"
               >
                 7日間
               </button>
               <button
                 onClick={() => setPresetPeriod(30)}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px]"
               >
                 30日間
               </button>
               <button
                 onClick={() => setPresetPeriod(90)}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px]"
               >
                 90日間
               </button>
@@ -331,26 +333,27 @@ export default function AnalyticsPage() {
                 >
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                     <p className="text-sm text-gray-500 mb-2">総売上</p>
-                    <p className="text-2xl sm:text-3xl font-light text-[var(--color-gold)]">
+                    <p className="text-3xl md:text-4xl font-light text-[var(--color-gold)]">
                       {formatPrice(data.summary.totalSales)}
                     </p>
                   </div>
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                     <p className="text-sm text-gray-500 mb-2">会計件数</p>
-                    <p className="text-2xl sm:text-3xl font-light">{data.summary.saleCount}件</p>
+                    <p className="text-3xl md:text-4xl font-light">{data.summary.saleCount}件</p>
                   </div>
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                     <p className="text-sm text-gray-500 mb-2">平均客単価</p>
-                    <p className="text-2xl sm:text-3xl font-light">
+                    <p className="text-3xl md:text-4xl font-light">
                       {formatPrice(data.summary.averagePerCustomer)}
                     </p>
                   </div>
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                    <p className="text-sm text-gray-500 mb-2">日平均売上</p>
-                    <p className="text-2xl sm:text-3xl font-light">
-                      {formatPrice(
-                        Math.round(data.summary.totalSales / (data.dailyTrend.length || 1))
-                      )}
+                    <p className="text-sm text-gray-500 mb-2">
+                      営業日平均売上
+                      <span className="text-xs ml-1">({data.summary.businessDays}日)</span>
+                    </p>
+                    <p className="text-3xl md:text-4xl font-light">
+                      {formatPrice(data.summary.averagePerBusinessDay)}
                     </p>
                   </div>
                 </motion.div>

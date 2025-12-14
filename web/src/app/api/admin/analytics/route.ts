@@ -188,6 +188,42 @@ export async function GET(request: NextRequest) {
       dailyTrend[dateStr].count += 1;
     }
 
+    // 営業日数を計算（定休日・不定休を除外）
+    // 不定休（終日休業）を取得
+    const holidays = await prisma.holiday.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+        startTime: null, // 終日休業のみ（時間帯休業は営業日としてカウント）
+      },
+      select: { date: true },
+    });
+    const holidayDates = new Set(
+      holidays.map((h) => h.date.toISOString().split("T")[0])
+    );
+
+    // 定休日: 月曜日 (1)
+    const CLOSED_DAY = 1;
+
+    // 期間内の営業日数をカウント
+    let businessDays = 0;
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      const dateStr = currentDate.toISOString().split("T")[0];
+
+      // 定休日（月曜）でなく、不定休（終日）でなければ営業日
+      if (dayOfWeek !== CLOSED_DAY && !holidayDates.has(dateStr)) {
+        businessDays++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // 営業日平均売上
+    const averagePerBusinessDay = businessDays > 0 ? Math.round(totalSales / businessDays) : 0;
+
     // トップ10リスト作成
     const topMenus = Object.values(menuData)
       .sort((a, b) => b.amount - a.amount)
@@ -212,6 +248,8 @@ export async function GET(request: NextRequest) {
         averagePerCustomer,
         totalMenuAmount,
         totalProductAmount,
+        businessDays,
+        averagePerBusinessDay,
       },
       paymentMethod: {
         data: paymentMethodData,

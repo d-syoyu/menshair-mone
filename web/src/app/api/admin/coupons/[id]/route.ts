@@ -19,6 +19,13 @@ const updateCouponSchema = z.object({
   usageLimitPerCustomer: z.number().int().positive().nullable().optional(),
   minimumAmount: z.number().int().nonnegative().nullable().optional(),
   isActive: z.boolean().optional(),
+  applicableMenuIds: z.array(z.string()).optional(),
+  applicableCategoryIds: z.array(z.string()).optional(),
+  applicableWeekdays: z.array(z.number().int().min(0).max(6())).optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
+  onlyFirstTime: z.boolean().optional(),
+  onlyReturning: z.boolean().optional(),
 });
 
 // GET /api/admin/coupons/[id] - クーポン詳細取得
@@ -108,6 +115,14 @@ export async function PUT(
       );
     }
 
+    // 初回/リピーターの矛盾チェック
+    if ((data.onlyFirstTime ?? existing.onlyFirstTime) && (data.onlyReturning ?? existing.onlyReturning)) {
+      return NextResponse.json(
+        { error: "初回限定とリピーター限定を同時に有効にはできません" },
+        { status: 400 }
+      );
+    }
+
     // コード変更時の重複チェック
     if (data.code && data.code.toUpperCase() !== existing.code) {
       const codeExists = await prisma.coupon.findUnique({
@@ -129,6 +144,17 @@ export async function PUT(
         { error: "終了日は開始日より後である必要があります" },
         { status: 400 }
       );
+    }
+
+    if ((data.startTime ?? existing.startTime) && (data.endTime ?? existing.endTime)) {
+      const start = data.startTime ?? existing.startTime!;
+      const end = data.endTime ?? existing.endTime!;
+      if (start >= end) {
+        return NextResponse.json(
+          { error: "終了時間は開始時間より後である必要があります" },
+          { status: 400 }
+        );
+      }
     }
 
     const updateData: any = { ...data };

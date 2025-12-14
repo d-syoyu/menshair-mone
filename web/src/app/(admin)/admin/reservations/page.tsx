@@ -604,13 +604,13 @@ function AdminReservationsContent() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Calendar Sidebar */}
           <motion.div
             initial="hidden"
             animate="visible"
             variants={fadeInUp}
-            className="lg:col-span-1"
+            className="md:col-span-1"
           >
             <div className="bg-white rounded-xl shadow-sm">
               {/* Mobile Calendar Toggle */}
@@ -748,7 +748,7 @@ function AdminReservationsContent() {
             initial="hidden"
             animate="visible"
             variants={fadeInUp}
-            className="lg:col-span-2"
+            className="md:col-span-2"
           >
             {/* Filters */}
             <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm mb-4 flex flex-col sm:flex-row gap-3 md:gap-4">
@@ -1074,7 +1074,7 @@ function AdminReservationsContent() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6"
           >
             <button
               onClick={closeConfirmDialog}
@@ -1153,7 +1153,7 @@ function AdminReservationsContent() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+              className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             >
               {/* Header */}
               <div className="p-6 border-b border-gray-100 flex-shrink-0">
@@ -1500,7 +1500,7 @@ function AdminReservationsContent() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+              className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             >
               {/* Header */}
               <div className="p-6 border-b border-gray-100 flex-shrink-0">

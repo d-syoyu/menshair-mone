@@ -226,9 +226,9 @@ export default function SalesListPage() {
         >
           <Link
             href="/admin/pos"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             POSダッシュボードに戻る
           </Link>
           <div className="flex items-center justify-between">
@@ -535,7 +535,7 @@ export default function SalesListPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
             >
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">

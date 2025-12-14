@@ -478,9 +478,9 @@ export default function EditSalePage() {
             <p className="text-gray-500 mb-4">会計が見つかりません</p>
             <Link
               href="/admin/pos/sales"
-              className="inline-flex items-center gap-2 text-[var(--color-accent)] hover:underline"
+              className="inline-flex items-center gap-2 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 rounded-lg px-3 py-2 transition-colors min-h-[44px]"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               会計履歴に戻る
             </Link>
           </div>
@@ -501,9 +501,9 @@ export default function EditSalePage() {
         >
           <Link
             href={`/admin/pos/sales/${saleId}`}
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             会計詳細に戻る
           </Link>
           <h1 className="text-2xl font-medium mb-2">会計編集</h1>
@@ -801,45 +801,62 @@ export default function EditSalePage() {
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4">支払方法</h2>
             <div className="space-y-3">
-              {payments.map((payment, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <select
-                    value={payment.paymentMethod}
-                    onChange={(e) => {
-                      const newPayments = [...payments];
-                      newPayments[index].paymentMethod = e.target.value;
-                      setPayments(newPayments);
-                    }}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                  >
-                    {paymentMethods.map((method) => (
-                      <option key={method.code} value={method.code}>
-                        {method.displayName}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="0"
-                    value={payment.amount}
-                    onChange={(e) => {
-                      const newPayments = [...payments];
-                      newPayments[index].amount = parseInt(e.target.value) || 0;
-                      setPayments(newPayments);
-                    }}
-                    className="w-32 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
-                    placeholder="0"
-                  />
-                  {payments.length > 1 && (
-                    <button
-                      onClick={() => handleRemovePayment(index)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              {payments.map((payment, index) => {
+                const otherPaymentsTotal = payments
+                  .filter((_, i) => i !== index)
+                  .reduce((sum, p) => sum + p.amount, 0);
+                const remainingAmount = Math.max(0, calculateTotal() - otherPaymentsTotal);
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={payment.paymentMethod}
+                      onChange={(e) => {
+                        const newPayments = [...payments];
+                        newPayments[index].paymentMethod = e.target.value;
+                        setPayments(newPayments);
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {paymentMethods.map((method) => (
+                        <option key={method.code} value={method.code}>
+                          {method.displayName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      value={payment.amount}
+                      onChange={(e) => {
+                        const newPayments = [...payments];
+                        newPayments[index].amount = parseInt(e.target.value) || 0;
+                        setPayments(newPayments);
+                      }}
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
+                      placeholder="0"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPayments = [...payments];
+                        newPayments[index].amount = remainingAmount;
+                        setPayments(newPayments);
+                      }}
+                      className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      全額
                     </button>
-                  )}
-                </div>
-              ))}
+                    {payments.length > 1 && (
+                      <button
+                        onClick={() => handleRemovePayment(index)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <button
               onClick={handleAddPayment}
@@ -904,7 +921,7 @@ export default function EditSalePage() {
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? '保存中...' : '変更を保存'}
               <Save className="w-4 h-4" />

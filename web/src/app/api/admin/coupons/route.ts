@@ -19,6 +19,13 @@ const createCouponSchema = z.object({
   usageLimitPerCustomer: z.number().int().positive().optional().nullable(),
   minimumAmount: z.number().int().nonnegative().optional().nullable(),
   isActive: z.boolean().default(true),
+  applicableMenuIds: z.array(z.string()).optional(),
+  applicableCategoryIds: z.array(z.string()).optional(),
+  applicableWeekdays: z.array(z.number().int().min(0).max(6())).optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
+  onlyFirstTime: z.boolean().optional(),
+  onlyReturning: z.boolean().optional(),
 });
 
 // GET /api/admin/coupons - クーポン一覧取得
@@ -111,6 +118,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 初回/リピーターの矛盾チェック
+    if (data.onlyFirstTime && data.onlyReturning) {
+      return NextResponse.json(
+        { error: "初回限定とリピーター限定を同時に有効にはできません" },
+        { status: 400 }
+      );
+    }
+
+    // 時間帯チェック
+    if (data.startTime && data.endTime && data.startTime >= data.endTime) {
+      return NextResponse.json(
+        { error: "終了時間は開始時間より後である必要があります" },
+        { status: 400 }
+      );
+    }
+
     const coupon = await prisma.coupon.create({
       data: {
         code: data.code.toUpperCase(),
@@ -124,6 +147,13 @@ export async function POST(request: NextRequest) {
         usageLimitPerCustomer: data.usageLimitPerCustomer,
         minimumAmount: data.minimumAmount,
         isActive: data.isActive,
+        applicableMenuIds: data.applicableMenuIds ?? [],
+        applicableCategoryIds: data.applicableCategoryIds ?? [],
+        applicableWeekdays: data.applicableWeekdays ?? [],
+        startTime: data.startTime ?? null,
+        endTime: data.endTime ?? null,
+        onlyFirstTime: data.onlyFirstTime ?? false,
+        onlyReturning: data.onlyReturning ?? false,
       },
     });
 

@@ -18,7 +18,7 @@ import {
   Menu,
   CreditCard,
 } from 'lucide-react';
-import { CATEGORY_COLORS } from '@/constants/menu';
+import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
               <Calendar className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-accent)]" />
               <span className="text-base md:text-lg text-gray-500">本日の予約</span>
             </div>
-            <p className="text-4xl md:text-5xl font-light">{stats?.todayCount ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats?.todayCount ?? '-'}</p>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
@@ -283,7 +283,7 @@ export default function AdminDashboard() {
                 )}
               </span>
             </div>
-            <p className="text-4xl md:text-5xl font-light">{stats?.weekCount ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats?.weekCount ?? '-'}</p>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
               <Scissors className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-gold)]" />
               <span className="text-base md:text-lg text-gray-500">Webからの予約数</span>
             </div>
-            <p className="text-4xl md:text-5xl font-light">{stats?.totalReservations ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats?.totalReservations ?? '-'}</p>
           </div>
         </motion.div>
 
@@ -548,7 +548,10 @@ export default function AdminDashboard() {
                                   }}
                                 >
                                   {segmentWidth > 20 && (
-                                    <span className="text-white text-xs font-medium truncate px-1">
+                                    <span
+                                      className="text-xs font-medium truncate px-1"
+                                      style={{ color: getCategoryTextColor(item.category) }}
+                                    >
                                       {item.menuName.split('（')[0]}
                                     </span>
                                   )}
@@ -669,7 +672,7 @@ export default function AdminDashboard() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6"
           >
             <button
               onClick={closeConfirmDialog}

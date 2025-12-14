@@ -27,7 +27,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
         <li><strong>ゆるふわウェーブ:</strong> 柔らかいウェーブで女性らしい印象に。</li>
         <li><strong>レイヤーカット:</strong> 動きのあるスタイルで軽やかに。</li>
       </ul>
-      <p>Hair Salon Whiteでは、お客様の髪質やライフスタイルに合わせた最適なスタイルをご提案いたします。ぜひご相談ください。</p>
+      <p>MONËでは、お客様の髪質やライフスタイルに合わせた最適なスタイルをご提案いたします。ぜひご相談ください。</p>
     `,
   },
   "staff-recommend-products": {
@@ -40,13 +40,13 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     excerpt: "サロンクオリティの髪を自宅でも。",
     blocks: [],
     fallbackContent: `
-      <p>サロンでのケアはもちろん大切ですが、毎日のホームケアが美髪を保つ鍵です。今回は、Hair Salon Whiteオリジナルのヘアケア商品をご紹介します。</p>
+      <p>サロンでのケアはもちろん大切ですが、毎日のホームケアが美髪を保つ鍵です。今回は、MONËオリジナルのヘアケア商品をご紹介します。</p>
       <p>当サロンでは、オーガニック成分を配合したオリジナルのシャンプー、トリートメント、ヘアオイルを取り揃えております。</p>
-      <h3>Hair Salon Whiteオリジナル商品</h3>
+      <h3>MONËオリジナル商品</h3>
       <ul>
-        <li><strong>Hair Salon Whiteシャンプー:</strong> アミノ酸系洗浄成分で優しく洗い上げます。</li>
-        <li><strong>Hair Salon Whiteトリートメント:</strong> 天然由来成分で髪の内部から補修。</li>
-        <li><strong>Hair Salon Whiteヘアオイル:</strong> ラベンダーの香りで、自然なツヤとまとまりを。</li>
+        <li><strong>MONËシャンプー:</strong> アミノ酸系洗浄成分で優しく洗い上げます。</li>
+        <li><strong>MONËトリートメント:</strong> 天然由来成分で髪の内部から補修。</li>
+        <li><strong>MONËヘアオイル:</strong> ラベンダーの香りで、自然なツヤとまとまりを。</li>
       </ul>
       <p>サロンでお試しいただけますので、お気軽にスタッフまでお声がけください。</p>
     `,
@@ -61,9 +61,9 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     excerpt: "リラックス効果だけじゃない！",
     blocks: [],
     fallbackContent: `
-      <p>Hair Salon Whiteのヘッドスパは、スチームを使った本格的な施術で、髪と頭皮の両方をケアします。</p>
+      <p>MONËのヘッドスパは、スチームを使った本格的な施術で、髪と頭皮の両方をケアします。</p>
       <p>温かいスチームで毛穴を開き、頭皮の汚れを優しく取り除きながら、トリートメント成分を髪の深部まで届けます。施術中はリラックスした時間をお過ごしいただけます。</p>
-      <h3>Hair Salon Whiteヘッドスパの特徴</h3>
+      <h3>MONËヘッドスパの特徴</h3>
       <ul>
         <li><strong>スチームケア:</strong> 温かいスチームで頭皮を柔らかくし、汚れを浮かせます。</li>
         <li><strong>頭皮マッサージ:</strong> 熟練のスタッフによる丁寧なマッサージで血行促進。</li>
@@ -82,7 +82,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     excerpt: "待合スペースをリニューアルしました。",
     blocks: [],
     fallbackContent: `
-      <p>いつもHair Salon White HAIR STUDIOをご利用いただき、誠にありがとうございます。</p>
+      <p>いつもMONËをご利用いただき、誠にありがとうございます。</p>
       <p>この度、待合スペースをリニューアルいたしました。温かみのある家具とグリーンを配した、よりリラックスできる空間に生まれ変わりました。</p>
       <h3>リニューアルポイント</h3>
       <ul>

@@ -1,5 +1,5 @@
 // src/app/api/availability/route.ts
-// Hair Salon White - Availability API
+// MONË - Availability API
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
