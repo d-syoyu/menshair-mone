@@ -404,7 +404,7 @@ export default function ReportsPage() {
                             <Pie
                               data={Object.entries(dailyReport.paymentMethodBreakdown).map(([m, d]) => ({ name: PAYMENT_METHOD_LABELS[m] || m, value: d.amount }))}
                               cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                             >
                               {Object.keys(dailyReport.paymentMethodBreakdown).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>

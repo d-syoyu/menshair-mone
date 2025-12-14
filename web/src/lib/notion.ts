@@ -72,7 +72,7 @@ export interface BlogPost {
   id: string;
   slug: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   excerpt: string;
   coverImage: string | null;
   publishedAt: string;
