@@ -149,6 +149,7 @@ export default function NewSalePage() {
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
   const [expandedMenuCategories, setExpandedMenuCategories] = useState<string[]>([]);
+  const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
 
   // Step 3: 支払・確定
   const [discounts, setDiscounts] = useState<Discount[]>([]);
@@ -881,7 +882,7 @@ export default function NewSalePage() {
                   <Package className="w-5 h-5 text-[var(--color-gold)]" />
                   店販商品
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {productCategories.map((category) => {
                     const categoryProducts = products
                       .filter((p) => p.categoryId === category.id)
@@ -889,40 +890,85 @@ export default function NewSalePage() {
 
                     if (categoryProducts.length === 0) return null;
 
+                    const isExpanded = expandedProductCategories.includes(category.id);
+                    const selectedCount = categoryProducts.filter(
+                      (p) => (productQuantities[p.id] || 0) > 0
+                    ).length;
+
                     return (
-                      <div key={category.id}>
-                        <p className="text-sm font-medium text-gray-600 mb-2">{category.name}</p>
-                        <div className="space-y-2">
-                          {categoryProducts.map((product) => (
-                            <div
-                              key={product.id}
-                              className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
+                      <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        {/* カテゴリーヘッダー（クリックで展開/折りたたみ） */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedProductCategories((prev) =>
+                              prev.includes(category.id)
+                                ? prev.filter((id) => id !== category.id)
+                                : [...prev, category.id]
+                            );
+                          }}
+                          className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
+                        >
+                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="flex-1 text-left font-medium text-gray-700">
+                            {category.name}
+                          </span>
+                          {selectedCount > 0 && (
+                            <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)] text-white rounded-full">
+                              {selectedCount}
+                            </span>
+                          )}
+                          <ChevronDown
+                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                              isExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+
+                        {/* 商品リスト（展開時のみ表示） */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="border-t border-gray-200"
                             >
-                              <div className="flex-1">
-                                <p className="font-medium">{product.name}</p>
-                                {product.stock !== null && (
-                                  <p className="text-xs text-gray-500">在庫: {product.stock}</p>
-                                )}
+                              <div className="p-2 space-y-1 bg-gray-50">
+                                {categoryProducts.map((product) => (
+                                  <div
+                                    key={product.id}
+                                    className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded-lg"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm truncate">{product.name}</p>
+                                      {product.stock !== null && (
+                                        <p className="text-xs text-gray-500">在庫: {product.stock}</p>
+                                      )}
+                                    </div>
+                                    <p className="text-[var(--color-gold)] font-medium text-sm flex-shrink-0">
+                                      {formatPrice(product.price)}
+                                    </p>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={productQuantities[product.id] || 0}
+                                      onChange={(e) => {
+                                        const value = parseInt(e.target.value) || 0;
+                                        setProductQuantities((prev) => ({
+                                          ...prev,
+                                          [product.id]: value,
+                                        }));
+                                      }}
+                                      className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-center text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                                    />
+                                  </div>
+                                ))}
                               </div>
-                              <p className="text-[var(--color-gold)] font-medium">
-                                {formatPrice(product.price)}
-                              </p>
-                              <input
-                                type="number"
-                                min="0"
-                                value={productQuantities[product.id] || 0}
-                                onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 0;
-                                  setProductQuantities((prev) => ({
-                                    ...prev,
-                                    [product.id]: value,
-                                  }));
-                                }}
-                                className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-center focus:outline-none focus:border-[var(--color-accent)]"
-                              />
-                            </div>
-                          ))}
-                        </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
