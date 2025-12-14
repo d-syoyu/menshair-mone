@@ -336,18 +336,20 @@ export default function EditSalePage() {
     return customDiscountAmount;
   };
 
+  // 内税方式: 税込価格から消費税を逆算
   const calculateTax = () => {
-    const subtotal = calculateSubtotal();
+    const subtotal = calculateSubtotal(); // 税込小計
     const discount = getDiscountAmount();
-    const taxableAmount = Math.max(0, subtotal - discount);
-    return Math.floor(taxableAmount * (taxRate / 100));
+    const taxInclusiveAmount = Math.max(0, subtotal - discount);
+    // 内税計算: 税込金額 × 税率 ÷ (100 + 税率)
+    return Math.floor(taxInclusiveAmount * taxRate / (100 + taxRate));
   };
 
   const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
+    const subtotal = calculateSubtotal(); // 税込小計
     const discount = getDiscountAmount();
-    const tax = calculateTax();
-    return subtotal - discount + tax;
+    // 内税方式なので、税込価格から割引を引くだけ
+    return Math.max(0, subtotal - discount);
   };
 
   const handleAddPayment = () => {
@@ -865,7 +867,7 @@ export default function EditSalePage() {
             <h2 className="text-lg font-medium mb-4">合計金額</h2>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">小計</span>
+                <span className="text-gray-600">小計（税込）</span>
                 <span>{formatPrice(calculateSubtotal())}</span>
               </div>
               {getDiscountAmount() > 0 && (
@@ -874,13 +876,13 @@ export default function EditSalePage() {
                   <span>-{formatPrice(getDiscountAmount())}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">消費税（{taxRate}%）</span>
-                <span>{formatPrice(calculateTax())}</span>
-              </div>
               <div className="flex items-center justify-between text-xl font-medium pt-2 border-t border-gray-200">
-                <span>合計金額</span>
+                <span>合計金額（税込）</span>
                 <span className="text-[var(--color-gold)]">{formatPrice(calculateTotal())}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>（うち消費税 {taxRate}%）</span>
+                <span>{formatPrice(calculateTax())}</span>
               </div>
               <div className="flex items-center justify-between text-sm pt-2">
                 <span className="text-gray-600">支払合計</span>
