@@ -20,6 +20,7 @@ import {
   DollarSign,
   CreditCard,
   Plus,
+  Minus,
   Trash2,
 } from 'lucide-react';
 
@@ -950,19 +951,39 @@ export default function NewSalePage() {
                                     <p className="text-[var(--color-gold)] font-medium text-sm flex-shrink-0">
                                       {formatPrice(product.price)}
                                     </p>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={productQuantities[product.id] || 0}
-                                      onChange={(e) => {
-                                        const value = parseInt(e.target.value) || 0;
-                                        setProductQuantities((prev) => ({
-                                          ...prev,
-                                          [product.id]: value,
-                                        }));
-                                      }}
-                                      className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-center text-sm focus:outline-none focus:border-[var(--color-accent)]"
-                                    />
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const current = productQuantities[product.id] || 0;
+                                          if (current > 0) {
+                                            setProductQuantities((prev) => ({
+                                              ...prev,
+                                              [product.id]: current - 1,
+                                            }));
+                                          }
+                                        }}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                      >
+                                        <Minus className="w-4 h-4 text-gray-600" />
+                                      </button>
+                                      <span className="w-8 text-center text-sm font-medium">
+                                        {productQuantities[product.id] || 0}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const current = productQuantities[product.id] || 0;
+                                          setProductQuantities((prev) => ({
+                                            ...prev,
+                                            [product.id]: current + 1,
+                                          }));
+                                        }}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                      >
+                                        <Plus className="w-4 h-4 text-gray-600" />
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
