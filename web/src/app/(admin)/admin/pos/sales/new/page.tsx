@@ -196,6 +196,28 @@ export default function NewSalePage() {
     }
   }, [customerSearch, sourceType]);
 
+  // 予約からのメニュー自動設定（menusがロードされた後に実行）
+  useEffect(() => {
+    if (step === 2 && selectedReservation && menus.length > 0 && selectedMenuIds.length === 0) {
+      // 予約アイテムのメニュー名でマッチング
+      const matchedMenuIds: string[] = [];
+      selectedReservation.items.forEach((item) => {
+        const matchedMenu = menus.find((m) => m.name === item.menuName);
+        if (matchedMenu) {
+          matchedMenuIds.push(matchedMenu.id);
+        }
+      });
+      if (matchedMenuIds.length > 0) {
+        setSelectedMenuIds(matchedMenuIds);
+        // 選択されたメニューのカテゴリを自動展開
+        const categoryIds = Array.from(
+          new Set(matchedMenuIds.map((id) => menus.find((m) => m.id === id)?.categoryId).filter(Boolean))
+        ) as string[];
+        setExpandedMenuCategories(categoryIds);
+      }
+    }
+  }, [step, selectedReservation, menus, selectedMenuIds.length]);
+
   const fetchTodayReservations = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
