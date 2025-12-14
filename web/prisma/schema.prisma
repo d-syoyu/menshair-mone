@@ -100,6 +100,7 @@ model Reservation {
   @@index([date])
   @@index([userId])
   @@index([status])
+  @@index([date, status]) // Compound index for reservation queries
 }
 
 // 予約アイテム（複数メニュー対応）
