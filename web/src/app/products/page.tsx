@@ -11,6 +11,7 @@ const mockProducts: Product[] = [
     category: 'シャンプー',
     description: 'サロン専売のプレミアムシャンプー。頭皮に優しく、髪にハリとコシを与えます。',
     image: null,
+    order: 1,
   },
   {
     id: '2',
@@ -19,6 +20,7 @@ const mockProducts: Product[] = [
     category: 'トリートメント',
     description: 'ダメージヘアを集中補修。サロン帰りのツヤ髪を自宅でも再現できます。',
     image: null,
+    order: 2,
   },
   {
     id: '3',
@@ -27,6 +29,7 @@ const mockProducts: Product[] = [
     category: 'スタイリング',
     description: '自然なツヤと程よいホールド力。ビジネスシーンにも最適なマットな仕上がり。',
     image: null,
+    order: 3,
   },
   {
     id: '4',
@@ -35,6 +38,7 @@ const mockProducts: Product[] = [
     category: '美容液',
     description: '頭皮環境を整え、健やかな髪の成長をサポート。毎日のケアにおすすめです。',
     image: null,
+    order: 4,
   },
 ];
 

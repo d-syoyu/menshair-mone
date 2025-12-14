@@ -19,6 +19,7 @@ const createCategorySchema = z.object({
 export async function GET() {
   try {
     const session = await auth();
+    console.log('[Categories API] Session:', { exists: !!session, user: session?.user });
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "権限がありません" }, { status: 403 });

@@ -124,8 +124,8 @@ export default function Home() {
             style={{ backgroundImage: 'url(/image3.jpeg)' }}
           />
 
-          {/* Overlay for text readability - darker for white background areas */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/50 to-black/60" />
+          {/* Overlay for text readability - darker for white background areas, stronger on mobile */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/60 to-black/70 md:from-black/55 md:via-black/50 md:to-black/60" />
 
           {/* Accent glow effects - contained within viewport */}
           <div className="absolute top-1/4 left-[10%] w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full bg-accent-light opacity-[0.06] blur-[80px] md:blur-[100px]" />
@@ -156,7 +156,7 @@ export default function Home() {
               一人一人の男性に
             </span>
             <span className="text-display block">
-              <span className="text-gold">「光」</span>と<span style={{ color: '#1F3D30' }}>「印象」</span>を...
+              <span className="hero-glow-quote">「</span><span className="text-gold hero-glow-main">光</span><span className="hero-glow-quote">」</span>と<span className="hero-glow-quote">「</span><span className="text-accent hero-glow-main">印象</span><span className="hero-glow-quote">」</span>を...
             </span>
           </motion.h1>
 

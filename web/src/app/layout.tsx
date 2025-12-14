@@ -3,7 +3,7 @@ import { Cormorant_Garamond, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import FloatingPhoneButton from "../components/FloatingPhoneButton";
+import FloatingButtons from "../components/FloatingPhoneButton";
 import { SessionProvider } from "../components/providers/session-provider";
 
 const cormorant = Cormorant_Garamond({
@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`scroll-smooth ${cormorant.variable} ${zenKaku.variable}`}>
+    <html lang="ja" className={`scroll-smooth ${cormorant.variable} ${zenKaku.variable}`} data-scroll-behavior="smooth">
       <body className="flex flex-col min-h-screen">
         <SessionProvider>
           <Header />
@@ -40,7 +40,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
-          <FloatingPhoneButton />
+          <FloatingButtons />
         </SessionProvider>
       </body>
     </html>

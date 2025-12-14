@@ -57,35 +57,52 @@ export default function NewsClient({ news }: NewsClientProps) {
               <motion.article
                 key={item.id}
                 variants={fadeInUp}
-                className="glass-card p-6 md:p-8 group cursor-pointer hover:border-accent/30 transition-all duration-300"
               >
-                <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8">
-                  {/* Date */}
-                  <div className="flex items-center gap-2 md:w-32 flex-shrink-0">
-                    <Calendar className="w-4 h-4 text-text-muted" />
-                    <time className="text-sm text-text-muted tracking-wider">{item.publishedAt}</time>
-                  </div>
+                <Link
+                  href={`/news/${item.slug}`}
+                  className="block glass-card overflow-hidden group cursor-pointer hover:border-accent/30 transition-all duration-300"
+                >
+                  <div className="flex flex-col md:flex-row">
+                    {/* Image */}
+                    {item.coverImage && (
+                      <div className="relative w-full md:w-80 h-56 md:h-auto md:aspect-[4/3] flex-shrink-0 overflow-hidden">
+                        <img
+                          src={item.coverImage}
+                          alt={item.title}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
 
-                  {/* Content */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className={`px-3 py-1 text-[10px] tracking-[0.1em] uppercase ${categoryColors[item.category] || 'bg-glass text-text-secondary'}`}>
-                        {item.category}
-                      </span>
+                    {/* Content */}
+                    <div className="flex-1 p-6 md:p-8">
+                      {/* Date & Category */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-text-muted" />
+                          <time className="text-sm text-text-muted tracking-wider">{item.publishedAt}</time>
+                        </div>
+                        {item.category && (
+                          <span className={`px-3 py-1 text-[10px] tracking-[0.1em] uppercase ${categoryColors[item.category] || 'bg-glass text-text-secondary'}`}>
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h2 className="text-xl md:text-2xl font-serif mb-2 group-hover:text-accent-light transition-colors">
+                        {item.title}
+                      </h2>
+
+                      {/* Subtitle */}
+                      {item.subtitle && (
+                        <p className="text-sm md:text-base text-text-secondary">
+                          {item.subtitle}
+                        </p>
+                      )}
                     </div>
-                    <h2 className="text-xl font-serif mb-3 group-hover:text-accent-light transition-colors">
-                      {item.title}
-                    </h2>
-                    <p className="text-body line-clamp-2">
-                      {item.excerpt}
-                    </p>
                   </div>
-
-                  {/* Arrow */}
-                  <div className="hidden md:flex items-center">
-                    <ArrowRight className="w-5 h-5 text-text-muted group-hover:text-accent-light group-hover:translate-x-1 transition-all" />
-                  </div>
-                </div>
+                </Link>
               </motion.article>
             ))}
           </div>

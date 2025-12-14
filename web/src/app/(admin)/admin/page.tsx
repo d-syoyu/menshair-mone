@@ -16,6 +16,7 @@ import {
   X,
   Users,
   Menu,
+  CreditCard,
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/constants/menu';
 
@@ -243,7 +244,10 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3 sm:gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{session?.user?.email}</span>
             <button
-              onClick={() => signOut({ callbackUrl: '/' })}
+              onClick={async () => {
+                await signOut({ redirect: false });
+                window.location.href = '/admin/login';
+              }}
               className="flex items-center gap-2 px-4 py-3 text-base text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <LogOut className="w-5 h-5" />
@@ -296,7 +300,7 @@ export default function AdminDashboard() {
           initial="hidden"
           animate="visible"
           variants={fadeInUp}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8"
         >
           <Link
             href="/admin/reservations"
@@ -347,6 +351,19 @@ export default function AdminDashboard() {
             <div>
               <p className="font-medium text-sm">不定休設定</p>
               <p className="text-xs text-gray-500 hidden sm:block">臨時休業日</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/pos"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="p-2 bg-[var(--color-gold)]/10 rounded-lg">
+              <CreditCard className="w-5 h-5 text-[var(--color-gold)]" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">会計・売上管理</p>
+              <p className="text-xs text-gray-500 hidden sm:block">POS・レポート</p>
             </div>
           </Link>
         </motion.div>

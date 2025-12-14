@@ -1,5 +1,5 @@
 // src/proxy.ts
-// Hair Salon White - Route Protection Middleware
+// Hair Salon White - Route Protection Proxy
 // Simple token-based check for Edge Runtime compatibility
 
 import { NextResponse } from "next/server";
@@ -26,6 +26,9 @@ export function proxy(request: NextRequest) {
   // 管理者専用ページ（ログインページを除く）
   const isAdminPage = pathname.startsWith("/admin") && !isAdminLoginPage;
 
+  // 管理者専用API
+  const isAdminAPI = pathname.startsWith("/api/admin");
+
   // 顧客認証ページにアクセス時、既にログインしていればリダイレクト
   if (isAuthPage && isLoggedIn) {
     return NextResponse.redirect(new URL("/mypage", request.url));
@@ -48,6 +51,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
+  // 管理者APIにアクセス時、未ログインなら403エラー
+  if (isAdminAPI && !isLoggedIn) {
+    return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+  }
+
   return NextResponse.next();
 }
 
@@ -59,5 +67,6 @@ export const config = {
     "/mypage/:path*",
     "/admin",
     "/admin/:path*",
+    "/api/admin/:path*",
   ],
 };

@@ -156,6 +156,7 @@ function AdminReservationsContent() {
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
+  const [expandedNewCategories, setExpandedNewCategories] = useState<string[]>([]);
   const [reservationDate, setReservationDate] = useState('');
   const [reservationTime, setReservationTime] = useState('10:00');
   const [reservationNote, setReservationNote] = useState('');
@@ -169,6 +170,7 @@ function AdminReservationsContent() {
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerPhone, setEditCustomerPhone] = useState('');
   const [editMenuIds, setEditMenuIds] = useState<string[]>([]);
+  const [expandedEditCategories, setExpandedEditCategories] = useState<string[]>([]);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editNote, setEditNote] = useState('');
@@ -1297,45 +1299,86 @@ function AdminReservationsContent() {
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
                       {MENU_CATEGORY_LIST.map(category => {
                         const categoryMenus = MENUS.filter(m => m.category === category.id);
                         if (categoryMenus.length === 0) return null;
 
+                        const isExpanded = expandedNewCategories.includes(category.id);
+                        const selectedCount = categoryMenus.filter(m => selectedMenuIds.includes(m.id)).length;
+
                         return (
-                          <div key={category.id}>
-                            <h4 className="text-sm font-medium text-gray-500 mb-2">{category.id}</h4>
-                            <div className="space-y-2">
-                              {categoryMenus.map(menu => {
-                                const isSelected = selectedMenuIds.includes(menu.id);
-                                return (
-                                  <button
-                                    key={menu.id}
-                                    onClick={() => toggleMenu(menu.id)}
-                                    className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                                      isSelected
-                                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
-                                      />
-                                      <div>
-                                        <p className="font-medium text-sm">{menu.name}</p>
-                                        <p className="text-xs text-gray-500">{menu.duration}分</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium">¥{menu.price.toLocaleString()}</span>
-                                      {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
-                                    </div>
-                                  </button>
+                          <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                            {/* カテゴリーヘッダー */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedNewCategories(prev =>
+                                  prev.includes(category.id)
+                                    ? prev.filter(id => id !== category.id)
+                                    : [...prev, category.id]
                                 );
-                              })}
-                            </div>
+                              }}
+                              className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <span
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: CATEGORY_COLORS[category.id] }}
+                              />
+                              <span className="flex-1 text-left font-medium text-gray-700 text-sm">
+                                {category.id}
+                              </span>
+                              {selectedCount > 0 && (
+                                <span className="px-2 py-0.5 text-xs bg-[var(--color-accent)] text-white rounded-full">
+                                  {selectedCount}
+                                </span>
+                              )}
+                              <ChevronDown
+                                className={`w-4 h-4 text-gray-400 transition-transform ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </button>
+
+                            {/* メニューリスト */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="border-t border-gray-200"
+                                >
+                                  <div className="p-2 space-y-1 bg-gray-50">
+                                    {categoryMenus.map(menu => {
+                                      const isSelected = selectedMenuIds.includes(menu.id);
+                                      return (
+                                        <button
+                                          key={menu.id}
+                                          type="button"
+                                          onClick={() => toggleMenu(menu.id)}
+                                          className={`w-full p-2 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                                            isSelected
+                                              ? 'border-[var(--color-accent)] bg-white'
+                                              : 'border-gray-100 bg-white hover:border-gray-200'
+                                          }`}
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm truncate">{menu.name}</p>
+                                            <p className="text-xs text-gray-500">{menu.duration}分</p>
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className="text-sm font-medium text-[var(--color-gold)]">¥{menu.price.toLocaleString()}</span>
+                                            {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         );
                       })}
@@ -1544,43 +1587,86 @@ function AdminReservationsContent() {
                     {/* メニュー選択 */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">メニュー</label>
-                      <div className="space-y-4 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
                         {MENU_CATEGORY_LIST.map(category => {
                           const categoryMenus = MENUS.filter(m => m.category === category.id);
                           if (categoryMenus.length === 0) return null;
 
+                          const isExpanded = expandedEditCategories.includes(category.id);
+                          const selectedCount = categoryMenus.filter(m => editMenuIds.includes(m.id)).length;
+
                           return (
-                            <div key={category.id}>
-                              <h4 className="text-xs font-medium text-gray-500 mb-2">{category.id}</h4>
-                              <div className="space-y-1">
-                                {categoryMenus.map(menu => {
-                                  const isSelected = editMenuIds.includes(menu.id);
-                                  return (
-                                    <button
-                                      key={menu.id}
-                                      onClick={() => toggleEditMenu(menu.id)}
-                                      className={`w-full p-2 rounded-lg border text-left flex items-center justify-between transition-colors text-sm ${
-                                        isSelected
-                                          ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
-                                          : 'border-gray-200 hover:border-gray-300'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <div
-                                          className="w-2 h-2 rounded-full"
-                                          style={{ backgroundColor: CATEGORY_COLORS[menu.category] }}
-                                        />
-                                        <span>{menu.name}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-gray-500">{menu.duration}分</span>
-                                        <span className="font-medium">¥{menu.price.toLocaleString()}</span>
-                                        {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
-                                      </div>
-                                    </button>
+                            <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                              {/* カテゴリーヘッダー */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedEditCategories(prev =>
+                                    prev.includes(category.id)
+                                      ? prev.filter(id => id !== category.id)
+                                      : [...prev, category.id]
                                   );
-                                })}
-                              </div>
+                                }}
+                                className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
+                              >
+                                <span
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: CATEGORY_COLORS[category.id] }}
+                                />
+                                <span className="flex-1 text-left font-medium text-gray-700 text-sm">
+                                  {category.id}
+                                </span>
+                                {selectedCount > 0 && (
+                                  <span className="px-2 py-0.5 text-xs bg-[var(--color-accent)] text-white rounded-full">
+                                    {selectedCount}
+                                  </span>
+                                )}
+                                <ChevronDown
+                                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+
+                              {/* メニューリスト */}
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="border-t border-gray-200"
+                                  >
+                                    <div className="p-2 space-y-1 bg-gray-50">
+                                      {categoryMenus.map(menu => {
+                                        const isSelected = editMenuIds.includes(menu.id);
+                                        return (
+                                          <button
+                                            key={menu.id}
+                                            type="button"
+                                            onClick={() => toggleEditMenu(menu.id)}
+                                            className={`w-full p-2 rounded-lg border text-left flex items-center justify-between transition-colors text-sm ${
+                                              isSelected
+                                                ? 'border-[var(--color-accent)] bg-white'
+                                                : 'border-gray-100 bg-white hover:border-gray-200'
+                                            }`}
+                                          >
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-medium text-sm truncate">{menu.name}</p>
+                                              <p className="text-xs text-gray-500">{menu.duration}分</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                              <span className="text-sm font-medium text-[var(--color-gold)]">¥{menu.price.toLocaleString()}</span>
+                                              {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)]" />}
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           );
                         })}

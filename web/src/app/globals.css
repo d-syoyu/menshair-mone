@@ -22,7 +22,7 @@
 
   /* Accent - Green (MONË brand color - deep forest green like entrance chairs) */
   --color-accent: #1F3D30;
-  --color-accent-light: #3A7058;
+  --color-accent-light: #6BBF8E;
   --color-accent-dark: #162B22;
   --color-accent-muted: rgba(31, 61, 48, 0.15);
 
@@ -684,6 +684,50 @@ h1, h2, h3, h4, h5, h6 {
 
 .admin-page a:hover {
   color: #2563eb;
+}
+
+/* ============================================
+   Hero Section Glow Effects - Responsive
+   ============================================ */
+
+@layer utilities {
+  /* Glow for quotation marks - extra strong with multiple layers */
+  .hero-glow-quote {
+    text-shadow:
+      0 0 20px rgba(255, 255, 255, 1),
+      0 0 20px rgba(255, 255, 255, 1),
+      0 0 20px rgba(255, 255, 255, 0.8);
+  }
+
+  @media (min-width: 768px) {
+    .hero-glow-quote {
+      text-shadow:
+        0 0 30px rgba(255, 255, 255, 1),
+        0 0 30px rgba(255, 255, 255, 1),
+        0 0 30px rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  /* Glow for main text (光/印象) - extra strong with multiple layers */
+  .hero-glow-main {
+    text-shadow:
+      0 0 25px rgba(255, 255, 255, 1),
+      0 0 25px rgba(255, 255, 255, 1),
+      0 0 25px rgba(255, 255, 255, 0.9),
+      0 0 50px rgba(255, 255, 255, 0.9),
+      0 0 80px rgba(255, 255, 255, 0.7);
+  }
+
+  @media (min-width: 768px) {
+    .hero-glow-main {
+      text-shadow:
+        0 0 35px rgba(255, 255, 255, 1),
+        0 0 35px rgba(255, 255, 255, 1),
+        0 0 35px rgba(255, 255, 255, 0.9),
+        0 0 70px rgba(255, 255, 255, 1),
+        0 0 100px rgba(255, 255, 255, 0.8);
+    }
+  }
 }
 
 /* ============================================

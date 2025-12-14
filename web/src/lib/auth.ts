@@ -35,6 +35,7 @@ declare module "@auth/core/jwt" {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
+  trustHost: true,
   session: {
     strategy: "jwt",
     // セッション有効期限: 90日間（ブラウザを閉じても維持）
@@ -155,4 +156,31 @@ export async function requireAdmin() {
     throw new Error("Forbidden");
   }
   return user;
+}
+
+// API Route用: 管理者権限チェック
+// 管理者でない場合は403レスポンスを返す、管理者の場合はnullを返す
+export async function checkAdminAuth(): Promise<{
+  error: Response | null;
+  user: { id: string; name?: string | null; email?: string | null; role: string } | null;
+}> {
+  const session = await auth();
+
+  if (!session?.user) {
+    const { NextResponse } = await import("next/server");
+    return {
+      error: NextResponse.json({ error: "認証が必要です" }, { status: 401 }),
+      user: null,
+    };
+  }
+
+  if (session.user.role !== "ADMIN") {
+    const { NextResponse } = await import("next/server");
+    return {
+      error: NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 }),
+      user: null,
+    };
+  }
+
+  return { error: null, user: session.user };
 }

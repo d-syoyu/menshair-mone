@@ -8,6 +8,7 @@ import { createReservationSchema } from "@/lib/validations";
 import { MENU_ITEMS, calculateMenuTotals, hasDuplicateCategories, getMenuById } from "@/constants/menu";
 import { CLOSED_DAY, BUSINESS_HOURS } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // GET /api/reservations - 予約一覧取得
 export async function GET(request: NextRequest) {
@@ -111,8 +112,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 日付パース
-    const date = new Date(dateStr);
+    // 日付パース（タイムゾーン対応）
+    const date = parseLocalDate(dateStr);
     if (isNaN(date.getTime())) {
       return NextResponse.json(
         { error: "日付の形式が正しくありません" },
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
           totalPrice,
           totalDuration,
           menuSummary,
-          date: new Date(dateStr),
+          date: parseLocalDate(dateStr),
           startTime,
           endTime,
           note: note || null,

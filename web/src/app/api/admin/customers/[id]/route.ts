@@ -154,3 +154,82 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+// DELETE /api/admin/customers/[id] - 顧客削除
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    // 顧客が存在するか確認
+    const existingCustomer = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { reservations: true },
+        },
+      },
+    });
+
+    if (!existingCustomer) {
+      return NextResponse.json(
+        { error: "顧客が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    // 管理者は削除不可
+    if (existingCustomer.role === "ADMIN") {
+      return NextResponse.json(
+        { error: "管理者アカウントは削除できません" },
+        { status: 403 }
+      );
+    }
+
+    // 予約がある場合は関連データも含めて削除（カスケード）
+    // 予約アイテムは予約に紐づいているので、予約削除時に一緒に削除される
+    if (existingCustomer._count.reservations > 0) {
+      // 関連する予約アイテムを先に削除
+      await prisma.reservationItem.deleteMany({
+        where: {
+          reservation: {
+            userId: id,
+          },
+        },
+      });
+
+      // 予約を削除
+      await prisma.reservation.deleteMany({
+        where: { userId: id },
+      });
+    }
+
+    // アカウント（OAuth連携）があれば削除
+    await prisma.account.deleteMany({
+      where: { userId: id },
+    });
+
+    // セッションがあれば削除
+    await prisma.session.deleteMany({
+      where: { userId: id },
+    });
+
+    // 顧客を削除
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "顧客を削除しました" });
+  } catch (error) {
+    console.error("Delete customer error:", error);
+    return NextResponse.json(
+      { error: "顧客の削除に失敗しました" },
+      { status: 500 }
+    );
+  }
+}

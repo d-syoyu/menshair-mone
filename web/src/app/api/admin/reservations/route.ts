@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { MENUS, getMenuById, calculateMenuTotals } from "@/constants/menu";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // 予約作成スキーマ
 const createReservationSchema = z.object({
@@ -82,9 +83,8 @@ export async function POST(request: NextRequest) {
     const endMinutes = startMinutes + totalDuration;
     const endTime = minutesToTime(endMinutes);
 
-    // 予約日時を作成
-    const reservationDate = new Date(date);
-    reservationDate.setHours(0, 0, 0, 0);
+    // 予約日時を作成（タイムゾーン対応）
+    const reservationDate = parseLocalDate(date);
 
     // 同日同時間の予約重複チェック
     const existingReservation = await prisma.reservation.findFirst({

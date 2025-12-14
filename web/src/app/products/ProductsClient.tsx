@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import type { Product } from '@/lib/notion';
@@ -41,16 +40,14 @@ export default function ProductsClient({ products }: ProductsClientProps) {
               {/* Product Image */}
               <div className="relative aspect-square overflow-hidden bg-dark-lighter">
                 {product.image ? (
-                  <Image
+                  <img
                     src={product.image}
                     alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-text-muted">
-                    <span className="text-4xl">📦</span>
+                    <span className="text-4xl"></span>
                   </div>
                 )}
                 {/* Category Badge */}

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { getMenuById, calculateMenuTotals } from "@/constants/menu";
+import { parseLocalDate } from "@/lib/date-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -149,14 +150,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       newMenus = menus;
     }
 
-    // 日時の更新
-    const newDate = date ? new Date(date) : existingReservation.date;
+    // 日時の更新（タイムゾーン対応）
+    const newDate = date ? parseLocalDate(date) : existingReservation.date;
     const newStartTime = startTime || existingReservation.startTime;
 
     if (date) {
-      const reservationDate = new Date(date);
-      reservationDate.setHours(0, 0, 0, 0);
-      updateData.date = reservationDate;
+      updateData.date = parseLocalDate(date);
     }
 
     if (startTime) {

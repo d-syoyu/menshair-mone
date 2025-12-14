@@ -9,8 +9,8 @@ const navItems = [
   { name: 'Menu', href: '/menu', nameJa: 'メニュー' },
   { name: 'About', href: '/about', nameJa: '店舗情報' },
   { name: 'News', href: '/news', nameJa: 'お知らせ' },
+  { name: 'Gallery', href: '/gallery', nameJa: 'ギャラリー' },
   { name: 'Products', href: '/products', nameJa: '商品紹介' },
-  { name: 'My Page', href: '/mypage', nameJa: 'マイページ' },
 ];
 
 const Header = () => {

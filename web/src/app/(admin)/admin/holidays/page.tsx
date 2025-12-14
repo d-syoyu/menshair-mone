@@ -595,7 +595,7 @@ export default function AdminHolidaysPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors"
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-500 !text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors"
                     >
                       不定休を追加
                     </button>

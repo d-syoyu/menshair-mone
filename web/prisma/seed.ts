@@ -100,6 +100,40 @@ const sampleMenus = [
   { id: "menu-sv", name: "ケアSV", price: 2200, duration: 25, category: "メンズシェービング" },
 ];
 
+// POSシステム用データ
+
+// 店販商品カテゴリ
+const productCategoryData = [
+  { name: "シャンプー", displayOrder: 0 },
+  { name: "トリートメント", displayOrder: 1 },
+  { name: "スタイリング", displayOrder: 2 },
+  { name: "その他", displayOrder: 3 },
+];
+
+// 店販商品
+const productData = [
+  // シャンプー
+  { name: "オーガニックシャンプー", category: "シャンプー", price: 3300, code: "P001", description: "頭皮に優しいオーガニックシャンプー", displayOrder: 0 },
+  { name: "スカルプケアシャンプー", category: "シャンプー", price: 4400, code: "P002", description: "頭皮環境を整えるシャンプー", displayOrder: 1 },
+  // トリートメント
+  { name: "リペアトリートメント", category: "トリートメント", price: 3850, code: "P003", description: "ダメージ補修トリートメント", displayOrder: 0 },
+  { name: "モイストトリートメント", category: "トリートメント", price: 4400, code: "P004", description: "保湿力の高いトリートメント", displayOrder: 1 },
+  // スタイリング
+  { name: "ワックス", category: "スタイリング", price: 2200, code: "P005", description: "自然な仕上がりのワックス", displayOrder: 0 },
+  { name: "ヘアオイル", category: "スタイリング", price: 2750, code: "P006", description: "ツヤを与えるヘアオイル", displayOrder: 1 },
+  { name: "スタイリングスプレー", category: "スタイリング", price: 1980, code: "P007", description: "長時間キープするスプレー", displayOrder: 2 },
+  // その他
+  { name: "頭皮ケアローション", category: "その他", price: 3300, code: "P008", description: "頭皮環境を整えるローション", displayOrder: 0 },
+];
+
+// 割引マスタ
+const discountData = [
+  { name: "学割", type: "PERCENTAGE" as const, value: 10, description: "学生証提示で10%OFF", displayOrder: 0 },
+  { name: "シニア割", type: "PERCENTAGE" as const, value: 5, description: "65歳以上のお客様は5%OFF", displayOrder: 1 },
+  { name: "初回割引", type: "FIXED" as const, value: 500, description: "初回来店のお客様は500円OFF", displayOrder: 2 },
+  { name: "会員割引", type: "FIXED" as const, value: 1000, description: "会員様は1000円OFF", displayOrder: 3 },
+];
+
 // 時間を追加するヘルパー関数
 function addMinutes(time: string, minutes: number): string {
   const [h, m] = time.split(":").map(Number);
@@ -299,6 +333,433 @@ async function main() {
   await createReservation(dec11, 4, [1, 4], "10:00", "CONFIRMED");        // 伊藤 - カラー + トリートメント
   await createReservation(dec11, 2, [0], "13:00", "CONFIRMED");           // 山本 - カット
   await createReservation(dec11, 0, [6], "16:00", "NO_SHOW");             // 田中 - もみほぐしスパ（無断キャンセル）
+
+  // POSシステム用データ作成
+  console.log("💰 Creating POS system data...");
+
+  // 店販商品カテゴリ作成
+  console.log("📦 Creating product categories...");
+  const productCategories: { id: string; name: string }[] = [];
+  for (const cat of productCategoryData) {
+    const existing = await prisma.productCategory.findUnique({
+      where: { name: cat.name },
+    });
+    if (existing) {
+      productCategories.push(existing);
+      console.log(`  ✓ Product category already exists: ${cat.name}`);
+    } else {
+      const created = await prisma.productCategory.create({
+        data: cat,
+      });
+      productCategories.push(created);
+      console.log(`  ✓ Product category created: ${cat.name}`);
+    }
+  }
+
+  // 店販商品作成
+  console.log("🛍️ Creating products...");
+  for (const product of productData) {
+    const category = productCategories.find((c) => c.name === product.category);
+    if (category) {
+      const existing = await prisma.product.findFirst({
+        where: { code: product.code },
+      });
+      if (existing) {
+        console.log(`  ✓ Product already exists: ${product.name}`);
+      } else {
+        await prisma.product.create({
+          data: {
+            name: product.name,
+            categoryId: category.id,
+            price: product.price,
+            code: product.code,
+            description: product.description,
+            displayOrder: product.displayOrder,
+          },
+        });
+        console.log(`  ✓ Product created: ${product.name}`);
+      }
+    }
+  }
+
+  // 割引マスタ作成
+  console.log("🎫 Creating discounts...");
+  for (const discount of discountData) {
+    const existing = await prisma.discount.findFirst({
+      where: { name: discount.name },
+    });
+    if (existing) {
+      console.log(`  ✓ Discount already exists: ${discount.name}`);
+    } else {
+      await prisma.discount.create({
+        data: discount,
+      });
+      console.log(`  ✓ Discount created: ${discount.name}`);
+    }
+  }
+
+  // 税率設定作成
+  console.log("⚙️ Creating settings...");
+  const existingTaxRate = await prisma.settings.findUnique({
+    where: { key: "tax_rate" },
+  });
+  if (existingTaxRate) {
+    console.log(`  ✓ Tax rate setting already exists: ${existingTaxRate.value}%`);
+  } else {
+    await prisma.settings.create({
+      data: {
+        key: "tax_rate",
+        value: "10",
+      },
+    });
+    console.log(`  ✓ Tax rate setting created: 10%`);
+  }
+
+  // 支払方法設定を作成
+  console.log("💳 Creating payment method settings...");
+  const paymentMethods: {
+    code: string;
+    displayName: string;
+    displayOrder: number;
+    isActive?: boolean;
+  }[] = [
+    { code: "CASH", displayName: "現金", displayOrder: 0 },
+    { code: "CREDIT_CARD", displayName: "クレジットカード", displayOrder: 1 },
+    { code: "PAYPAY", displayName: "PayPay", displayOrder: 2 },
+    { code: "LINE_PAY", displayName: "LINE Pay", displayOrder: 3 },
+    { code: "RAKUTEN_PAY", displayName: "楽天ペイ", displayOrder: 4 },
+    { code: "AU_PAY", displayName: "au PAY", displayOrder: 5 },
+    { code: "D_PAYMENT", displayName: "d払い", displayOrder: 6 },
+    { code: "MERPAY", displayName: "メルペイ", displayOrder: 7 },
+    { code: "BANK_TRANSFER", displayName: "銀行振込", displayOrder: 8, isActive: false },
+    { code: "OTHER", displayName: "その他", displayOrder: 9, isActive: false },
+  ];
+
+  for (const pm of paymentMethods) {
+    const existing = await prisma.paymentMethodSetting.findUnique({
+      where: { code: pm.code },
+    });
+    if (!existing) {
+      await prisma.paymentMethodSetting.create({
+        data: {
+          code: pm.code,
+          displayName: pm.displayName,
+          displayOrder: pm.displayOrder,
+          isActive: pm.isActive ?? true,
+        },
+      });
+      console.log(`  ✓ Payment method created: ${pm.displayName}`);
+    } else {
+      console.log(`  ✓ Payment method already exists: ${pm.displayName}`);
+    }
+  }
+
+  // サンプル会計データ作成
+  console.log("💳 Creating sample sales...");
+
+  // 既存の会計データを削除（再シード時のため）
+  await prisma.payment.deleteMany({});
+  await prisma.saleItem.deleteMany({});
+  await prisma.sale.deleteMany({});
+  console.log("🗑️ Cleared existing sales");
+
+  // 管理者IDを取得
+  const admin = await prisma.user.findFirst({
+    where: { role: "ADMIN" },
+  });
+
+  // 商品IDを取得
+  const products = await prisma.product.findMany();
+  const productMap = new Map(products.map(p => [p.code, p]));
+
+  // メニューIDを取得（名前からIDを引くマップ）
+  const dbMenus = await prisma.menu.findMany({
+    include: { category: true },
+  });
+  const menuMap = new Map(dbMenus.map(m => [m.name, m]));
+
+  // 会計作成ヘルパー関数
+  const createSale = async (
+    saleDate: Date,
+    saleTime: string,
+    customerIndex: number | null, // nullはウォークイン
+    menuItems: { name: string; category: string; price: number; duration: number }[],
+    productCodes: { code: string; quantity: number }[],
+    paymentMethod: string,
+    discountAmount: number = 0,
+    note?: string
+  ) => {
+    const customer = customerIndex !== null ? customers[customerIndex] : null;
+
+    // 売上番号生成（ローカルタイムゾーン対応）
+    const year = saleDate.getFullYear();
+    const month = String(saleDate.getMonth() + 1).padStart(2, "0");
+    const day = String(saleDate.getDate()).padStart(2, "0");
+    const dateStr = `${year}${month}${day}`;
+    const existingCount = await prisma.sale.count({
+      where: {
+        saleNumber: { startsWith: `SALE-${dateStr}` }
+      }
+    });
+    const saleNumber = `SALE-${dateStr}-${String(existingCount + 1).padStart(3, "0")}`;
+
+    // 金額計算
+    const menuSubtotal = menuItems.reduce((sum, m) => sum + m.price, 0);
+    const productSubtotal = productCodes.reduce((sum, p) => {
+      const product = productMap.get(p.code);
+      return sum + (product ? product.price * p.quantity : 0);
+    }, 0);
+    const subtotal = menuSubtotal + productSubtotal;
+    const taxRate = 10;
+    const taxAmount = Math.floor(subtotal * taxRate / 100);
+    const totalAmount = subtotal + taxAmount - discountAmount;
+
+    // 会計作成
+    const sale = await prisma.sale.create({
+      data: {
+        saleNumber,
+        userId: customer?.id || null,
+        customerName: customer?.name || "ウォークイン",
+        customerPhone: customer ? (sampleCustomers.find(c => c.email === customer.email)?.phone || null) : null,
+        subtotal,
+        taxAmount,
+        taxRate,
+        discountAmount,
+        totalAmount,
+        paymentMethod,
+        paymentStatus: "PAID",
+        saleDate,
+        saleTime,
+        note: note || null,
+        createdBy: admin?.id || null,
+      },
+    });
+
+    // 会計明細作成（メニュー）
+    let orderIndex = 0;
+    for (const menu of menuItems) {
+      const dbMenu = menuMap.get(menu.name);
+      await prisma.saleItem.create({
+        data: {
+          saleId: sale.id,
+          itemType: "MENU",
+          menuId: dbMenu?.id || null,
+          menuName: menu.name,
+          category: menu.category,
+          duration: menu.duration,
+          quantity: 1,
+          unitPrice: menu.price,
+          subtotal: menu.price,
+          orderIndex: orderIndex++,
+        },
+      });
+    }
+
+    // 会計明細作成（商品）
+    for (const pc of productCodes) {
+      const product = productMap.get(pc.code);
+      if (product) {
+        await prisma.saleItem.create({
+          data: {
+            saleId: sale.id,
+            itemType: "PRODUCT",
+            productId: product.id,
+            productName: product.name,
+            quantity: pc.quantity,
+            unitPrice: product.price,
+            subtotal: product.price * pc.quantity,
+            orderIndex: orderIndex++,
+          },
+        });
+      }
+    }
+
+    // 支払明細作成
+    await prisma.payment.create({
+      data: {
+        saleId: sale.id,
+        paymentMethod,
+        amount: totalAmount,
+        orderIndex: 0,
+      },
+    });
+
+    const displayDate = `${saleDate.getMonth() + 1}/${saleDate.getDate()}`;
+    console.log(`  ✓ ${displayDate} ${saleTime}: ${saleNumber} - ¥${totalAmount.toLocaleString()} (${customer?.name || "ウォークイン"}) [${paymentMethod}]`);
+  };
+
+  // 12/10（火）の会計
+  await createSale(
+    dec10,
+    "11:45",
+    1, // 鈴木
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [],
+    "CASH"
+  );
+
+  // 12/11（木）の会計
+  await createSale(
+    dec11,
+    "11:00",
+    4, // 伊藤
+    [
+      { name: "カラー", category: "カラー", price: 4950, duration: 60 },
+      { name: "オーガニックノートシステムトリートメント3step", category: "スパ＆トリートメント", price: 3300, duration: 40 }
+    ],
+    [{ code: "P003", quantity: 1 }], // リペアトリートメント
+    "CREDIT_CARD"
+  );
+
+  await createSale(
+    dec11,
+    "14:00",
+    2, // 山本
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [{ code: "P005", quantity: 1 }], // ワックス
+    "PAYPAY"
+  );
+
+  // 12/12（金）の会計
+  await createSale(
+    baseDate,
+    "10:45",
+    0, // 田中
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [],
+    "CASH"
+  );
+
+  await createSale(
+    baseDate,
+    "13:00",
+    1, // 鈴木
+    [
+      { name: "カラー", category: "カラー", price: 4950, duration: 60 },
+      { name: "オーガニックノートシステムトリートメント3step", category: "スパ＆トリートメント", price: 3300, duration: 40 }
+    ],
+    [],
+    "LINE_PAY"
+  );
+
+  await createSale(
+    baseDate,
+    "14:45",
+    2, // 山本
+    [{ name: "オーガニックノートシステムトリートメント3step", category: "スパ＆トリートメント", price: 3300, duration: 40 }],
+    [{ code: "P004", quantity: 1 }], // モイストトリートメント
+    "CREDIT_CARD"
+  );
+
+  await createSale(
+    baseDate,
+    "17:00",
+    3, // 佐藤
+    [
+      { name: "カット", category: "カット", price: 4950, duration: 40 },
+      { name: "カラー", category: "カラー", price: 4950, duration: 60 }
+    ],
+    [],
+    "RAKUTEN_PAY",
+    500, // 初回割引
+    "初回来店"
+  );
+
+  await createSale(
+    baseDate,
+    "18:15",
+    4, // 伊藤
+    [{ name: "もみほぐしクレンジングSPA", category: "スパ＆トリートメント", price: 2200, duration: 30 }],
+    [],
+    "CASH"
+  );
+
+  // ウォークイン（飛び込み）
+  await createSale(
+    baseDate,
+    "19:00",
+    null, // ウォークイン
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [{ code: "P006", quantity: 1 }], // ヘアオイル
+    "CASH"
+  );
+
+  // 12/13（土）の会計
+  await createSale(
+    dec13,
+    "12:30",
+    2, // 山本
+    [{ name: "全頭矯正", category: "縮毛矯正", price: 11000, duration: 150 }],
+    [{ code: "P001", quantity: 1 }], // オーガニックシャンプー
+    "CREDIT_CARD"
+  );
+
+  await createSale(
+    dec13,
+    "15:30",
+    0, // 田中
+    [
+      { name: "デザインパーマ", category: "パーマ", price: 7700, duration: 90 },
+      { name: "オーガニックノートシステムトリートメント3step", category: "スパ＆トリートメント", price: 3300, duration: 40 }
+    ],
+    [],
+    "PAYPAY"
+  );
+
+  await createSale(
+    dec13,
+    "16:45",
+    4, // 伊藤
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [],
+    "CASH"
+  );
+
+  await createSale(
+    dec13,
+    "18:20",
+    1, // 鈴木
+    [{ name: "シャンプーブロー", category: "シャンプー＆セット", price: 1650, duration: 20 }],
+    [],
+    "LINE_PAY"
+  );
+
+  // 12/14（日）の会計
+  await createSale(
+    dec14,
+    "12:00",
+    3, // 佐藤
+    [
+      { name: "カット", category: "カット", price: 4950, duration: 40 },
+      { name: "もみほぐしクレンジングSPA", category: "スパ＆トリートメント", price: 2200, duration: 30 }
+    ],
+    [{ code: "P005", quantity: 2 }], // ワックス×2
+    "CREDIT_CARD"
+  );
+
+  await createSale(
+    dec14,
+    "14:45",
+    0, // 田中
+    [{ name: "オーガニックノートシステムトリートメント3step", category: "スパ＆トリートメント", price: 3300, duration: 40 }],
+    [],
+    "CASH"
+  );
+
+  // ウォークイン（商品購入のみ）
+  await createSale(
+    dec14,
+    "16:00",
+    null, // ウォークイン
+    [],
+    [
+      { code: "P001", quantity: 1 }, // オーガニックシャンプー
+      { code: "P003", quantity: 1 }, // リペアトリートメント
+    ],
+    "PAYPAY",
+    0,
+    "商品購入のみ"
+  );
 
   console.log("✅ Seeding completed!");
 }

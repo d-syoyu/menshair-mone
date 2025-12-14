@@ -8,6 +8,7 @@ import type {
   RichTextItemResponse,
   DatabaseObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { getProxiedImageUrl } from "./image-proxy";
 
 // Notion Client - only create if API key is set
 // SDK v5 uses 2025-09-03 API by default
@@ -15,30 +16,53 @@ const notion = process.env.NOTION_API_KEY
   ? new Client({ auth: process.env.NOTION_API_KEY })
   : null;
 
-const databaseId = process.env.NOTION_DATABASE_ID;
-const productsDatabaseId = process.env.NOTION_PRODUCTS_DATABASE_ID;
+const newsDatabaseId = process.env.NOTION_DATABASE_ID_NEWS;
+const galleryDatabaseId = process.env.NOTION_DATABASE_ID_GALLERY;
+const productsDatabaseId = process.env.NOTION_DATABASE_ID_PRODUCTS;
 
 // Cache for data_source_id (avoids repeated API calls)
-let cachedDataSourceId: string | null = null;
+let cachedNewsDataSourceId: string | null = null;
+let cachedGalleryDataSourceId: string | null = null;
 let cachedProductsDataSourceId: string | null = null;
 
-// Get data_source_id from database (required for 2025-09-03 API)
-async function getDataSourceId(): Promise<string | null> {
-  if (cachedDataSourceId) return cachedDataSourceId;
-  if (!notion || !databaseId) return null;
+// Get data_source_id for News database (required for 2025-09-03 API)
+async function getNewsDataSourceId(): Promise<string | null> {
+  if (cachedNewsDataSourceId) return cachedNewsDataSourceId;
+  if (!notion || !newsDatabaseId) return null;
 
   try {
     const database = await notion.databases.retrieve({
-      database_id: databaseId,
+      database_id: newsDatabaseId,
     }) as DatabaseObjectResponse;
 
     if (database.data_sources && database.data_sources.length > 0) {
-      cachedDataSourceId = database.data_sources[0].id;
-      return cachedDataSourceId;
+      cachedNewsDataSourceId = database.data_sources[0].id;
+      return cachedNewsDataSourceId;
     }
     return null;
   } catch (error) {
-    console.error("Error fetching data source id:", error);
+    console.error("Error fetching news data source id:", error);
+    return null;
+  }
+}
+
+// Get data_source_id for Gallery database
+async function getGalleryDataSourceId(): Promise<string | null> {
+  if (cachedGalleryDataSourceId) return cachedGalleryDataSourceId;
+  if (!notion || !galleryDatabaseId) return null;
+
+  try {
+    const database = await notion.databases.retrieve({
+      database_id: galleryDatabaseId,
+    }) as DatabaseObjectResponse;
+
+    if (database.data_sources && database.data_sources.length > 0) {
+      cachedGalleryDataSourceId = database.data_sources[0].id;
+      return cachedGalleryDataSourceId;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching gallery data source id:", error);
     return null;
   }
 }
@@ -48,6 +72,7 @@ export interface BlogPost {
   id: string;
   slug: string;
   title: string;
+  subtitle: string;
   excerpt: string;
   coverImage: string | null;
   publishedAt: string;
@@ -71,49 +96,70 @@ function formatDate(dateString: string | null): string {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// Helper: Extract page properties
+// Helper: Extract page properties (日本語プロパティ名対応)
 function extractPageProperties(page: PageObjectResponse): BlogPost | null {
   const properties = page.properties;
 
-  // Title
-  const titleProp = properties["Title"];
+  // タイトル (Title)
+  const titleProp = properties["タイトル"] || properties["Title"];
   if (titleProp?.type !== "title") return null;
   const title = extractRichText(titleProp.title);
 
-  // Slug
-  const slugProp = properties["Slug"];
-  if (slugProp?.type !== "rich_text") return null;
-  const slug = extractRichText(slugProp.rich_text);
-  if (!slug) return null;
+  // ページURL (Slug) - なければpage.idを使用
+  const slugProp = properties["ページURL"] || properties["Slug"];
+  let slug = "";
+  if (slugProp?.type === "rich_text") {
+    slug = extractRichText(slugProp.rich_text);
+  }
+  if (!slug) {
+    slug = page.id.replace(/-/g, "");
+  }
 
-  // Published
-  const publishedProp = properties["Published"];
-  if (publishedProp?.type !== "checkbox" || !publishedProp.checkbox) return null;
+  // 公開 (Published) - checkbox型
+  const publishedProp = properties["公開"] || properties["Published"];
+  if (publishedProp?.type === "checkbox") {
+    if (!publishedProp.checkbox) return null;
+  }
 
-  // PublishedAt
-  const publishedAtProp = properties["PublishedAt"];
+  // 公開日 (PublishedAt)
+  const publishedAtProp = properties["公開日"] || properties["PublishedAt"];
   const publishedAt =
     publishedAtProp?.type === "date" && publishedAtProp.date
       ? formatDate(publishedAtProp.date.start)
       : "";
 
-  // Excerpt
-  const excerptProp = properties["Excerpt"];
+  // 本文 (Excerpt)
+  const excerptProp = properties["本文"] || properties["Excerpt"];
   const excerpt =
     excerptProp?.type === "rich_text"
       ? extractRichText(excerptProp.rich_text)
       : "";
 
-  // Category
-  const categoryProp = properties["Category"];
+  // カテゴリ (Category)
+  const categoryProp = properties["カテゴリ"] || properties["Category"];
   const category =
     categoryProp?.type === "select" && categoryProp.select
       ? categoryProp.select.name
       : "";
 
-  // Cover Image
+  // サブタイトル (Subtitle)
+  const subtitleProp = properties["サブタイトル"] || properties["Subtitle"];
+  const subtitle =
+    subtitleProp?.type === "rich_text"
+      ? extractRichText(subtitleProp.rich_text)
+      : "";
+
+  // サムネイル (Cover Image) - filesプロパティまたはページカバーから取得
   let coverImage: string | null = null;
-  if (page.cover) {
+  const thumbnailProp = properties["サムネイル"];
+  if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
+    const file = thumbnailProp.files[0];
+    if (file.type === "external") {
+      coverImage = file.external.url;
+    } else if (file.type === "file") {
+      coverImage = file.file.url;
+    }
+  } else if (page.cover) {
     if (page.cover.type === "external") {
       coverImage = page.cover.external.url;
     } else if (page.cover.type === "file") {
@@ -121,10 +167,14 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
     }
   }
 
+  // プロキシURLに変換
+  coverImage = getProxiedImageUrl(coverImage);
+
   return {
     id: page.id,
     slug,
     title,
+    subtitle,
     excerpt,
     coverImage,
     publishedAt,
@@ -132,35 +182,23 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
   };
 }
 
-// Get all published blog posts
+// Get all published blog posts (News)
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  if (!notion || !databaseId) {
+  if (!notion || !newsDatabaseId) {
     console.warn("Notion API not configured");
     return [];
   }
 
   try {
     // Get data_source_id (required for 2025-09-03 API)
-    const dataSourceId = await getDataSourceId();
+    const dataSourceId = await getNewsDataSourceId();
     if (!dataSourceId) {
-      console.warn("Could not retrieve data_source_id");
+      console.warn("Could not retrieve news data_source_id");
       return [];
     }
 
     const response = await notion.dataSources.query({
       data_source_id: dataSourceId,
-      filter: {
-        property: "Published",
-        checkbox: {
-          equals: true,
-        },
-      },
-      sorts: [
-        {
-          property: "PublishedAt",
-          direction: "descending",
-        },
-      ],
     });
 
     const posts: BlogPost[] = [];
@@ -184,56 +222,76 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPostBySlug(
   slug: string
 ): Promise<BlogPostDetail | null> {
-  if (!notion || !databaseId) {
+  if (!notion || !newsDatabaseId) {
     console.warn("Notion API not configured");
     return null;
   }
 
   try {
     // Get data_source_id (required for 2025-09-03 API)
-    const dataSourceId = await getDataSourceId();
+    const dataSourceId = await getNewsDataSourceId();
     if (!dataSourceId) {
-      console.warn("Could not retrieve data_source_id");
+      console.warn("Could not retrieve news data_source_id");
       return null;
     }
 
+    // Get all items and filter by slug in code (to avoid property name issues)
     const response = await notion.dataSources.query({
       data_source_id: dataSourceId,
-      filter: {
-        and: [
-          {
-            property: "Slug",
-            rich_text: {
-              equals: slug,
-            },
-          },
-          {
-            property: "Published",
-            checkbox: {
-              equals: true,
-            },
-          },
-        ],
-      },
     });
 
-    if (response.results.length === 0) {
+    // Find the page with matching slug
+    let matchedPage: PageObjectResponse | null = null;
+    for (const page of response.results) {
+      if ("properties" in page) {
+        const pageObj = page as PageObjectResponse;
+        const properties = pageObj.properties;
+
+        // Check slug (ページURL or Slug)
+        const slugProp = properties["ページURL"] || properties["Slug"];
+        let pageSlug = "";
+        if (slugProp?.type === "rich_text") {
+          pageSlug = extractRichText(slugProp.rich_text);
+        }
+        if (!pageSlug) {
+          pageSlug = pageObj.id.replace(/-/g, "");
+        }
+
+        if (pageSlug === slug) {
+          matchedPage = pageObj;
+          break;
+        }
+      }
+    }
+
+    if (!matchedPage) {
       return null;
     }
 
-    const page = response.results[0] as PageObjectResponse;
-    const post = extractPageProperties(page);
+    const post = extractPageProperties(matchedPage);
 
     if (!post) {
       return null;
     }
 
     // Get page blocks (content)
-    const blocks = await getPageBlocks(page.id);
+    const blocks = await getPageBlocks(matchedPage.id);
+
+    // If no blocks, use the excerpt (本文 property) as fallback content
+    let fallbackContent: string | undefined;
+    if (blocks.length === 0 && post.excerpt) {
+      // Convert plain text to HTML with line breaks
+      fallbackContent = post.excerpt
+        .split('\n')
+        .map(line => line ? `<p>${line}</p>` : '<br>')
+        .join('');
+      console.log(`[News Detail] Using fallback content from 本文 property (${post.excerpt.length} chars)`);
+    }
 
     return {
       ...post,
       blocks,
+      fallbackContent,
     };
   } catch (error) {
     console.error("Error fetching blog post:", error);
@@ -285,13 +343,132 @@ export async function getAllBlogSlugs(): Promise<string[]> {
 }
 
 // ============================================
-// News (お知らせ) 関連
+// News (お知らせ) エイリアス
 // ============================================
 
-// お知らせはブログと同じデータベースを使用
 // getBlogPosts()のエイリアスとして提供
 export async function getNews(): Promise<BlogPost[]> {
   return await getBlogPosts();
+}
+
+export async function getNewsBySlug(slug: string): Promise<BlogPostDetail | null> {
+  return await getBlogPostBySlug(slug);
+}
+
+export async function getAllNewsSlugs(): Promise<string[]> {
+  return await getAllBlogSlugs();
+}
+
+// ============================================
+// Gallery (ギャラリー) 関連
+// ============================================
+
+// Types
+export interface GalleryItem {
+  id: string;
+  title: string;
+  category: string;
+  image: string | null;
+  order: number;
+}
+
+// Helper: Extract gallery item properties (日本語プロパティ名対応)
+function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null {
+  const properties = page.properties;
+
+  // タイトル (Title property)
+  const nameProp = properties["タイトル"] || properties["Name"];
+  if (nameProp?.type !== "title") return null;
+  const title = extractRichText(nameProp.title);
+
+  // 公開 (Published)
+  const publishedProp = properties["公開"] || properties["Published"];
+  if (publishedProp?.type === "checkbox" && !publishedProp.checkbox) return null;
+
+  // カテゴリ (Category) - 説明文をカテゴリとして使用
+  const categoryProp = properties["Category"] || properties["説明文"];
+  let category = "";
+  if (categoryProp?.type === "select" && categoryProp.select) {
+    category = categoryProp.select.name;
+  } else if (categoryProp?.type === "rich_text") {
+    category = extractRichText(categoryProp.rich_text);
+  }
+
+  // Order - なければ0
+  const orderProp = properties["Order"];
+  const order =
+    orderProp?.type === "number" && orderProp.number !== null
+      ? orderProp.number
+      : 0;
+
+  // 画像 (Image) - filesプロパティ、画像URL、またはページカバーから取得
+  let image: string | null = null;
+  const imageProp = properties["画像"];
+  const imageUrlProp = properties["画像URL"];
+
+  if (imageProp?.type === "files" && imageProp.files.length > 0) {
+    const file = imageProp.files[0];
+    if (file.type === "external") {
+      image = file.external.url;
+    } else if (file.type === "file") {
+      image = file.file.url;
+    }
+  } else if (imageUrlProp?.type === "rich_text") {
+    image = extractRichText(imageUrlProp.rich_text) || null;
+  } else if (page.cover) {
+    if (page.cover.type === "external") {
+      image = page.cover.external.url;
+    } else if (page.cover.type === "file") {
+      image = page.cover.file.url;
+    }
+  }
+
+  // プロキシURLに変換
+  image = getProxiedImageUrl(image);
+
+  return {
+    id: page.id,
+    title,
+    category,
+    image,
+    order,
+  };
+}
+
+// Get all published gallery items
+export async function getGalleryItems(): Promise<GalleryItem[]> {
+  if (!notion || !galleryDatabaseId) {
+    console.warn("Notion Gallery API not configured");
+    return [];
+  }
+
+  try {
+    // Get data_source_id (required for 2025-09-03 API)
+    const dataSourceId = await getGalleryDataSourceId();
+    if (!dataSourceId) {
+      console.warn("Could not retrieve gallery data_source_id");
+      return [];
+    }
+
+    const response = await notion.dataSources.query({
+      data_source_id: dataSourceId,
+    });
+
+    const items: GalleryItem[] = [];
+    for (const page of response.results) {
+      if ("properties" in page) {
+        const item = extractGalleryProperties(page as PageObjectResponse);
+        if (item) {
+          items.push(item);
+        }
+      }
+    }
+
+    return items;
+  } catch (error) {
+    console.error("Error fetching gallery items:", error);
+    return [];
+  }
 }
 
 // ============================================
@@ -306,9 +483,10 @@ export interface Product {
   category: string;
   description: string;
   image: string | null;
+  order: number;
 }
 
-// Get data_source_id for products database
+// Get data_source_id for Products database
 async function getProductsDataSourceId(): Promise<string | null> {
   if (cachedProductsDataSourceId) return cachedProductsDataSourceId;
   if (!notion || !productsDatabaseId) return null;
@@ -329,49 +507,69 @@ async function getProductsDataSourceId(): Promise<string | null> {
   }
 }
 
-// Helper: Extract product properties
+// Helper: Extract product properties (日本語プロパティ名対応)
 function extractProductProperties(page: PageObjectResponse): Product | null {
   const properties = page.properties;
 
-  // Name (Title property)
-  const nameProp = properties["Name"];
+  // 商品名 (Title property)
+  const nameProp = properties["商品名"] || properties["Name"];
   if (nameProp?.type !== "title") return null;
   const name = extractRichText(nameProp.title);
 
-  // Published
-  const publishedProp = properties["Published"];
-  if (publishedProp?.type !== "checkbox" || !publishedProp.checkbox) return null;
+  // 公開 (Published)
+  const publishedProp = properties["公開"] || properties["Published"];
+  if (publishedProp?.type === "checkbox" && !publishedProp.checkbox) return null;
 
-  // Price
-  const priceProp = properties["Price"];
-  const price =
-    priceProp?.type === "rich_text"
-      ? extractRichText(priceProp.rich_text)
-      : "";
+  // 価格 (Price) - number型またはrich_text型
+  const priceProp = properties["価格"] || properties["Price"];
+  let price = "";
+  if (priceProp?.type === "number" && priceProp.number !== null) {
+    price = `¥${priceProp.number.toLocaleString()}`;
+  } else if (priceProp?.type === "rich_text") {
+    price = extractRichText(priceProp.rich_text);
+  }
 
-  // Category
-  const categoryProp = properties["Category"];
+  // 商品カテゴリ (Category)
+  const categoryProp = properties["商品カテゴリ"] || properties["Category"];
   const category =
     categoryProp?.type === "select" && categoryProp.select
       ? categoryProp.select.name
       : "";
 
-  // Description
-  const descriptionProp = properties["Description"];
+  // 説明文 (Description)
+  const descriptionProp = properties["説明文"] || properties["Description"];
   const description =
     descriptionProp?.type === "rich_text"
       ? extractRichText(descriptionProp.rich_text)
       : "";
 
-  // Cover Image
+  // Order - なければ0
+  const orderProp = properties["Order"];
+  const order =
+    orderProp?.type === "number" && orderProp.number !== null
+      ? orderProp.number
+      : 0;
+
+  // 画像 (Image) - filesプロパティまたはページカバーから取得
   let image: string | null = null;
-  if (page.cover) {
+  const imageProp = properties["画像"];
+  if (imageProp?.type === "files" && imageProp.files.length > 0) {
+    const file = imageProp.files[0];
+    if (file.type === "external") {
+      image = file.external.url;
+    } else if (file.type === "file") {
+      image = file.file.url;
+    }
+  } else if (page.cover) {
     if (page.cover.type === "external") {
       image = page.cover.external.url;
     } else if (page.cover.type === "file") {
       image = page.cover.file.url;
     }
   }
+
+  // プロキシURLに変換
+  image = getProxiedImageUrl(image);
 
   return {
     id: page.id,
@@ -380,6 +578,7 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
     category,
     description,
     image,
+    order,
   };
 }
 
@@ -400,18 +599,6 @@ export async function getProducts(): Promise<Product[]> {
 
     const response = await notion.dataSources.query({
       data_source_id: dataSourceId,
-      filter: {
-        property: "Published",
-        checkbox: {
-          equals: true,
-        },
-      },
-      sorts: [
-        {
-          property: "Order",
-          direction: "ascending",
-        },
-      ],
     });
 
     const products: Product[] = [];

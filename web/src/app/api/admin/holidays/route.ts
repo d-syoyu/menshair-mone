@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { parseLocalDate } from "@/lib/date-utils";
 
 // 不定休作成スキーマ
 const createHolidaySchema = z.object({
@@ -105,8 +106,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { date, startTime, endTime, reason } = validationResult.data;
-    const holidayDate = new Date(date);
-    holidayDate.setHours(0, 0, 0, 0);
+    // タイムゾーン問題を避けるため、共通ユーティリティを使用
+    const holidayDate = parseLocalDate(date);
 
     // 既存チェック（同じ日付・時間帯の組み合わせ）
     const existingHoliday = await prisma.holiday.findFirst({

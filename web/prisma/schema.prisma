@@ -28,6 +28,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   reservations  Reservation[]
+  sales         Sale[]              // 顧客の売上履歴
+  createdSales  Sale[]   @relation("CreatedSales") // 管理者が作成した売上
 }
 
 model Account {
@@ -93,6 +95,7 @@ model Reservation {
 
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   items         ReservationItem[]
+  sale          Sale?             // この予約の会計
 
   @@index([date])
   @@index([userId])
@@ -211,4 +214,199 @@ model Holiday {
 
   @@unique([date, startTime, endTime])
   @@index([date])
+}
+
+// ============================================
+// 売上・会計関連（POS）
+// ============================================
+
+// 会計（売上）マスタ
+model Sale {
+  id              String          @id @default(cuid())
+  saleNumber      String          @unique // 伝票番号（SALE-YYYYMMDD-XXX）
+
+  // 顧客情報
+  userId          String?         // 顧客ID（ウォークイン時は任意）
+  customerName    String?         // 顧客名（スナップショット）
+  customerPhone   String?         // 顧客電話番号
+
+  // 予約との紐付け
+  reservationId   String?         @unique // 予約ID（予約から作成時）
+
+  // 金額情報
+  subtotal        Int             // 小計（税抜）
+  taxAmount       Int             // 消費税額
+  taxRate         Int             // 消費税率（%）※スナップショット
+  discountAmount  Int             @default(0) // 割引額
+  totalAmount     Int             // 合計金額（税込・割引後）
+
+  // 支払情報
+  paymentMethod   String          // 主要支払方法（集計用）
+  paymentStatus   PaymentStatus   @default(PENDING)
+
+  // 売上日時
+  saleDate        DateTime        @db.Date
+  saleTime        String          // "14:30"
+
+  // メモ
+  note            String?         @db.Text
+
+  // メタ情報
+  createdBy       String?         // 作成者ID（管理者）
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // リレーション
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reservation     Reservation?    @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  items           SaleItem[]
+  payments        Payment[]       // 複数支払対応
+  createdByUser   User?           @relation("CreatedSales", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([saleDate])
+  @@index([userId])
+  @@index([reservationId])
+  @@index([paymentMethod])
+  @@index([createdAt])
+}
+
+// 会計明細（施術メニュー + 店販商品）
+model SaleItem {
+  id          String       @id @default(cuid())
+  saleId      String
+
+  // アイテム種別
+  itemType    SaleItemType // MENU / PRODUCT
+
+  // メニューの場合
+  menuId      String?
+  menuName    String?
+  category    String?
+  duration    Int?
+
+  // 店販商品の場合
+  productId   String?
+  productName String?
+
+  // 共通情報
+  quantity    Int          @default(1)
+  unitPrice   Int          // 単価
+  subtotal    Int          // 小計（数量 × 単価）
+  orderIndex  Int          // 明細順序
+
+  sale        Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@unique([saleId, orderIndex])
+}
+
+// 支払詳細（複数支払方法対応）
+model Payment {
+  id            String   @id @default(cuid())
+  saleId        String
+
+  paymentMethod String
+  amount        Int      // 支払額
+  orderIndex    Int      // 支払順序
+
+  note          String?
+  createdAt     DateTime @default(now())
+
+  sale          Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@unique([saleId, orderIndex])
+}
+
+// 店販商品マスタ
+model Product {
+  id           String          @id @default(cuid())
+  name         String          // 商品名
+  categoryId   String
+  price        Int             // 販売価格（税込）
+  cost         Int?            // 原価（任意）
+  stock        Int?            // 在庫数（任意・簡易管理）
+  code         String?         @unique // 商品コード
+  description  String?         @db.Text
+  displayOrder Int             @default(0)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  category     ProductCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+// 店販商品カテゴリ
+model ProductCategory {
+  id           String    @id @default(cuid())
+  name         String    @unique // シャンプー、トリートメント等
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  products     Product[]
+
+  @@index([isActive])
+}
+
+// 割引マスタ
+model Discount {
+  id           String       @id @default(cuid())
+  name         String       // 学割、シニア割等
+  type         DiscountType // PERCENTAGE / FIXED
+  value        Int          // %の場合は整数、固定額の場合は円
+  description  String?      @db.Text
+  isActive     Boolean      @default(true)
+  displayOrder Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([isActive])
+}
+
+// システム設定（税率等）
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique // "tax_rate"
+  value     String   // "10"
+  updatedAt DateTime @updatedAt
+}
+
+// 支払方法設定
+model PaymentMethodSetting {
+  id           String   @id @default(cuid())
+  code         String   @unique // 支払方法コード（任意の文字列）
+  displayName  String   // 表示名（現金、クレジットカード等）
+  isActive     Boolean  @default(true) // 有効/無効
+  displayOrder Int      @default(0) // 表示順
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([code])
+}
+
+// ============================================
+// Enum定義（POS用）
+// ============================================
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+enum SaleItemType {
+  MENU
+  PRODUCT
+}
+
+enum DiscountType {
+  PERCENTAGE  // パーセンテージ割引
+  FIXED       // 固定額割引
 }

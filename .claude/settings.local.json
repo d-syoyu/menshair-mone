@@ -15,7 +15,15 @@
       "Bash(ls:*)",
       "Bash(npm run db:seed:*)",
       "Bash(git push:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(node -e \"\nconst { Client } = require(''@notionhq/client'');\nconst notion = new Client({ auth: ''ntn_m40727709713T23C6Q6SToRXz73TzTf6SzJrRBvwQOM3k5'' });\n\nasync function getProps() {\n  // News DB\n  console.log(''=== NEWS DB ==='');\n  const newsDb = await notion.databases.retrieve({ database_id: ''2c90f2c18d9b80c29900c0a1e11b9772'' });\n  console.log(''Properties:'', Object.keys(newsDb.properties).join('', ''));\n  for (const [name, prop] of Object.entries(newsDb.properties)) {\n    console.log(''  -'', name, '':'', prop.type);\n  }\n  \n  // Gallery DB\n  console.log(''\\n=== GALLERY DB ==='');\n  const galleryDb = await notion.databases.retrieve({ database_id: ''2c90f2c18d9b801ea104fd6857060fbe'' });\n  console.log(''Properties:'', Object.keys(galleryDb.properties).join('', ''));\n  for (const [name, prop] of Object.entries(galleryDb.properties)) {\n    console.log(''  -'', name, '':'', prop.type);\n  }\n}\ngetProps().catch(console.error);\n\")",
+      "Bash(node -e \"\nconst { Client } = require(''@notionhq/client'');\nconst notion = new Client({ auth: ''ntn_m40727709713T23C6Q6SToRXz73TzTf6SzJrRBvwQOM3k5'' });\n\nasync function getProps() {\n  // News DB\n  console.log(''=== NEWS DB ==='');\n  const newsDb = await notion.databases.retrieve({ database_id: ''2c90f2c18d9b80c29900c0a1e11b9772'' });\n  console.log(JSON.stringify(newsDb, null, 2));\n}\ngetProps().catch(console.error);\n\")",
+      "Bash(node -e \"\nconst { Client } = require(''@notionhq/client'');\nconst notion = new Client({ auth: ''ntn_m40727709713T23C6Q6SToRXz73TzTf6SzJrRBvwQOM3k5'' });\n\nasync function getProps() {\n  // Get data source info\n  const dataSourceId = ''2c90f2c1-8d9b-8093-9ecb-000b8d214639'';\n  console.log(''=== NEWS DATA SOURCE ==='');\n  const ds = await notion.dataSources.retrieve({ data_source_id: dataSourceId });\n  console.log(JSON.stringify(ds, null, 2));\n}\ngetProps().catch(console.error);\n\")",
+      "Bash(node -e \"\nconst { Client } = require(''@notionhq/client'');\nconst notion = new Client({ auth: ''ntn_m40727709713T23C6Q6SToRXz73TzTf6SzJrRBvwQOM3k5'' });\n\nasync function getProps() {\n  // Gallery DB\n  const db = await notion.databases.retrieve({ database_id: ''2c90f2c18d9b801ea104fd6857060fbe'' });\n  const dataSourceId = db.data_sources?.[0]?.id;\n  if (dataSourceId) {\n    const ds = await notion.dataSources.retrieve({ data_source_id: dataSourceId });\n    console.log(''=== GALLERY PROPERTIES ==='');\n    for (const [name, prop] of Object.entries(ds.properties)) {\n      console.log(name + '':'', prop.type);\n    }\n  }\n}\ngetProps().catch(console.error);\n\")",
+      "Bash(node -e:*)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

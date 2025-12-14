@@ -29,7 +29,7 @@ const config: Config = {
         },
         accent: {
           DEFAULT: '#1F3D30',
-          light: '#3A7058',
+          light: '#6BBF8E',
           dark: '#162B22',
           muted: 'rgba(31, 61, 48, 0.12)',
         },

@@ -15,9 +15,10 @@ import {
   ChevronDown,
   Clock,
   X,
-  XCircle,
-  Plus,
   UserPlus,
+  Pencil,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/constants/menu';
 
@@ -81,6 +82,18 @@ export default function AdminCustomersPage() {
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // 顧客編集モーダル
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '' });
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // 顧客削除ダイアログ
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -223,6 +236,104 @@ export default function AdminCustomersPage() {
     }
   };
 
+  // 編集モーダルを開く
+  const openEditModal = (customer: Customer, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCustomer(customer);
+    setEditForm({
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+    });
+    setEditError(null);
+    setIsEditModalOpen(true);
+  };
+
+  // 顧客編集
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+
+    setIsSubmitting(true);
+    setEditError(null);
+
+    try {
+      const res = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          phone: editForm.phone,
+          email: editForm.email || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEditError(data.error || '顧客情報の更新に失敗しました');
+        return;
+      }
+
+      // 成功したら顧客リストを更新
+      setCustomers(prev =>
+        prev.map(c =>
+          c.id === editingCustomer.id
+            ? { ...c, name: data.name, phone: data.phone, email: data.email }
+            : c
+        )
+      );
+
+      // モーダルを閉じる
+      setIsEditModalOpen(false);
+      setEditingCustomer(null);
+    } catch {
+      setEditError('顧客情報の更新に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 削除ダイアログを開く
+  const openDeleteDialog = (customer: Customer, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingCustomer(customer);
+    setDeleteError(null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // 顧客削除
+  const handleDeleteCustomer = async () => {
+    if (!deletingCustomer) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch(`/api/admin/customers/${deletingCustomer.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setDeleteError(data.error || '顧客の削除に失敗しました');
+        return;
+      }
+
+      // 成功したら顧客リストから削除
+      setCustomers(prev => prev.filter(c => c.id !== deletingCustomer.id));
+
+      // ダイアログを閉じる
+      setIsDeleteDialogOpen(false);
+      setDeletingCustomer(null);
+    } catch {
+      setDeleteError('顧客の削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-4xl mx-auto px-4">
@@ -298,9 +409,12 @@ export default function AdminCustomersPage() {
                   return (
                     <div key={customer.id}>
                       {/* Customer Row */}
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => toggleCustomer(customer.id)}
-                        className="w-full p-4 sm:p-6 hover:bg-gray-50 transition-colors text-left"
+                        onKeyDown={(e) => e.key === 'Enter' && toggleCustomer(customer.id)}
+                        className="w-full p-4 sm:p-6 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                       >
                         <div className="flex items-start gap-3 sm:gap-4">
                           {/* Avatar */}
@@ -337,18 +451,39 @@ export default function AdminCustomersPage() {
                             </div>
                           </div>
 
-                          {/* Stats */}
-                          <div className="text-right flex-shrink-0">
-                            <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 mb-1">
-                              <Calendar className="w-3.5 h-3.5" />
-                              <span>来店</span>
+                          {/* Stats & Actions */}
+                          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                            {/* Stats */}
+                            <div className="text-right">
+                              <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 mb-1">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>来店</span>
+                              </div>
+                              <p className="text-xl sm:text-2xl font-light text-[var(--color-accent)]">
+                                {completedCount}<span className="text-sm text-gray-400">回</span>
+                              </p>
                             </div>
-                            <p className="text-xl sm:text-2xl font-light text-[var(--color-accent)]">
-                              {completedCount}<span className="text-sm text-gray-400">回</span>
-                            </p>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => openEditModal(customer, e)}
+                                className="p-2 text-gray-400 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 rounded-lg transition-colors"
+                                title="編集"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => openDeleteDialog(customer, e)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="削除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </button>
+                      </div>
 
                       {/* Expanded History */}
                       <AnimatePresence>
@@ -588,6 +723,177 @@ export default function AdminCustomersPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 顧客編集モーダル */}
+      <AnimatePresence>
+        {isEditModalOpen && editingCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsEditModalOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-[var(--color-accent)]/10 rounded-full">
+                  <Pencil className="w-6 h-6 text-[var(--color-accent)]" />
+                </div>
+                <h3 className="text-xl font-medium text-gray-900">顧客情報を編集</h3>
+              </div>
+
+              {editError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                  {editError}
+                </div>
+              )}
+
+              <form onSubmit={handleEditCustomer} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    名前 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="山田 太郎"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    電話番号 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="090-1234-5678"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    メールアドレス（任意）
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder="example@email.com"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="flex-1 py-3 px-4 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !editForm.name || !editForm.phone}
+                    className="flex-1 py-3 px-4 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? '更新中...' : '更新する'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 顧客削除確認ダイアログ */}
+      <AnimatePresence>
+        {isDeleteDialogOpen && deletingCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-xl font-medium text-gray-900">顧客を削除</h3>
+              </div>
+
+              <p className="text-gray-600 mb-2">
+                以下の顧客を削除してもよろしいですか？
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <p className="font-medium text-gray-900">
+                  {deletingCustomer.name || '名前未登録'}
+                </p>
+                {deletingCustomer.phone && (
+                  <p className="text-sm text-gray-500">{deletingCustomer.phone}</p>
+                )}
+                {deletingCustomer.email && (
+                  <p className="text-sm text-gray-500">{deletingCustomer.email}</p>
+                )}
+                {deletingCustomer._count.reservations > 0 && (
+                  <p className="text-sm text-red-600 mt-2">
+                    ※ この顧客には {deletingCustomer._count.reservations} 件の予約履歴があります。
+                    削除すると予約履歴も一緒に削除されます。
+                  </p>
+                )}
+              </div>
+
+              {deleteError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="flex-1 py-3 px-4 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteCustomer}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? '削除中...' : '削除する'}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
