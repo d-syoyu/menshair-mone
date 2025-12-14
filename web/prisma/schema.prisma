@@ -238,7 +238,9 @@ model Sale {
   subtotal        Int             // 小計（税抜）
   taxAmount       Int             // 消費税額
   taxRate         Int             // 消費税率（%）※スナップショット
-  discountAmount  Int             @default(0) // 割引額
+  discountAmount  Int             @default(0) // 店頭割引額
+  couponId        String?         // 適用クーポンID
+  couponDiscount  Int             @default(0) // クーポン割引額
   totalAmount     Int             // 合計金額（税込・割引後）
 
   // 支払情報
@@ -260,6 +262,7 @@ model Sale {
   // リレーション
   user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   reservation     Reservation?    @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  coupon          Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items           SaleItem[]
   payments        Payment[]       // 複数支払対応
   createdByUser   User?           @relation("CreatedSales", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -267,6 +270,7 @@ model Sale {
   @@index([saleDate])
   @@index([userId])
   @@index([reservationId])
+  @@index([couponId])
   @@index([paymentMethod])
   @@index([createdAt])
 }
@@ -354,7 +358,7 @@ model ProductCategory {
   @@index([isActive])
 }
 
-// 割引マスタ
+// 割引マスタ（店頭割引）
 model Discount {
   id           String       @id @default(cuid())
   name         String       // 学割、シニア割等
@@ -367,6 +371,53 @@ model Discount {
   updatedAt    DateTime     @updatedAt
 
   @@index([isActive])
+}
+
+// クーポンマスタ
+model Coupon {
+  id                    String        @id @default(cuid())
+  code                  String        @unique // クーポンコード（WELCOME10等）
+  name                  String        // クーポン名
+  type                  DiscountType  // PERCENTAGE / FIXED
+  value                 Int           // 割引値
+  description           String?       @db.Text
+
+  // 有効期間
+  validFrom             DateTime      // 有効開始日
+  validUntil            DateTime      // 有効終了日
+
+  // 利用制限
+  usageLimit            Int?          // 全体利用上限（null = 無制限）
+  usageLimitPerCustomer Int?          // 顧客ごとの利用上限（null = 無制限）
+  usageCount            Int           @default(0) // 現在の利用回数
+
+  // 適用条件
+  minimumAmount         Int?          // 最低購入金額（null = 条件なし）
+
+  isActive              Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // リレーション
+  usages                CouponUsage[]
+  sales                 Sale[]
+
+  @@index([code])
+  @@index([isActive, validFrom, validUntil])
+}
+
+// クーポン利用履歴
+model CouponUsage {
+  id          String   @id @default(cuid())
+  couponId    String
+  saleId      String?  @unique // 1つの売上に1つのクーポン
+  customerId  String?  // 顧客ID（ログインユーザーの場合）
+  usedAt      DateTime @default(now())
+
+  coupon      Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([customerId])
 }
 
 // システム設定（税率等）

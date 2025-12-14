@@ -11,6 +11,7 @@ import {
   Receipt,
   Package,
   Percent,
+  Ticket,
   Settings,
   Clock,
   User,
@@ -168,9 +169,9 @@ export default function POSDashboard() {
         >
           <Link
             href="/admin"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             管理画面に戻る
           </Link>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -296,12 +297,25 @@ export default function POSDashboard() {
             href="/admin/pos/discounts"
             className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Percent className="w-5 h-5 text-purple-600" />
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Percent className="w-5 h-5 text-red-600" />
             </div>
             <div>
               <p className="font-medium text-sm">割引管理</p>
-              <p className="text-xs text-gray-500 hidden sm:block">割引設定</p>
+              <p className="text-xs text-gray-500 hidden sm:block">店頭割引</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/pos/coupons"
+            className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Ticket className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">クーポン管理</p>
+              <p className="text-xs text-gray-500 hidden sm:block">クーポン設定</p>
             </div>
           </Link>
 
@@ -318,7 +332,6 @@ export default function POSDashboard() {
             </div>
           </Link>
 
-          <div className="hidden sm:block" />
           <div className="hidden sm:block" />
         </motion.div>
 

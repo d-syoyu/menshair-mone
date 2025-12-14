@@ -45,7 +45,9 @@ const createSaleSchema = z.object({
   reservationId: z.string().optional(),
   items: z.array(saleItemSchema).min(1, "明細は1件以上必要です"),
   payments: z.array(paymentSchema).min(1, "支払情報は1件以上必要です"),
-  discountAmount: z.number().int().min(0).default(0),
+  discountAmount: z.number().int().min(0).default(0), // 店頭割引
+  couponId: z.string().optional(), // クーポンID
+  couponDiscount: z.number().int().min(0).default(0), // クーポン割引額
   note: z.string().optional(),
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付形式が不正です"),
   saleTime: z.string().regex(/^\d{2}:\d{2}$/, "時刻形式が不正です"),
@@ -135,6 +137,13 @@ export async function GET(request: NextRequest) {
             phone: true,
           },
         },
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         items: {
           orderBy: { orderIndex: "asc" },
         },
@@ -186,12 +195,51 @@ export async function POST(request: NextRequest) {
       return sum + item.unitPrice * item.quantity;
     }, 0);
 
+    // 合計割引額（店頭割引 + クーポン割引）
+    const totalDiscount = data.discountAmount + data.couponDiscount;
+
     // 税額計算（小計から割引額を引いた金額に対して税率を適用）
-    const taxableAmount = Math.max(0, subtotal - data.discountAmount);
+    const taxableAmount = Math.max(0, subtotal - totalDiscount);
     const taxAmount = Math.floor(taxableAmount * (taxRate / 100));
 
     // 合計金額（税込・割引後）
     const totalAmount = taxableAmount + taxAmount;
+
+    // クーポンの検証（指定されている場合）
+    if (data.couponId) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { id: data.couponId },
+      });
+
+      if (!coupon) {
+        return NextResponse.json(
+          { error: "指定されたクーポンが見つかりません" },
+          { status: 400 }
+        );
+      }
+
+      if (!coupon.isActive) {
+        return NextResponse.json(
+          { error: "このクーポンは現在無効です" },
+          { status: 400 }
+        );
+      }
+
+      const now = new Date();
+      if (now < coupon.validFrom || now > coupon.validUntil) {
+        return NextResponse.json(
+          { error: "このクーポンは有効期間外です" },
+          { status: 400 }
+        );
+      }
+
+      if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+        return NextResponse.json(
+          { error: "このクーポンは利用上限に達しています" },
+          { status: 400 }
+        );
+      }
+    }
 
     // 支払総額チェック
     const paymentTotal = data.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -223,6 +271,8 @@ export async function POST(request: NextRequest) {
           taxAmount,
           taxRate,
           discountAmount: data.discountAmount,
+          couponId: data.couponId,
+          couponDiscount: data.couponDiscount,
           totalAmount,
           paymentMethod: primaryPaymentMethod,
           paymentStatus: "PAID",
@@ -232,6 +282,24 @@ export async function POST(request: NextRequest) {
           createdBy: createdByUserId,
         },
       });
+
+      // クーポン利用履歴の作成と利用回数の更新
+      if (data.couponId) {
+        await tx.couponUsage.create({
+          data: {
+            couponId: data.couponId,
+            saleId: newSale.id,
+            customerId: data.userId,
+          },
+        });
+
+        await tx.coupon.update({
+          where: { id: data.couponId },
+          data: {
+            usageCount: { increment: 1 },
+          },
+        });
+      }
 
       // 会計明細作成
       for (let i = 0; i < data.items.length; i++) {
@@ -287,6 +355,13 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             phone: true,
+          },
+        },
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
           },
         },
         items: {

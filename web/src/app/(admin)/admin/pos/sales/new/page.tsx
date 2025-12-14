@@ -22,6 +22,9 @@ import {
   Plus,
   Minus,
   Trash2,
+  Ticket,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -120,6 +123,15 @@ interface Payment {
   amount: number;
 }
 
+interface AppliedCoupon {
+  id: string;
+  code: string;
+  name: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  discountAmount: number;
+}
+
 interface PaymentMethodSetting {
   id: string;
   code: string;
@@ -156,6 +168,12 @@ export default function NewSalePage() {
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
+
+  // クーポン関連
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
   const [payments, setPayments] = useState<Payment[]>([
     { paymentMethod: 'CASH', amount: 0 },
@@ -311,6 +329,61 @@ export default function NewSalePage() {
     }
   };
 
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('クーポンコードを入力してください');
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const subtotal = calculateSubtotal();
+      const customerId = sourceType === 'reservation'
+        ? selectedReservation?.user.id
+        : selectedCustomer?.id;
+
+      const res = await fetch('/api/admin/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode,
+          subtotal,
+          customerId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.valid) {
+        setCouponError(data.error || 'クーポンが無効です');
+        return;
+      }
+
+      setAppliedCoupon({
+        id: data.coupon.id,
+        code: data.coupon.code,
+        name: data.coupon.name,
+        type: data.coupon.type,
+        value: data.coupon.value,
+        discountAmount: data.discountAmount,
+      });
+      setCouponCode('');
+      setCouponError(null);
+    } catch (err) {
+      setCouponError('クーポンの検証に失敗しました');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
+
   const handleNextStep = () => {
     setError(null);
 
@@ -368,7 +441,8 @@ export default function NewSalePage() {
     return subtotal;
   };
 
-  const getDiscountAmount = () => {
+  // 店頭割引額を計算
+  const getStoreDiscountAmount = () => {
     if (selectedDiscount) {
       const subtotal = calculateSubtotal();
       if (selectedDiscount.type === 'PERCENTAGE') {
@@ -380,10 +454,20 @@ export default function NewSalePage() {
     return customDiscountAmount;
   };
 
+  // クーポン割引額を取得
+  const getCouponDiscountAmount = () => {
+    return appliedCoupon?.discountAmount || 0;
+  };
+
+  // 合計割引額（店頭割引 + クーポン）
+  const getTotalDiscountAmount = () => {
+    return getStoreDiscountAmount() + getCouponDiscountAmount();
+  };
+
   // 内税方式: 税込価格から消費税を逆算
   const calculateTax = () => {
     const subtotal = calculateSubtotal(); // 税込小計
-    const discount = getDiscountAmount();
+    const discount = getTotalDiscountAmount();
     const taxInclusiveAmount = Math.max(0, subtotal - discount);
     // 内税計算: 税込金額 × 税率 ÷ (100 + 税率)
     return Math.floor(taxInclusiveAmount * taxRate / (100 + taxRate));
@@ -392,7 +476,7 @@ export default function NewSalePage() {
   // 税抜金額を計算（内税から逆算）
   const calculatePreTaxAmount = () => {
     const subtotal = calculateSubtotal();
-    const discount = getDiscountAmount();
+    const discount = getTotalDiscountAmount();
     const total = Math.max(0, subtotal - discount);
     const tax = calculateTax();
     return total - tax;
@@ -400,7 +484,7 @@ export default function NewSalePage() {
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal(); // 税込小計
-    const discount = getDiscountAmount();
+    const discount = getTotalDiscountAmount();
     // 内税方式なので、税込価格から割引を引くだけ
     return Math.max(0, subtotal - discount);
   };
@@ -480,7 +564,9 @@ export default function NewSalePage() {
         reservationId: sourceType === 'reservation' ? selectedReservation?.id : undefined,
         items,
         payments,
-        discountAmount: getDiscountAmount(),
+        discountAmount: getStoreDiscountAmount(),
+        couponId: appliedCoupon?.id,
+        couponDiscount: getCouponDiscountAmount(),
         note: note || undefined,
         saleDate,
         saleTime,
@@ -522,9 +608,9 @@ export default function NewSalePage() {
         >
           <Link
             href="/admin/pos"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             POSダッシュボードに戻る
           </Link>
           <h1 className="text-2xl font-medium">新規会計登録</h1>
@@ -548,14 +634,14 @@ export default function NewSalePage() {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${
                       step >= s.num
-                        ? 'bg-[var(--color-charcoal)] text-white'
+                        ? 'bg-[var(--color-accent)] text-white'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     {step > s.num ? <Check className="w-5 h-5" /> : s.num}
                   </div>
                   <span className={`mt-2 text-xs sm:text-sm text-center ${
-                    step === s.num ? 'font-medium text-[var(--color-charcoal)]' : 'text-gray-600'
+                    step === s.num ? 'font-medium text-[var(--color-accent)]' : 'text-gray-600'
                   }`}>
                     {s.label}
                   </span>
@@ -563,7 +649,7 @@ export default function NewSalePage() {
                 {idx < 2 && (
                   <div
                     className={`h-1 flex-1 -mt-5 transition-colors ${
-                      step > s.num ? 'bg-[var(--color-charcoal)]' : 'bg-gray-200'
+                      step > s.num ? 'bg-[var(--color-accent)]' : 'bg-gray-200'
                     }`}
                   />
                 )}
@@ -1024,9 +1110,84 @@ export default function NewSalePage() {
             <div className="space-y-6">
               <h2 className="text-lg font-medium mb-4">支払情報と確定</h2>
 
-              {/* Discount */}
+              {/* Coupon */}
               <div>
-                <h3 className="font-medium mb-3">割引</h3>
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-purple-500" />
+                  クーポン
+                </h3>
+                {appliedCoupon ? (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-purple-900">{appliedCoupon.name}</p>
+                        <p className="text-sm text-purple-700">
+                          コード: <span className="font-mono">{appliedCoupon.code}</span>
+                        </p>
+                        <p className="text-sm text-purple-700">
+                          {appliedCoupon.type === 'PERCENTAGE'
+                            ? `${appliedCoupon.value}% OFF`
+                            : `¥${appliedCoupon.value.toLocaleString()} OFF`}
+                          {' → '}
+                          <span className="font-medium">
+                            ¥{appliedCoupon.discountAmount.toLocaleString()} 割引
+                          </span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={removeCoupon}
+                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+                        title="クーポンを解除"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => {
+                          setCouponCode(e.target.value.toUpperCase());
+                          setCouponError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            validateCoupon();
+                          }
+                        }}
+                        placeholder="クーポンコードを入力"
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 font-mono placeholder:text-gray-400 focus:outline-none focus:border-purple-400"
+                      />
+                      <button
+                        onClick={validateCoupon}
+                        disabled={isValidatingCoupon || !couponCode.trim()}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                      >
+                        {isValidatingCoupon ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        適用
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-sm text-red-600 flex items-center gap-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        {couponError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Store Discount */}
+              <div>
+                <h3 className="font-medium mb-3">店頭割引</h3>
                 <div className="space-y-2 mb-3">
                   <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
@@ -1088,45 +1249,65 @@ export default function NewSalePage() {
               <div>
                 <h3 className="font-medium mb-3">支払方法</h3>
                 <div className="space-y-3">
-                  {payments.map((payment, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <select
-                        value={payment.paymentMethod}
-                        onChange={(e) => {
-                          const newPayments = [...payments];
-                          newPayments[index].paymentMethod = e.target.value;
-                          setPayments(newPayments);
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                      >
-                        {paymentMethods.map((method) => (
-                          <option key={method.code} value={method.code}>
-                            {method.displayName}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min="0"
-                        value={payment.amount}
-                        onChange={(e) => {
-                          const newPayments = [...payments];
-                          newPayments[index].amount = parseInt(e.target.value) || 0;
-                          setPayments(newPayments);
-                        }}
-                        className="w-32 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
-                        placeholder="0"
-                      />
-                      {payments.length > 1 && (
-                        <button
-                          onClick={() => handleRemovePayment(index)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  {payments.map((payment, index) => {
+                    // 残りの金額を計算（他の支払いの合計を引く）
+                    const otherPaymentsTotal = payments
+                      .filter((_, i) => i !== index)
+                      .reduce((sum, p) => sum + p.amount, 0);
+                    const remainingAmount = Math.max(0, calculateTotal() - otherPaymentsTotal);
+
+                    return (
+                      <div key={index} className="flex items-center gap-2">
+                        <select
+                          value={payment.paymentMethod}
+                          onChange={(e) => {
+                            const newPayments = [...payments];
+                            newPayments[index].paymentMethod = e.target.value;
+                            setPayments(newPayments);
+                          }}
+                          className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {paymentMethods.map((method) => (
+                            <option key={method.code} value={method.code}>
+                              {method.displayName}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="0"
+                          value={payment.amount}
+                          onChange={(e) => {
+                            const newPayments = [...payments];
+                            newPayments[index].amount = parseInt(e.target.value) || 0;
+                            setPayments(newPayments);
+                          }}
+                          className="w-24 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
+                          placeholder="0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newPayments = [...payments];
+                            newPayments[index].amount = remainingAmount;
+                            setPayments(newPayments);
+                          }}
+                          className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          全額
                         </button>
-                      )}
-                    </div>
-                  ))}
+                        {payments.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePayment(index)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={handleAddPayment}
@@ -1181,10 +1362,19 @@ export default function NewSalePage() {
                   <span className="text-gray-600">小計（税込）</span>
                   <span>{formatPrice(calculateSubtotal())}</span>
                 </div>
-                {getDiscountAmount() > 0 && (
+                {getCouponDiscountAmount() > 0 && (
+                  <div className="flex items-center justify-between text-sm text-purple-600">
+                    <span className="flex items-center gap-1">
+                      <Ticket className="w-3.5 h-3.5" />
+                      クーポン割引
+                    </span>
+                    <span>-{formatPrice(getCouponDiscountAmount())}</span>
+                  </div>
+                )}
+                {getStoreDiscountAmount() > 0 && (
                   <div className="flex items-center justify-between text-sm text-red-600">
-                    <span>割引</span>
-                    <span>-{formatPrice(getDiscountAmount())}</span>
+                    <span>店頭割引</span>
+                    <span>-{formatPrice(getStoreDiscountAmount())}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-xl font-medium pt-2 border-t border-gray-200">
@@ -1220,7 +1410,7 @@ export default function NewSalePage() {
             {step < 3 ? (
               <button
                 onClick={handleNextStep}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-charcoal)] text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
               >
                 次へ
                 <ChevronRight className="w-4 h-4" />
