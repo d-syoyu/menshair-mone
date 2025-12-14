@@ -30,6 +30,63 @@ const minutesToTime = (minutes: number): string => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+// GET /api/admin/reservations - 予約一覧取得
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get("date");
+    const status = searchParams.get("status");
+
+    // クエリ条件を構築
+    const where: any = {};
+
+    if (date) {
+      const reservationDate = parseLocalDate(date);
+      where.date = reservationDate;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    // 予約一覧を取得
+    const reservations = await prisma.reservation.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        items: {
+          orderBy: { orderIndex: "asc" },
+        },
+      },
+      orderBy: [
+        { date: "asc" },
+        { startTime: "asc" },
+      ],
+    });
+
+    return NextResponse.json({ reservations });
+  } catch (error) {
+    console.error("Get reservations error:", error);
+    return NextResponse.json(
+      { error: "予約の取得に失敗しました" },
+      { status: 500 }
+    );
+  }
+}
+
 // POST /api/admin/reservations - 予約作成（電話予約用）
 export async function POST(request: NextRequest) {
   try {
