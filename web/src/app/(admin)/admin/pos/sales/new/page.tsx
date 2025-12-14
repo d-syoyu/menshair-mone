@@ -328,10 +328,7 @@ export default function NewSalePage() {
         return;
       }
 
-      // 予約から作成の場合、メニューを自動設定
-      if (selectedReservation) {
-        setSelectedMenuIds(selectedReservation.items.map((item) => item.menuId));
-      }
+      // 予約から作成の場合、メニューはuseEffectで自動設定される（名前マッチング）
     }
 
     if (step === 2) {
