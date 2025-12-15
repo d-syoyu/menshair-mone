@@ -170,6 +170,7 @@ export default function ReportsPage() {
     if (activeTab === 'daily') fetchDailyReport();
     else if (activeTab === 'monthly') fetchMonthlyReport();
     else fetchAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedDate, selectedYear, selectedMonth, analyticsStartDate, analyticsEndDate]);
 
   const fetchDailyReport = async () => {

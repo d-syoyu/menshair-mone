@@ -148,7 +148,7 @@ export async function PATCH(
     }
 
     // 明細・支払が更新される場合、再計算
-    let updateData: any = {};
+    let updateData: Record<string, unknown> = {};
 
     if (data.items || data.discountAmount !== undefined) {
       const items = data.items || existingSale.items;
@@ -200,7 +200,7 @@ export async function PATCH(
     }
 
     // トランザクション処理
-    const updatedSale = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // 会計更新
       const sale = await tx.sale.update({
         where: { id },

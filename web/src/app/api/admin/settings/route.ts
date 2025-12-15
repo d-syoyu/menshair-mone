@@ -21,7 +21,7 @@ export async function GET() {
     const settings = await prisma.settings.findMany();
 
     // キーバリュー形式に変換
-    const settingsObject = settings.reduce((acc: any, setting) => {
+    const settingsObject = settings.reduce<Record<string, string>>((acc, setting) => {
       acc[setting.key] = setting.value;
       return acc;
     }, {});
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest) {
 
     // 更新後の設定を取得
     const settings = await prisma.settings.findMany();
-    const settingsObject = settings.reduce((acc: any, setting) => {
+    const settingsObject = settings.reduce<Record<string, string>>((acc, setting) => {
       acc[setting.key] = setting.value;
       return acc;
     }, {});

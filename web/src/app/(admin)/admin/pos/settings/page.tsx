@@ -17,20 +17,6 @@ import {
   Trash2,
 } from 'lucide-react';
 
-// コードから日本語名へのマッピング
-const CODE_DISPLAY_NAMES: Record<string, string> = {
-  CASH: '現金',
-  CREDIT_CARD: 'クレジットカード',
-  PAYPAY: 'PayPay',
-  LINE_PAY: 'LINE Pay',
-  RAKUTEN_PAY: '楽天ペイ',
-  AU_PAY: 'au PAY',
-  D_PAYMENT: 'd払い',
-  MERPAY: 'メルペイ',
-  BANK_TRANSFER: '銀行振込',
-  OTHER: 'その他',
-};
-
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
@@ -72,6 +58,7 @@ export default function AdminPOSSettingsPage() {
   useEffect(() => {
     fetchSettings();
     fetchPaymentMethods();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettings = async () => {

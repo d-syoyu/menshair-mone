@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
-    const type = searchParams.get("type") || "all"; // all, payment, menu, product
-
     // デフォルトは過去30日間
     const endDate = endDateParam ? new Date(endDateParam) : new Date();
     endDate.setHours(23, 59, 59, 999);

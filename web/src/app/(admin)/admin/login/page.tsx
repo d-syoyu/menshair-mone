@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
@@ -13,17 +13,12 @@ function AdminLoginContent() {
   const error = searchParams.get('error');
 
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(STORAGE_KEY) || '';
+  });
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
-
-  // 保存されたメールアドレスを読み込み
-  useEffect(() => {
-    const savedEmail = localStorage.getItem(STORAGE_KEY);
-    if (savedEmail) {
-      setEmail(savedEmail);
-    }
-  }, []);
 
   // 管理者ログイン（Credentials）
   const handleAdminLogin = async (e: React.FormEvent) => {

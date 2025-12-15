@@ -216,19 +216,6 @@ export default function AdminDashboard() {
   const today = new Date();
 
   // 各メニューアイテムのセグメント位置を計算
-  const calculateSegments = (reservation: Reservation) => {
-    const startMin = timeToMinutes(reservation.startTime) - 600;
-    const totalMin = 660;
-    let currentOffset = 0;
-
-    return reservation.items.map((item) => {
-      const left = ((startMin + currentOffset) / totalMin) * 100;
-      const width = (item.duration / totalMin) * 100;
-      currentOffset += item.duration;
-      return { ...item, left, width };
-    });
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide">
@@ -523,7 +510,6 @@ export default function AdminDashboard() {
                       const left = (startMin / totalMin) * 100;
                       const width = ((endMin - startMin) / totalMin) * 100;
                       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                      const segments = calculateSegments(reservation);
 
                       return (
                         <button

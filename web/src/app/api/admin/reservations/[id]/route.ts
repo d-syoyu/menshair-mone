@@ -252,7 +252,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 日時の更新（タイムゾーン対応）
-    const newDate = date ? parseLocalDate(date) : existingReservation.date;
     const newStartTime = startTime || existingReservation.startTime;
 
     if (date) {

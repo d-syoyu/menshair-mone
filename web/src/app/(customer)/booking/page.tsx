@@ -15,7 +15,6 @@ import {
 import {
   MENU_ITEMS,
   MENU_CATEGORY_LIST,
-  getSelectedCategories,
   calculateMenuTotals,
   CATEGORY_COLORS,
   getCategoryTextColor,
@@ -133,6 +132,7 @@ export default function BookingPage() {
     if (selectedDate && selectedMenuIds.length > 0) {
       fetchAvailability(selectedDate, selectedMenuIds);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedMenuIds]);
 
   // ローカル日付をYYYY-MM-DD形式に変換（タイムゾーン問題を回避）

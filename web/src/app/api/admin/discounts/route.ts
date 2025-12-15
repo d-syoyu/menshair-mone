@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get("includeInactive") === "true";
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (!includeInactive) {
       where.isActive = true;
     }

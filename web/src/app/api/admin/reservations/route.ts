@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { MENUS, getMenuById, calculateMenuTotals } from "@/constants/menu";
+import { getMenuById, calculateMenuTotals } from "@/constants/menu";
 import { parseLocalDate } from "@/lib/date-utils";
 
 // 予約作成スキーマ
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
 
     // クエリ条件を構築
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (date) {
       const reservationDate = parseLocalDate(date);

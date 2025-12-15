@@ -13,11 +13,12 @@ const fadeInUp = {
 
 interface Reservation {
   id: string;
-  menuName: string;
+  menuSummary: string;
+  totalPrice: number;
   date: string;
   startTime: string;
   endTime: string;
-  status: string;
+  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -30,16 +31,19 @@ export default function MyPage() {
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const res = await fetch('/api/reservations?status=CONFIRMED&limit=3');
+        const res = await fetch('/api/reservations?status=CONFIRMED&limit=50');
         const data = await res.json();
-        // 今日以降の予約のみ表示
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const upcoming = data.reservations?.filter((r: Reservation) => {
-          const reservationDate = new Date(r.date);
-          return reservationDate >= today;
-        }) || [];
-        setUpcomingReservations(upcoming);
+
+        const upcoming =
+          data.reservations?.filter((r: Reservation) => {
+            const reservationDate = new Date(r.date);
+            reservationDate.setHours(0, 0, 0, 0);
+            return reservationDate >= today;
+          }) || [];
+
+        setUpcomingReservations(upcoming.slice(0, 3));
       } catch (error) {
         console.error('Failed to fetch reservations:', error);
       } finally {
@@ -70,7 +74,7 @@ export default function MyPage() {
           className="text-center mb-12"
         >
           <p className="text-subheading mb-2">My Page</p>
-          <h1 className="text-heading mb-4">マイページ</h1>
+          <h1 className="text-heading mb-4 text-white">マイページ</h1>
           <div className="divider-line mx-auto" />
         </motion.div>
 
@@ -110,7 +114,7 @@ export default function MyPage() {
             <Calendar className="w-6 h-6" />
             <div className="flex-1">
               <p className="font-medium">新規予約</p>
-              <p className="text-sm opacity-70">予約を取る</p>
+              <p className="text-sm opacity-70">空き状況を確認</p>
             </div>
             <ArrowRight className="w-5 h-5" />
           </Link>
@@ -123,7 +127,7 @@ export default function MyPage() {
             <div className="flex-1">
               <p className="font-medium text-white">予約履歴</p>
               <p className="text-sm text-text-muted">
-                過去の予約を見る
+                過去・今後の予約を確認
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-text-muted" />
@@ -138,7 +142,7 @@ export default function MyPage() {
           className="glass-card p-6 mb-8"
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-medium text-white">今後のご予約</h2>
+            <h2 className="text-lg font-medium text-white">直近の予約</h2>
             <Link
               href="/mypage/reservations"
               className="text-sm text-accent-light hover:text-accent transition-colors"
@@ -154,7 +158,7 @@ export default function MyPage() {
           ) : upcomingReservations.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-text-muted mb-4">
-                予約はありません
+                予約はまだありません
               </p>
               <Link
                 href="/booking"
@@ -176,9 +180,14 @@ export default function MyPage() {
                     <Scissors className="w-5 h-5 text-accent-light" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-white">{reservation.menuName}</p>
+                    <p className="font-medium text-white">
+                      {reservation.menuSummary || 'メニュー未設定'}
+                    </p>
                     <p className="text-sm text-text-muted">
                       {formatDate(reservation.date)} {reservation.startTime}〜
+                    </p>
+                    <p className="text-sm text-gold">
+                      ¥{reservation.totalPrice.toLocaleString()}
                     </p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-text-muted" />

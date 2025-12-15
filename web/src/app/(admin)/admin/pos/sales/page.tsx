@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -94,7 +93,6 @@ const PAYMENT_STATUS_STYLES: Record<string, string> = {
 };
 
 export default function SalesListPage() {
-  const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +114,7 @@ export default function SalesListPage() {
 
   useEffect(() => {
     fetchSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate, customerName, paymentMethod, paymentStatus]);
 
   const fetchSales = async () => {
@@ -490,7 +489,7 @@ export default function SalesListPage() {
                             <div>
                               <p className="text-sm font-medium text-gray-700 mb-2">支払詳細</p>
                               <div className="space-y-1">
-                                {sale.payments.map((payment, index) => (
+                                {sale.payments.map((payment) => (
                                   <div key={payment.id} className="flex items-center justify-between text-sm">
                                     <span className="text-gray-600">
                                       {PAYMENT_METHOD_LABELS[payment.paymentMethod] || payment.paymentMethod}

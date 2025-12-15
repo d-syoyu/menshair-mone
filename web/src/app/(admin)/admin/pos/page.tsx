@@ -74,6 +74,7 @@ export default function POSDashboard() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ローカルタイムゾーンでYYYY-MM-DD形式の日付文字列を生成
@@ -145,11 +146,6 @@ export default function POSDashboard() {
   };
 
   const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  };
 
   const getItemsSummary = (items: SaleItem[]) => {
     const names = items.map((item) =>

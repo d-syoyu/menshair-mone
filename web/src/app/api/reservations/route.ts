@@ -5,8 +5,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { createReservationSchema } from "@/lib/validations";
-import { calculateMenuTotals, hasDuplicateCategories, getMenuById } from "@/constants/menu";
-import { CLOSED_DAY, BUSINESS_HOURS } from "@/constants/salon";
+import {
+  calculateMenuTotals,
+  hasDuplicateCategories,
+  getMenuById,
+} from "@/constants/menu";
+import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
 import { parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
@@ -22,10 +26,9 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const page = parseInt(searchParams.get("page") || "1", 10);
 
-    // 管理者の場合は全予約、顧客の場合は自分の予約のみ
     const where: Record<string, unknown> = {};
     if (session.user.role !== "ADMIN") {
       where.userId = session.user.id;
@@ -103,10 +106,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { menuIds, date: dateStr, startTime, note, couponCode } = validationResult.data;
+    const { menuIds, date: dateStr, startTime, note, couponCode } =
+      validationResult.data;
 
-    // 全メニューが存在するか確認
-    const menus = menuIds.map(id => getMenuById(id)).filter((m): m is NonNullable<typeof m> => m !== undefined);
+    // メニュー存在チェック
+    const menus = menuIds
+      .map((id) => getMenuById(id))
+      .filter((m): m is NonNullable<typeof m> => m !== undefined);
     if (menus.length !== menuIds.length) {
       return NextResponse.json(
         { error: "指定されたメニューが見つかりません" },
@@ -114,7 +120,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // カテゴリ重複チェック
+    // 同カテゴリ重複チェック（1カテゴリ1メニュー）
     if (hasDuplicateCategories(menuIds)) {
       return NextResponse.json(
         { error: "同じカテゴリのメニューは複数選択できません" },
@@ -122,7 +128,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 日付パース（タイムゾーン対応）
+    // 日付パース
     const date = parseLocalDate(dateStr);
     if (isNaN(date.getTime())) {
       return NextResponse.json(
@@ -148,7 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 合計計算
-    const { totalPrice, totalDuration, menuSummary, earliestLastBookingTime } = calculateMenuTotals(menuIds);
+    const { totalPrice, totalDuration, menuSummary, earliestLastBookingTime } =
+      calculateMenuTotals(menuIds);
 
     // 最終受付時間チェック
     if (startTime >= earliestLastBookingTime) {
@@ -158,12 +165,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 終了時刻計算
+    // 終了時間計算
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     const endMinutes = startHours * 60 + startMinutes + totalDuration;
     const endHours = Math.floor(endMinutes / 60);
     const endMins = endMinutes % 60;
-    const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
+    const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+      .toString()
+      .padStart(2, "0")}`;
     const weekday = date.getDay();
 
     // クーポン検証（任意）
@@ -182,7 +191,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!couponResult.valid) {
-        return NextResponse.json({ error: couponResult.error }, { status: 400 });
+        return NextResponse.json(
+          { error: couponResult.error },
+          { status: 400 }
+        );
       }
 
       appliedCouponId = couponResult.coupon.id;
@@ -190,15 +202,16 @@ export async function POST(request: NextRequest) {
       appliedCouponDiscount = couponResult.discountAmount;
     }
 
-    // 営業時間内チェック
-    if (endTime > BUSINESS_HOURS.close) {
+    // 営業時間チェック（曜日別クローズ時間）
+    const businessHours = getBusinessHours(date);
+    if (endTime > businessHours.close) {
       return NextResponse.json(
         { error: "営業時間外のため予約できません" },
         { status: 400 }
       );
     }
 
-    // 重複チェック
+    // 同日・同時間帯の重複チェック
     const startOfDay = new Date(dateStr);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(dateStr);
@@ -231,7 +244,6 @@ export async function POST(request: NextRequest) {
 
     // 予約作成（トランザクション）
     const reservation = await prisma.$transaction(async (tx) => {
-      // 予約を作成
       const newReservation = await tx.reservation.create({
         data: {
           userId: session.user.id,
@@ -249,7 +261,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 予約アイテムを作成
       await tx.reservationItem.createMany({
         data: menus.map((menu, index) => ({
           reservationId: newReservation.id,
@@ -262,7 +273,6 @@ export async function POST(request: NextRequest) {
         })),
       });
 
-      // 作成した予約を取得して返す
       return tx.reservation.findUnique({
         where: { id: newReservation.id },
         include: {
@@ -288,8 +298,6 @@ export async function POST(request: NextRequest) {
         },
       });
     });
-
-    // TODO: 予約確認メール送信
 
     return NextResponse.json(
       {

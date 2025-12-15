@@ -157,7 +157,7 @@ export async function PUT(
       }
     }
 
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     if (data.code) updateData.code = data.code.toUpperCase();
     if (data.validFrom) updateData.validFrom = validFrom;
     if (data.validUntil) updateData.validUntil = validUntil;

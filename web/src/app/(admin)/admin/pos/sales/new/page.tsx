@@ -1,30 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  ChevronRight,
-  ChevronDown,
-  Check,
+  Save,
   AlertTriangle,
-  User,
-  Search,
-  Calendar,
   Clock,
   Package,
   Menu as MenuIcon,
-  Percent,
-  DollarSign,
-  CreditCard,
   Plus,
   Minus,
   Trash2,
-  Ticket,
+  ChevronDown,
+  Calendar,
+  User,
+  Phone,
+  Search,
   X,
-  Loader2,
+  Check,
+  Ticket,
+  Receipt,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -32,46 +30,9 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
 
-type Step = 1 | 2 | 3;
-type SourceType = 'reservation' | 'walkin' | null;
+// ========== 型定義 ==========
 
-interface Customer {
-  id: string;
-  name: string | null;
-  phone: string | null;
-  email: string | null;
-}
-
-interface Reservation {
-  id: string;
-  date: string;
-  startTime: string;
-  totalPrice: number;
-  totalDuration: number;
-  menuSummary: string;
-  couponCode?: string | null;
-  couponDiscount?: number;
-  coupon?: {
-    id: string;
-    code: string;
-    name: string;
-    type: 'PERCENTAGE' | 'FIXED';
-    value: number;
-  } | null;
-  user: {
-    id: string;
-    name: string | null;
-    phone: string | null;
-  };
-  items: {
-    id: string;
-    menuId: string;
-    menuName: string;
-    category: string;
-    price: number;
-    duration: number;
-  }[];
-}
+type SourceType = 'reservation' | 'walkin';
 
 interface Menu {
   id: string;
@@ -115,21 +76,51 @@ interface Discount {
   isActive: boolean;
 }
 
-interface SaleItem {
-  itemType: 'MENU' | 'PRODUCT';
-  menuId?: string;
-  menuName?: string;
-  category?: string;
-  duration?: number;
-  productId?: string;
-  productName?: string;
-  quantity: number;
-  unitPrice: number;
+interface PaymentMethodSetting {
+  id: string;
+  code: string;
+  displayName: string;
+  isActive: boolean;
+  displayOrder: number;
 }
 
-interface Payment {
+interface PaymentEntry {
   paymentMethod: string;
   amount: number;
+}
+
+interface Reservation {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  totalPrice: number;
+  menuSummary: string;
+  couponId: string | null;
+  couponCode: string | null;
+  couponDiscount: number;
+  user: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+  };
+  items: {
+    id: string;
+    menuId: string;
+    menuName: string;
+    category: string;
+    price: number;
+    duration: number;
+  }[];
+}
+
+interface Customer {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 interface AppliedCoupon {
@@ -139,165 +130,89 @@ interface AppliedCoupon {
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
   discountAmount: number;
+  message: string;
 }
 
-interface PaymentMethodSetting {
-  id: string;
-  code: string;
-  displayName: string;
-  isActive: boolean;
-  displayOrder: number;
-}
+// ========== メインコンポーネント ==========
 
 export default function NewSalePage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
+
+  // 読み込み状態
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Step 1: 会計元の選択
-  const [sourceType, setSourceType] = useState<SourceType>(null);
-  const [todayReservations, setTodayReservations] = useState<Reservation[]>([]);
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [walkinName, setWalkinName] = useState('');
-  const [walkinPhone, setWalkinPhone] = useState('');
-
-  // Step 2: 明細入力
+  // マスターデータ
   const [menus, setMenus] = useState<Menu[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
+  const [taxRate, setTaxRate] = useState(10);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+
+  // 会計元
+  const [sourceType, setSourceType] = useState<SourceType>('walkin');
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // 顧客検索モーダル
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([]);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+
+  // 明細
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
   const [expandedMenuCategories, setExpandedMenuCategories] = useState<string[]>([]);
   const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
 
-  // Step 3: 支払・確定
-  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  // 割引・クーポン
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
-
-  // クーポン関連
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-  const [autoAppliedCoupon, setAutoAppliedCoupon] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSetting[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([
-    { paymentMethod: 'CASH', amount: 0 },
-  ]);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  // 支払
+  const [payments, setPayments] = useState<PaymentEntry[]>([{ paymentMethod: 'CASH', amount: 0 }]);
+
+  // 日時・備考
   const [saleDate, setSaleDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
   const [saleTime, setSaleTime] = useState(() => {
     const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(Math.floor(now.getMinutes() / 10) * 10).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   });
   const [note, setNote] = useState('');
-  const [taxRate, setTaxRate] = useState(10);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ========== データ取得 ==========
 
   useEffect(() => {
-    if (step === 1 && sourceType === 'reservation') {
-      fetchTodayReservations();
-    } else if (step === 1 && sourceType === 'walkin') {
-      fetchCustomers();
-    } else if (step === 2) {
-      fetchMenus();
-      fetchProducts();
-      fetchProductCategories();
-    } else if (step === 3) {
-      fetchDiscounts();
-      fetchTaxRate();
-      fetchPaymentMethods();
-    }
-  }, [step, sourceType]);
-
-  // 顧客検索
-  useEffect(() => {
-    if (customerSearch && sourceType === 'walkin') {
-      const timer = setTimeout(() => fetchCustomers(customerSearch), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [customerSearch, sourceType]);
-
-  // 予約切り替え時にクーポン状態をリセット
-  useEffect(() => {
-    setAppliedCoupon(null);
-    setCouponCode('');
-    setCouponError(null);
-    setAutoAppliedCoupon(false);
-  }, [selectedReservation]);
-
-  // 予約からのメニュー自動設定（menusがロードされた後に実行）
-  useEffect(() => {
-    if (step === 2 && selectedReservation && menus.length > 0 && selectedMenuIds.length === 0) {
-      // 予約アイテムのメニュー名でマッチング
-      const matchedMenuIds: string[] = [];
-      selectedReservation.items.forEach((item) => {
-        const matchedMenu = menus.find((m) => m.name === item.menuName);
-        if (matchedMenu) {
-          matchedMenuIds.push(matchedMenu.id);
-        }
-      });
-      if (matchedMenuIds.length > 0) {
-        setSelectedMenuIds(matchedMenuIds);
-        // 選択されたメニューのカテゴリを自動展開
-        const categoryIds = Array.from(
-          new Set(matchedMenuIds.map((id) => menus.find((m) => m.id === id)?.categoryId).filter(Boolean))
-        ) as string[];
-        setExpandedMenuCategories(categoryIds);
-      }
-    }
-  }, [step, selectedReservation, menus, selectedMenuIds.length]);
-
-  // 予約に紐づくクーポンを会計ステップで自動適用
-  useEffect(() => {
-    if (step !== 3 || appliedCoupon || autoAppliedCoupon) return;
-    if (!selectedReservation) return;
-
-    const code = selectedReservation.coupon?.code || selectedReservation.couponCode || '';
-    if (code) {
-      setCouponCode(code);
-      setAutoAppliedCoupon(true);
-      validateCoupon(code);
-    }
-  }, [step, selectedReservation, appliedCoupon, autoAppliedCoupon, selectedMenuIds, productQuantities]);
-
-  const fetchTodayReservations = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/admin/reservations?date=${today}&status=CONFIRMED`);
-      const data = await res.json();
-      setTodayReservations(data.reservations || []);
-    } catch (err) {
-      console.error('Failed to fetch reservations:', err);
-    }
-  };
-
-  const fetchCustomers = async (query = '') => {
-    try {
-      const url = query
-        ? `/api/admin/customers?q=${encodeURIComponent(query)}`
-        : '/api/admin/customers';
-      const res = await fetch(url);
-      const data = await res.json();
-      setCustomers(data);
-    } catch (err) {
-      console.error('Failed to fetch customers:', err);
-    }
-  };
+    Promise.all([
+      fetchMenus(),
+      fetchProducts(),
+      fetchProductCategories(),
+      fetchDiscounts(),
+      fetchPaymentMethods(),
+      fetchTaxRate(),
+      fetchReservations(),
+    ]).then(() => setIsLoading(false));
+  }, []);
 
   const fetchMenus = async () => {
     try {
       const res = await fetch('/api/admin/menus');
       const data = await res.json();
-      setMenus(data);
+      setMenus(data.filter((m: Menu) => m.isActive));
     } catch (err) {
       console.error('Failed to fetch menus:', err);
     }
@@ -307,7 +222,7 @@ export default function NewSalePage() {
     try {
       const res = await fetch('/api/admin/products');
       const data = await res.json();
-      setProducts(data);
+      setProducts(data.filter((p: Product) => p.isActive));
     } catch (err) {
       console.error('Failed to fetch products:', err);
     }
@@ -327,9 +242,25 @@ export default function NewSalePage() {
     try {
       const res = await fetch('/api/admin/discounts');
       const data = await res.json();
-      setDiscounts(data);
+      setDiscounts(data.filter((d: Discount) => d.isActive));
     } catch (err) {
       console.error('Failed to fetch discounts:', err);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const res = await fetch('/api/admin/payment-methods');
+      const data = await res.json();
+      const methods = data.paymentMethods || data;
+      const activeMethods = methods.filter((pm: PaymentMethodSetting) => pm.isActive);
+      setPaymentMethods(activeMethods);
+      // 初期支払方法を設定
+      if (activeMethods.length > 0) {
+        setPayments([{ paymentMethod: activeMethods[0].code, amount: 0 }]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch payment methods:', err);
     }
   };
 
@@ -343,26 +274,154 @@ export default function NewSalePage() {
     }
   };
 
-  const fetchPaymentMethods = async () => {
+  const fetchReservations = async () => {
     try {
-      const res = await fetch('/api/admin/payment-methods');
+      // 本日以降のCONFIRMED予約を取得
+      const today = new Date().toISOString().split('T')[0];
+      const res = await fetch(`/api/admin/reservations?status=CONFIRMED`);
       const data = await res.json();
-      // 有効な支払方法のみをフィルタリングして設定
-      const methods = data.paymentMethods || data;
-      const activeMethods = methods.filter((pm: PaymentMethodSetting) => pm.isActive);
-      setPaymentMethods(activeMethods);
-      // 初期支払方法を最初の有効な支払方法に設定
-      if (activeMethods.length > 0 && payments[0].paymentMethod === 'CASH') {
-        setPayments([{ paymentMethod: activeMethods[0].code, amount: 0 }]);
-      }
+      // 本日以降の予約のみフィルタリング
+      const filtered = data.filter((r: Reservation) => r.date >= today);
+      setReservations(filtered);
     } catch (err) {
-      console.error('Failed to fetch payment methods:', err);
+      console.error('Failed to fetch reservations:', err);
     }
   };
 
-  const validateCoupon = async (codeOverride?: string) => {
-    const normalizedCode = (codeOverride ?? couponCode).trim();
-    if (!normalizedCode) {
+  // ========== 顧客検索 ==========
+
+  const searchCustomers = async (query: string) => {
+    if (!query.trim()) {
+      setCustomerSearchResults([]);
+      return;
+    }
+
+    setIsSearchingCustomers(true);
+    try {
+      const res = await fetch(`/api/admin/customers?search=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setCustomerSearchResults(data);
+    } catch (err) {
+      console.error('Failed to search customers:', err);
+    } finally {
+      setIsSearchingCustomers(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerSearchQuery) {
+        searchCustomers(customerSearchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearchQuery]);
+
+  const selectCustomer = (customer: Customer) => {
+    setSelectedUserId(customer.id);
+    setCustomerName(customer.name || '');
+    setCustomerPhone(customer.phone || '');
+    setShowCustomerSearch(false);
+    setCustomerSearchQuery('');
+    setCustomerSearchResults([]);
+  };
+
+  // ========== 予約選択 ==========
+
+  const selectReservation = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setSelectedUserId(reservation.user.id);
+    setCustomerName(reservation.user.name || '');
+    setCustomerPhone(reservation.user.phone || '');
+
+    // 予約のメニューを自動選択
+    const menuIds = reservation.items.map(item => item.menuId);
+    setSelectedMenuIds(menuIds);
+
+    // 予約のクーポンを自動適用
+    if (reservation.couponId && reservation.couponCode) {
+      setCouponCode(reservation.couponCode);
+      // クーポン割引額を予約から取得
+      setAppliedCoupon({
+        id: reservation.couponId,
+        code: reservation.couponCode,
+        name: reservation.couponCode,
+        type: 'FIXED',
+        value: reservation.couponDiscount,
+        discountAmount: reservation.couponDiscount,
+        message: `¥${reservation.couponDiscount.toLocaleString()}割引（予約時適用）`,
+      });
+    }
+
+    // 予約日時を設定
+    setSaleDate(reservation.date.split('T')[0]);
+    setSaleTime(reservation.startTime);
+  };
+
+  const clearReservation = () => {
+    setSelectedReservation(null);
+    setSelectedUserId(null);
+    setCustomerName('');
+    setCustomerPhone('');
+    setSelectedMenuIds([]);
+    setAppliedCoupon(null);
+    setCouponCode('');
+  };
+
+  // ========== 金額計算 ==========
+
+  const calculateSubtotal = useMemo(() => {
+    let subtotal = 0;
+
+    // メニュー小計
+    selectedMenuIds.forEach((menuId) => {
+      const menu = menus.find((m) => m.id === menuId);
+      if (menu) subtotal += menu.price;
+    });
+
+    // 商品小計
+    Object.entries(productQuantities).forEach(([productId, quantity]) => {
+      const product = products.find((p) => p.id === productId);
+      if (product && quantity > 0) {
+        subtotal += product.price * quantity;
+      }
+    });
+
+    return subtotal;
+  }, [selectedMenuIds, productQuantities, menus, products]);
+
+  const getDiscountAmount = useMemo(() => {
+    if (selectedDiscount) {
+      if (selectedDiscount.type === 'PERCENTAGE') {
+        return Math.floor((calculateSubtotal * selectedDiscount.value) / 100);
+      } else {
+        return selectedDiscount.value;
+      }
+    }
+    return customDiscountAmount;
+  }, [selectedDiscount, customDiscountAmount, calculateSubtotal]);
+
+  const getCouponDiscount = useMemo(() => {
+    return appliedCoupon?.discountAmount || 0;
+  }, [appliedCoupon]);
+
+  const calculateTax = useMemo(() => {
+    const taxInclusiveAmount = Math.max(0, calculateSubtotal - getDiscountAmount - getCouponDiscount);
+    return Math.floor(taxInclusiveAmount * taxRate / (100 + taxRate));
+  }, [calculateSubtotal, getDiscountAmount, getCouponDiscount, taxRate]);
+
+  const calculateTotal = useMemo(() => {
+    return Math.max(0, calculateSubtotal - getDiscountAmount - getCouponDiscount);
+  }, [calculateSubtotal, getDiscountAmount, getCouponDiscount]);
+
+  const paymentTotal = useMemo(() => {
+    return payments.reduce((sum, p) => sum + p.amount, 0);
+  }, [payments]);
+
+  // ========== クーポン検証 ==========
+
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
       setCouponError('クーポンコードを入力してください');
       return;
     }
@@ -371,49 +430,46 @@ export default function NewSalePage() {
     setCouponError(null);
 
     try {
-      const subtotal = calculateSubtotal();
-      const customerId = sourceType === 'reservation'
-        ? selectedReservation?.user.id
-        : selectedCustomer?.id;
-      const selectedMenus = selectedMenuIds
-        .map((id) => menus.find((m) => m.id === id))
-        .filter((m): m is Menu => Boolean(m));
-      const categories = selectedMenus.map((m) => m.category.name);
-      const menuIds = selectedMenus.map((m) => m.id);
-      const weekday = saleDate ? new Date(saleDate).getDay() : new Date().getDay();
+      const menuIds = selectedMenuIds;
+      const categories = selectedMenuIds
+        .map(id => menus.find(m => m.id === id)?.category.name)
+        .filter(Boolean) as string[];
+
+      const saleWeekday = new Date(saleDate).getDay();
 
       const res = await fetch('/api/admin/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: normalizedCode,
-          subtotal,
-          customerId,
+          code: couponCode,
+          subtotal: calculateSubtotal,
+          customerId: selectedUserId,
           menuIds,
           categories,
-          weekday,
+          weekday: saleWeekday,
           time: saleTime,
         }),
       });
 
       const data = await res.json();
 
-      if (!data.valid) {
-        setCouponError(data.error || 'クーポンが無効です');
-        return;
+      if (data.valid) {
+        setAppliedCoupon({
+          id: data.coupon.id,
+          code: data.coupon.code,
+          name: data.coupon.name,
+          type: data.coupon.type,
+          value: data.coupon.value,
+          discountAmount: data.discountAmount,
+          message: data.message,
+        });
+        setSuccess('クーポンを適用しました');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setCouponError(data.error);
+        setAppliedCoupon(null);
       }
-
-      setAppliedCoupon({
-        id: data.coupon.id,
-        code: data.coupon.code,
-        name: data.coupon.name,
-        type: data.coupon.type,
-        value: data.coupon.value,
-        discountAmount: data.discountAmount,
-      });
-      setCouponCode('');
-      setCouponError(null);
-    } catch (err) {
+    } catch {
       setCouponError('クーポンの検証に失敗しました');
     } finally {
       setIsValidatingCoupon(false);
@@ -424,113 +480,9 @@ export default function NewSalePage() {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError(null);
-    setAutoAppliedCoupon(true); // 手動で解除した場合は自動適用を抑止
   };
 
-  const handleNextStep = () => {
-    setError(null);
-
-    if (step === 1) {
-      if (!sourceType) {
-        setError('会計元を選択してください');
-        return;
-      }
-
-      if (sourceType === 'reservation' && !selectedReservation) {
-        setError('予約を選択してください');
-        return;
-      }
-
-      if (sourceType === 'walkin' && !selectedCustomer && (!walkinName || !walkinPhone)) {
-        setError('顧客を選択するか、顧客情報を入力してください');
-        return;
-      }
-
-      // 予約から作成の場合、メニューはuseEffectで自動設定される（名前マッチング）
-    }
-
-    if (step === 2) {
-      if (selectedMenuIds.length === 0 && Object.keys(productQuantities).length === 0) {
-        setError('メニューまたは商品を選択してください');
-        return;
-      }
-    }
-
-    setStep((prev) => (prev + 1) as Step);
-  };
-
-  const handlePrevStep = () => {
-    setError(null);
-    setStep((prev) => (prev - 1) as Step);
-  };
-
-  const calculateSubtotal = () => {
-    let subtotal = 0;
-
-    // メニューの小計
-    selectedMenuIds.forEach((menuId) => {
-      const menu = menus.find((m) => m.id === menuId);
-      if (menu) subtotal += menu.price;
-    });
-
-    // 商品の小計
-    Object.entries(productQuantities).forEach(([productId, quantity]) => {
-      const product = products.find((p) => p.id === productId);
-      if (product && quantity > 0) {
-        subtotal += product.price * quantity;
-      }
-    });
-
-    return subtotal;
-  };
-
-  // 店頭割引額を計算
-  const getStoreDiscountAmount = () => {
-    if (selectedDiscount) {
-      const subtotal = calculateSubtotal();
-      if (selectedDiscount.type === 'PERCENTAGE') {
-        return Math.floor((subtotal * selectedDiscount.value) / 100);
-      } else {
-        return selectedDiscount.value;
-      }
-    }
-    return customDiscountAmount;
-  };
-
-  // クーポン割引額を取得
-  const getCouponDiscountAmount = () => {
-    return appliedCoupon?.discountAmount || 0;
-  };
-
-  // 合計割引額（店頭割引 + クーポン）
-  const getTotalDiscountAmount = () => {
-    return getStoreDiscountAmount() + getCouponDiscountAmount();
-  };
-
-  // 内税方式: 税込価格から消費税を逆算
-  const calculateTax = () => {
-    const subtotal = calculateSubtotal(); // 税込小計
-    const discount = getTotalDiscountAmount();
-    const taxInclusiveAmount = Math.max(0, subtotal - discount);
-    // 内税計算: 税込金額 × 税率 ÷ (100 + 税率)
-    return Math.floor(taxInclusiveAmount * taxRate / (100 + taxRate));
-  };
-
-  // 税抜金額を計算（内税から逆算）
-  const calculatePreTaxAmount = () => {
-    const subtotal = calculateSubtotal();
-    const discount = getTotalDiscountAmount();
-    const total = Math.max(0, subtotal - discount);
-    const tax = calculateTax();
-    return total - tax;
-  };
-
-  const calculateTotal = () => {
-    const subtotal = calculateSubtotal(); // 税込小計
-    const discount = getTotalDiscountAmount();
-    // 内税方式なので、税込価格から割引を引くだけ
-    return Math.max(0, subtotal - discount);
-  };
+  // ========== 支払方法 ==========
 
   const handleAddPayment = () => {
     const defaultMethod = paymentMethods.length > 0 ? paymentMethods[0].code : 'CASH';
@@ -543,28 +495,58 @@ export default function NewSalePage() {
     }
   };
 
+  const handleSetFullAmount = (index: number) => {
+    const otherPaymentsTotal = payments
+      .filter((_, i) => i !== index)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const remainingAmount = Math.max(0, calculateTotal - otherPaymentsTotal);
+
+    const newPayments = [...payments];
+    newPayments[index].amount = remainingAmount;
+    setPayments(newPayments);
+  };
+
+  // ========== 送信処理 ==========
+
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 5000);
+  };
+
   const handleSubmit = async () => {
     setError(null);
 
     // バリデーション
-    const total = calculateTotal();
-    const paymentTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+    if (selectedMenuIds.length === 0 && Object.keys(productQuantities).filter(k => productQuantities[k] > 0).length === 0) {
+      showError('メニューまたは商品を選択してください');
+      return;
+    }
 
-    if (paymentTotal !== total) {
-      setError(`支払総額が合計金額と一致しません（支払: ¥${paymentTotal.toLocaleString()}, 合計: ¥${total.toLocaleString()}）`);
+    if (paymentTotal !== calculateTotal) {
+      showError(`支払総額が合計金額と一致しません（支払: ¥${paymentTotal.toLocaleString()}, 合計: ¥${calculateTotal.toLocaleString()}）`);
       return;
     }
 
     if (payments.some((p) => p.amount <= 0)) {
-      setError('支払金額は1円以上を入力してください');
+      showError('支払金額は1円以上を入力してください');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // 会計明細を作成
-      const items: SaleItem[] = [];
+      // 明細データを構築
+      const items: Array<{
+        itemType: 'MENU' | 'PRODUCT';
+        menuId?: string;
+        menuName?: string;
+        category?: string;
+        duration?: number;
+        productId?: string;
+        productName?: string;
+        quantity: number;
+        unitPrice: number;
+      }> = [];
 
       // メニュー明細
       selectedMenuIds.forEach((menuId) => {
@@ -597,22 +579,18 @@ export default function NewSalePage() {
       });
 
       const requestBody = {
-        userId: sourceType === 'reservation' ? selectedReservation?.user.id : selectedCustomer?.id,
-        customerName: sourceType === 'reservation'
-          ? selectedReservation?.user.name
-          : selectedCustomer?.name || walkinName,
-        customerPhone: sourceType === 'reservation'
-          ? selectedReservation?.user.phone
-          : selectedCustomer?.phone || walkinPhone,
-        reservationId: sourceType === 'reservation' ? selectedReservation?.id : undefined,
+        reservationId: selectedReservation?.id,
+        userId: selectedUserId || undefined,
+        customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
         items,
         payments,
-        discountAmount: getStoreDiscountAmount(),
+        discountAmount: getDiscountAmount,
         couponId: appliedCoupon?.id,
-        couponDiscount: getCouponDiscountAmount(),
-        note: note || undefined,
+        couponDiscount: getCouponDiscount,
         saleDate,
         saleTime,
+        note: note || undefined,
       };
 
       const res = await fetch('/api/admin/sales', {
@@ -624,25 +602,44 @@ export default function NewSalePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || '会計の作成に失敗しました');
+        showError(data.error || '会計の登録に失敗しました');
         return;
       }
 
-      // 成功したら会計履歴ページに遷移
+      // 成功 - 会計一覧へリダイレクト
       router.push('/admin/pos/sales');
-    } catch (err) {
-      setError('会計の作成に失敗しました');
+    } catch {
+      showError('会計の登録に失敗しました');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ========== ヘルパー関数 ==========
+
   const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
+
+  const formatReservationDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  // ========== レンダリング ==========
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
+        <div className="container-wide max-w-6xl mx-auto px-4">
+          <div className="p-12 text-center text-gray-500">読み込み中...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
-      <div className="container-wide max-w-4xl mx-auto px-4">
-        {/* Header */}
+      <div className="container-wide max-w-6xl mx-auto px-4">
+        {/* ヘッダー */}
         <motion.div
           initial="hidden"
           animate="visible"
@@ -650,58 +647,17 @@ export default function NewSalePage() {
           className="mb-8"
         >
           <Link
-            href="/admin/pos"
+            href="/admin/pos/sales"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
           >
             <ArrowLeft className="w-5 h-5" />
-            POSダッシュボードに戻る
+            会計履歴に戻る
           </Link>
-          <h1 className="text-2xl font-medium">新規会計登録</h1>
+          <h1 className="text-2xl font-medium mb-2">新規会計登録</h1>
+          <p className="text-gray-600">予約からの会計またはウォークインの会計を登録します</p>
         </motion.div>
 
-        {/* Step Indicator */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
-          <div className="flex items-start justify-center max-w-2xl mx-auto">
-            {[
-              { num: 1, label: '会計元選択' },
-              { num: 2, label: '明細入力' },
-              { num: 3, label: '支払・確定' }
-            ].map((s, idx) => (
-              <div key={s.num} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${
-                      step >= s.num
-                        ? 'bg-[var(--color-accent)] text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {step > s.num ? <Check className="w-5 h-5" /> : s.num}
-                  </div>
-                  <span className={`mt-2 text-xs sm:text-sm text-center ${
-                    step === s.num ? 'font-medium text-[var(--color-accent)]' : 'text-gray-600'
-                  }`}>
-                    {s.label}
-                  </span>
-                </div>
-                {idx < 2 && (
-                  <div
-                    className={`h-1 flex-1 -mt-5 transition-colors ${
-                      step > s.num ? 'bg-[var(--color-accent)]' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Error Message */}
+        {/* 通知 */}
         <AnimatePresence>
           {error && (
             <motion.div
@@ -710,339 +666,212 @@ export default function NewSalePage() {
               exit={{ opacity: 0, y: -10 }}
               className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
             >
-              <AlertTriangle className="w-5 h-5" />
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
               {error}
+            </motion.div>
+          )}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
+            >
+              <Check className="w-5 h-5 flex-shrink-0" />
+              {success}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Content */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm p-6 sm:p-8"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {/* Step 1: 会計元の選択 */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-medium mb-4">会計元を選択</h2>
+          {/* 左カラム */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* 1. 会計元セクション */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-[var(--color-gold)]" />
+                会計元
+              </h2>
 
-              {/* Source Type Selection */}
-              {!sourceType && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setSourceType('reservation')}
-                    className="p-6 border-2 border-gray-200 rounded-lg hover:border-[var(--color-charcoal)] hover:bg-gray-50 transition-all group"
-                  >
-                    <Calendar className="w-8 h-8 text-[var(--color-gold)] mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                    <p className="font-medium mb-1">予約から作成</p>
-                    <p className="text-sm text-gray-500">本日の予約から選択</p>
-                  </button>
-                  <button
-                    onClick={() => setSourceType('walkin')}
-                    className="p-6 border-2 border-gray-200 rounded-lg hover:border-[var(--color-charcoal)] hover:bg-gray-50 transition-all group"
-                  >
-                    <User className="w-8 h-8 text-[var(--color-accent)] mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                    <p className="font-medium mb-1">ウォークインで作成</p>
-                    <p className="text-sm text-gray-500">顧客を検索または新規入力</p>
-                  </button>
-                </div>
-              )}
+              {/* ソースタイプ選択 */}
+              <div className="flex gap-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSourceType('reservation');
+                    clearReservation();
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                    sourceType === 'reservation'
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Calendar className="w-5 h-5 mx-auto mb-1" />
+                  <span className="text-sm font-medium">予約から</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSourceType('walkin');
+                    clearReservation();
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                    sourceType === 'walkin'
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <User className="w-5 h-5 mx-auto mb-1" />
+                  <span className="text-sm font-medium">ウォークイン</span>
+                </button>
+              </div>
 
-              {/* Reservation Selection */}
+              {/* 予約選択 */}
               {sourceType === 'reservation' && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium">本日の予約</h3>
-                    <button
-                      onClick={() => {
-                        setSourceType(null);
-                        setSelectedReservation(null);
-                      }}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      戻る
-                    </button>
-                  </div>
-                  {todayReservations.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">本日の予約はありません</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {todayReservations.map((reservation) => (
-                        <button
-                          key={reservation.id}
-                          onClick={() => setSelectedReservation(reservation)}
-                          className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
-                            selectedReservation?.id === reservation.id
-                              ? 'border-[var(--color-charcoal)] bg-gray-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="font-medium mb-1">{reservation.user.name || '名前未登録'}</p>
-                              <p className="text-sm text-gray-600 mb-1">{reservation.menuSummary}</p>
-                              <div className="flex items-center gap-3 text-xs text-gray-500">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  {reservation.startTime}
-                                </span>
-                                <span>{formatPrice(reservation.totalPrice)}</span>
-                              </div>
-                            </div>
-                            {selectedReservation?.id === reservation.id && (
-                              <Check className="w-5 h-5 text-[var(--color-charcoal)]" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Walk-in Customer Selection */}
-              {sourceType === 'walkin' && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium">顧客選択</h3>
-                    <button
-                      onClick={() => {
-                        setSourceType(null);
-                        setSelectedCustomer(null);
-                        setWalkinName('');
-                        setWalkinPhone('');
-                      }}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      戻る
-                    </button>
-                  </div>
-
-                  {/* Customer Search */}
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e) => setCustomerSearch(e.target.value)}
-                      placeholder="顧客を検索（名前または電話番号）"
-                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                    />
-                  </div>
-
-                  {/* Customer List */}
-                  {customerSearch && customers.length > 0 && (
-                    <div className="mb-4 max-h-60 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                      {customers.map((customer) => (
-                        <button
-                          key={customer.id}
-                          onClick={() => {
-                            setSelectedCustomer(customer);
-                            setCustomerSearch('');
-                          }}
-                          className="w-full p-3 text-left hover:bg-gray-50 transition-colors"
-                        >
-                          <p className="font-medium">{customer.name || '名前未登録'}</p>
-                          <p className="text-sm text-gray-500">{customer.phone || 'TEL未登録'}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Selected Customer or New Input */}
-                  {selectedCustomer ? (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between">
+                <div className="space-y-3">
+                  {selectedReservation ? (
+                    <div className="p-4 border border-[var(--color-accent)] bg-[var(--color-accent)]/5 rounded-lg">
+                      <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-medium mb-1">選択中の顧客</p>
-                          <p className="text-sm text-gray-600">{selectedCustomer.name}</p>
-                          <p className="text-sm text-gray-500">{selectedCustomer.phone}</p>
+                          <p className="font-medium">{selectedReservation.user.name || '名前未登録'}</p>
+                          <p className="text-sm text-gray-600">
+                            {formatReservationDate(selectedReservation.date)} {selectedReservation.startTime}〜{selectedReservation.endTime}
+                          </p>
+                          <p className="text-sm text-gray-500">{selectedReservation.menuSummary}</p>
+                          {selectedReservation.couponCode && (
+                            <p className="text-sm text-green-600 mt-1">
+                              <Ticket className="w-3 h-3 inline mr-1" />
+                              クーポン: {selectedReservation.couponCode}
+                            </p>
+                          )}
                         </div>
                         <button
-                          onClick={() => setSelectedCustomer(null)}
-                          className="text-sm text-gray-500 hover:text-gray-700"
+                          type="button"
+                          onClick={clearReservation}
+                          className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          変更
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm text-gray-600">または新規顧客情報を入力</p>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          顧客名 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={walkinName}
-                          onChange={(e) => setWalkinName(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="例: 山田太郎"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          電話番号 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          value={walkinPhone}
-                          onChange={(e) => setWalkinPhone(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="例: 090-1234-5678"
-                        />
-                      </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {reservations.length === 0 ? (
+                        <p className="text-center text-gray-500 py-4">予約がありません</p>
+                      ) : (
+                        reservations.map((reservation) => (
+                          <button
+                            key={reservation.id}
+                            type="button"
+                            onClick={() => selectReservation(reservation)}
+                            className="w-full p-3 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 text-left transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{reservation.user.name || '名前未登録'}</p>
+                                <p className="text-sm text-gray-600">
+                                  {formatReservationDate(reservation.date)} {reservation.startTime}〜
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500">{reservation.menuSummary}</p>
+                                <p className="text-[var(--color-gold)] font-medium">
+                                  {formatPrice(reservation.totalPrice)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ウォークイン顧客入力 */}
+              {sourceType === 'walkin' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <User className="w-4 h-4 inline mr-1" />
+                        顧客名
+                      </label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="例: 田中太郎"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Phone className="w-4 h-4 inline mr-1" />
+                        電話番号
+                      </label>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="例: 090-1234-5678"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerSearch(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Search className="w-4 h-4" />
+                    既存顧客から選択
+                  </button>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Step 2: 明細入力 */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-medium mb-4">メニュー・商品を選択</h2>
+            {/* 2. メニュー選択 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+                <MenuIcon className="w-5 h-5 text-[var(--color-gold)]" />
+                施術メニュー
+                {selectedMenuIds.length > 0 && (
+                  <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)] text-white rounded-full">
+                    {selectedMenuIds.length}
+                  </span>
+                )}
+              </h2>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {(() => {
+                  const categories = Array.from(
+                    new Map(menus.map((m) => [m.category.id, m.category])).values()
+                  );
 
-              {/* Menu Selection */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <MenuIcon className="w-5 h-5 text-[var(--color-gold)]" />
-                  施術メニュー
-                </h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {/* カテゴリーごとにアコーディオン */}
-                  {(() => {
-                    // カテゴリーをユニークに取得（表示順でソート）
-                    const categories = Array.from(
-                      new Map(menus.map((m) => [m.category.id, m.category])).values()
-                    );
-
-                    return categories.map((category) => {
-                      const categoryMenus = menus
-                        .filter((m) => m.categoryId === category.id)
-                        .sort((a, b) => a.displayOrder - b.displayOrder);
-
-                      if (categoryMenus.length === 0) return null;
-
-                      const isExpanded = expandedMenuCategories.includes(category.id);
-                      const selectedCount = categoryMenus.filter((m) =>
-                        selectedMenuIds.includes(m.id)
-                      ).length;
-
-                      return (
-                        <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                          {/* カテゴリーヘッダー（クリックで展開/折りたたみ） */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpandedMenuCategories((prev) =>
-                                prev.includes(category.id)
-                                  ? prev.filter((id) => id !== category.id)
-                                  : [...prev, category.id]
-                              );
-                            }}
-                            className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
-                          >
-                            <span
-                              className="w-3 h-3 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: category.color }}
-                            />
-                            <span className="flex-1 text-left font-medium text-gray-700">
-                              {category.name}
-                            </span>
-                            {selectedCount > 0 && (
-                              <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)] text-white rounded-full">
-                                {selectedCount}
-                              </span>
-                            )}
-                            <ChevronDown
-                              className={`w-4 h-4 text-gray-400 transition-transform ${
-                                isExpanded ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </button>
-
-                          {/* メニューリスト（展開時のみ表示） */}
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="border-t border-gray-200"
-                              >
-                                <div className="p-2 space-y-1 bg-gray-50">
-                                  {categoryMenus.map((menu) => (
-                                    <label
-                                      key={menu.id}
-                                      className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded-lg hover:border-gray-200 cursor-pointer transition-colors"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedMenuIds.includes(menu.id)}
-                                        onChange={() => {
-                                          setSelectedMenuIds((prev) =>
-                                            prev.includes(menu.id)
-                                              ? prev.filter((id) => id !== menu.id)
-                                              : [...prev, menu.id]
-                                          );
-                                        }}
-                                        className="w-4 h-4 rounded border-gray-300"
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate">{menu.name}</p>
-                                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                                          <Clock className="w-3 h-3" />
-                                          {menu.duration}分
-                                        </p>
-                                      </div>
-                                      <p className="text-[var(--color-gold)] font-medium text-sm flex-shrink-0">
-                                        {formatPrice(menu.price)}
-                                      </p>
-                                    </label>
-                                  ))}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-              {/* Product Selection */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <Package className="w-5 h-5 text-[var(--color-gold)]" />
-                  店販商品
-                </h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {productCategories.map((category) => {
-                    const categoryProducts = products
-                      .filter((p) => p.categoryId === category.id)
+                  return categories.map((category) => {
+                    const categoryMenus = menus
+                      .filter((m) => m.categoryId === category.id)
                       .sort((a, b) => a.displayOrder - b.displayOrder);
 
-                    if (categoryProducts.length === 0) return null;
+                    if (categoryMenus.length === 0) return null;
 
-                    const isExpanded = expandedProductCategories.includes(category.id);
-                    const selectedCount = categoryProducts.filter(
-                      (p) => (productQuantities[p.id] || 0) > 0
+                    const isExpanded = expandedMenuCategories.includes(category.id);
+                    const selectedCount = categoryMenus.filter((m) =>
+                      selectedMenuIds.includes(m.id)
                     ).length;
 
                     return (
                       <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                        {/* カテゴリーヘッダー（クリックで展開/折りたたみ） */}
                         <button
                           type="button"
                           onClick={() => {
-                            setExpandedProductCategories((prev) =>
+                            setExpandedMenuCategories((prev) =>
                               prev.includes(category.id)
                                 ? prev.filter((id) => id !== category.id)
                                 : [...prev, category.id]
@@ -1050,7 +879,10 @@ export default function NewSalePage() {
                           }}
                           className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
                         >
-                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: category.color }}
+                          />
                           <span className="flex-1 text-left font-medium text-gray-700">
                             {category.name}
                           </span>
@@ -1066,7 +898,6 @@ export default function NewSalePage() {
                           />
                         </button>
 
-                        {/* 商品リスト（展開時のみ表示） */}
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
@@ -1077,54 +908,34 @@ export default function NewSalePage() {
                               className="border-t border-gray-200"
                             >
                               <div className="p-2 space-y-1 bg-gray-50">
-                                {categoryProducts.map((product) => (
-                                  <div
-                                    key={product.id}
-                                    className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded-lg"
+                                {categoryMenus.map((menu) => (
+                                  <label
+                                    key={menu.id}
+                                    className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded-lg hover:border-gray-200 cursor-pointer transition-colors"
                                   >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedMenuIds.includes(menu.id)}
+                                      onChange={() => {
+                                        setSelectedMenuIds((prev) =>
+                                          prev.includes(menu.id)
+                                            ? prev.filter((id) => id !== menu.id)
+                                            : [...prev, menu.id]
+                                        );
+                                      }}
+                                      className="w-4 h-4 rounded border-gray-300"
+                                    />
                                     <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-sm truncate">{product.name}</p>
-                                      {product.stock !== null && (
-                                        <p className="text-xs text-gray-500">在庫: {product.stock}</p>
-                                      )}
+                                      <p className="font-medium text-sm truncate">{menu.name}</p>
+                                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {menu.duration}分
+                                      </p>
                                     </div>
                                     <p className="text-[var(--color-gold)] font-medium text-sm flex-shrink-0">
-                                      {formatPrice(product.price)}
+                                      {formatPrice(menu.price)}
                                     </p>
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const current = productQuantities[product.id] || 0;
-                                          if (current > 0) {
-                                            setProductQuantities((prev) => ({
-                                              ...prev,
-                                              [product.id]: current - 1,
-                                            }));
-                                          }
-                                        }}
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                                      >
-                                        <Minus className="w-4 h-4 text-gray-600" />
-                                      </button>
-                                      <span className="w-8 text-center text-sm font-medium">
-                                        {productQuantities[product.id] || 0}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const current = productQuantities[product.id] || 0;
-                                          setProductQuantities((prev) => ({
-                                            ...prev,
-                                            [product.id]: current + 1,
-                                          }));
-                                        }}
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                                      >
-                                        <Plus className="w-4 h-4 text-gray-600" />
-                                      </button>
-                                    </div>
-                                  </div>
+                                  </label>
                                 ))}
                               </div>
                             </motion.div>
@@ -1132,106 +943,143 @@ export default function NewSalePage() {
                         </AnimatePresence>
                       </div>
                     );
-                  })}
-                </div>
-              </div>
-
-              {/* Subtotal */}
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between text-lg">
-                  <span className="font-medium">小計</span>
-                  <span className="text-[var(--color-gold)] font-medium">
-                    {formatPrice(calculateSubtotal())}
-                  </span>
-                </div>
+                  });
+                })()}
               </div>
             </div>
-          )}
 
-          {/* Step 3: 支払・確定 */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-medium mb-4">支払情報と確定</h2>
-
-              {/* Coupon */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-purple-500" />
-                  クーポン
-                </h3>
-                {appliedCoupon ? (
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-purple-900">{appliedCoupon.name}</p>
-                        <p className="text-sm text-purple-700">
-                          コード: <span className="font-mono">{appliedCoupon.code}</span>
-                        </p>
-                        <p className="text-sm text-purple-700">
-                          {appliedCoupon.type === 'PERCENTAGE'
-                            ? `${appliedCoupon.value}% OFF`
-                            : `¥${appliedCoupon.value.toLocaleString()} OFF`}
-                          {' → '}
-                          <span className="font-medium">
-                            ¥{appliedCoupon.discountAmount.toLocaleString()} 割引
-                          </span>
-                        </p>
-                      </div>
-                      <button
-                        onClick={removeCoupon}
-                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                        title="クーポンを解除"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => {
-                          setCouponCode(e.target.value.toUpperCase());
-                          setCouponError(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            validateCoupon();
-                          }
-                        }}
-                        placeholder="クーポンコードを入力"
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 font-mono placeholder:text-gray-400 focus:outline-none focus:border-purple-400"
-                      />
-                      <button
-                        onClick={() => validateCoupon()}
-                        disabled={isValidatingCoupon || !couponCode.trim()}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                      >
-                        {isValidatingCoupon ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}
-                        適用
-                      </button>
-                    </div>
-                    {couponError && (
-                      <p className="text-sm text-red-600 flex items-center gap-1">
-                        <AlertTriangle className="w-4 h-4" />
-                        {couponError}
-                      </p>
-                    )}
-                  </div>
+            {/* 3. 商品選択 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+                <Package className="w-5 h-5 text-[var(--color-gold)]" />
+                店販商品
+                {Object.values(productQuantities).some(q => q > 0) && (
+                  <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)] text-white rounded-full">
+                    {Object.values(productQuantities).filter(q => q > 0).length}
+                  </span>
                 )}
-              </div>
+              </h2>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {productCategories.map((category) => {
+                  const categoryProducts = products
+                    .filter((p) => p.categoryId === category.id)
+                    .sort((a, b) => a.displayOrder - b.displayOrder);
 
-              {/* Store Discount */}
-              <div>
-                <h3 className="font-medium mb-3">店頭割引</h3>
-                <div className="space-y-2 mb-3">
+                  if (categoryProducts.length === 0) return null;
+
+                  const isExpanded = expandedProductCategories.includes(category.id);
+                  const selectedCount = categoryProducts.filter((p) =>
+                    (productQuantities[p.id] || 0) > 0
+                  ).length;
+
+                  return (
+                    <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedProductCategories((prev) =>
+                            prev.includes(category.id)
+                              ? prev.filter((id) => id !== category.id)
+                              : [...prev, category.id]
+                          );
+                        }}
+                        className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="flex-1 text-left font-medium text-gray-700">
+                          {category.name}
+                        </span>
+                        {selectedCount > 0 && (
+                          <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)] text-white rounded-full">
+                            {selectedCount}
+                          </span>
+                        )}
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="border-t border-gray-200"
+                          >
+                            <div className="p-2 space-y-2 bg-gray-50">
+                              {categoryProducts.map((product) => (
+                                <div
+                                  key={product.id}
+                                  className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded-lg"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm truncate">{product.name}</p>
+                                    {product.stock !== null && (
+                                      <p className="text-xs text-gray-500">在庫: {product.stock}</p>
+                                    )}
+                                  </div>
+                                  <p className="text-[var(--color-gold)] font-medium text-sm">
+                                    {formatPrice(product.price)}
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = productQuantities[product.id] || 0;
+                                        if (current > 0) {
+                                          setProductQuantities((prev) => ({
+                                            ...prev,
+                                            [product.id]: current - 1,
+                                          }));
+                                        }
+                                      }}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                                    >
+                                      <Minus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                    <span className="w-6 text-center text-sm font-medium">
+                                      {productQuantities[product.id] || 0}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const current = productQuantities[product.id] || 0;
+                                        setProductQuantities((prev) => ({
+                                          ...prev,
+                                          [product.id]: current + 1,
+                                        }));
+                                      }}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                                    >
+                                      <Plus className="w-3 h-3 text-gray-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4. 割引・クーポン */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-[var(--color-gold)]" />
+                割引・クーポン
+              </h2>
+
+              {/* 店頭割引 */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">店頭割引</h3>
+                <div className="space-y-2">
                   <label className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
                       type="radio"
@@ -1269,10 +1117,8 @@ export default function NewSalePage() {
                     </label>
                   ))}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    カスタム割引額（円）
-                  </label>
+                <div className="mt-3">
+                  <label className="block text-sm text-gray-600 mb-1">カスタム割引額（円）</label>
                   <input
                     type="number"
                     min="0"
@@ -1288,86 +1134,118 @@ export default function NewSalePage() {
                 </div>
               </div>
 
-              {/* Payment Methods */}
+              {/* クーポン */}
               <div>
-                <h3 className="font-medium mb-3">支払方法</h3>
-                <div className="space-y-3">
-                  {payments.map((payment, index) => {
-                    // 残りの金額を計算（他の支払いの合計を引く）
-                    const otherPaymentsTotal = payments
-                      .filter((_, i) => i !== index)
-                      .reduce((sum, p) => sum + p.amount, 0);
-                    const remainingAmount = Math.max(0, calculateTotal() - otherPaymentsTotal);
-
-                    return (
-                      <div key={index} className="flex items-center gap-2">
-                        <select
-                          value={payment.paymentMethod}
-                          onChange={(e) => {
-                            const newPayments = [...payments];
-                            newPayments[index].paymentMethod = e.target.value;
-                            setPayments(newPayments);
-                          }}
-                          className="w-28 px-2 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)]"
-                        >
-                          {paymentMethods.map((method) => (
-                            <option key={method.code} value={method.code}>
-                              {method.displayName}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          min="0"
-                          value={payment.amount}
-                          onChange={(e) => {
-                            const newPayments = [...payments];
-                            newPayments[index].amount = parseInt(e.target.value) || 0;
-                            setPayments(newPayments);
-                          }}
-                          className="ml-auto w-24 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newPayments = [...payments];
-                            newPayments[index].amount = remainingAmount;
-                            setPayments(newPayments);
-                          }}
-                          className="px-4 py-2.5 text-sm font-medium bg-gray-700 hover:bg-gray-800 active:bg-gray-900 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
-                          style={{ color: '#FFFFFF' }}
-                        >
-                          全額
-                        </button>
-                        {payments.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePayment(index)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                <h3 className="text-sm font-medium text-gray-700 mb-2">クーポン</h3>
+                {appliedCoupon ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-green-700">{appliedCoupon.code}</p>
+                        <p className="text-sm text-green-600">{appliedCoupon.message}</p>
                       </div>
-                    );
-                  })}
-                </div>
-                <button
-                  onClick={handleAddPayment}
-                  className="mt-3 inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  支払方法を追加
-                </button>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="p-1 text-green-600 hover:text-green-800"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                      placeholder="クーポンコードを入力"
+                    />
+                    <button
+                      type="button"
+                      onClick={validateCoupon}
+                      disabled={isValidatingCoupon || !couponCode.trim()}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isValidatingCoupon ? '検証中...' : '適用'}
+                    </button>
+                  </div>
+                )}
+                {couponError && (
+                  <p className="mt-2 text-sm text-red-600">{couponError}</p>
+                )}
               </div>
+            </div>
 
-              {/* Date and Time */}
-              <div className="grid grid-cols-2 gap-4">
+            {/* 5. 支払方法 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4">支払方法</h2>
+              <div className="space-y-3">
+                {payments.map((payment, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      value={payment.paymentMethod}
+                      onChange={(e) => {
+                        const newPayments = [...payments];
+                        newPayments[index].paymentMethod = e.target.value;
+                        setPayments(newPayments);
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                    >
+                      {paymentMethods.map((method) => (
+                        <option key={method.code} value={method.code}>
+                          {method.displayName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      value={payment.amount}
+                      onChange={(e) => {
+                        const newPayments = [...payments];
+                        newPayments[index].amount = parseInt(e.target.value) || 0;
+                        setPayments(newPayments);
+                      }}
+                      className="w-28 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
+                      placeholder="0"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSetFullAmount(index)}
+                      className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      全額
+                    </button>
+                    {payments.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePayment(index)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={handleAddPayment}
+                className="mt-3 inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                支払方法を追加
+              </button>
+            </div>
+
+            {/* 6. 日時・備考 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-medium mb-4">日時・備考</h2>
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    売上日 <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">売上日</label>
                   <input
                     type="date"
                     value={saleDate}
@@ -1376,9 +1254,7 @@ export default function NewSalePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    売上時刻 <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">時刻</label>
                   <input
                     type="time"
                     value={saleTime}
@@ -1387,91 +1263,181 @@ export default function NewSalePage() {
                   />
                 </div>
               </div>
-
-              {/* Note */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">備考</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                  rows={3}
+                  rows={2}
                   placeholder="メモを入力してください"
                 />
               </div>
+            </div>
+          </div>
 
-              {/* Summary */}
-              <div className="pt-4 border-t border-gray-200 space-y-2">
+          {/* 右カラム - 金額サマリー */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+              <h2 className="text-lg font-medium mb-4">合計金額</h2>
+              <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">小計（税込）</span>
-                  <span>{formatPrice(calculateSubtotal())}</span>
+                  <span>{formatPrice(calculateSubtotal)}</span>
                 </div>
-                {getCouponDiscountAmount() > 0 && (
-                  <div className="flex items-center justify-between text-sm text-purple-600">
-                    <span className="flex items-center gap-1">
-                      <Ticket className="w-3.5 h-3.5" />
-                      クーポン割引
-                    </span>
-                    <span>-{formatPrice(getCouponDiscountAmount())}</span>
-                  </div>
-                )}
-                {getStoreDiscountAmount() > 0 && (
+                {getDiscountAmount > 0 && (
                   <div className="flex items-center justify-between text-sm text-red-600">
                     <span>店頭割引</span>
-                    <span>-{formatPrice(getStoreDiscountAmount())}</span>
+                    <span>-{formatPrice(getDiscountAmount)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-xl font-medium pt-2 border-t border-gray-200">
-                  <span>合計金額（税込）</span>
-                  <span className="text-[var(--color-gold)]">{formatPrice(calculateTotal())}</span>
+                {getCouponDiscount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-600">
+                    <span>クーポン割引</span>
+                    <span>-{formatPrice(getCouponDiscount)}</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-200 pt-3">
+                  <div className="flex items-center justify-between text-xl font-medium">
+                    <span>合計（税込）</span>
+                    <span className="text-[var(--color-gold)]">{formatPrice(calculateTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                    <span>（うち消費税 {taxRate}%）</span>
+                    <span>{formatPrice(calculateTax)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>（うち消費税 {taxRate}%）</span>
-                  <span>{formatPrice(calculateTax())}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm pt-2">
-                  <span className="text-gray-600">支払合計</span>
-                  <span className={payments.reduce((sum, p) => sum + p.amount, 0) === calculateTotal() ? 'text-green-600' : 'text-red-600'}>
-                    {formatPrice(payments.reduce((sum, p) => sum + p.amount, 0))}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
-            {step > 1 ? (
+                <div className="border-t border-gray-200 pt-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">支払合計</span>
+                    <span className={paymentTotal === calculateTotal ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                      {formatPrice(paymentTotal)}
+                    </span>
+                  </div>
+                  {paymentTotal !== calculateTotal && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {paymentTotal > calculateTotal
+                        ? `¥${(paymentTotal - calculateTotal).toLocaleString()} 多い`
+                        : `¥${(calculateTotal - paymentTotal).toLocaleString()} 不足`}
+                    </p>
+                  )}
+                </div>
+
+                {/* 明細プレビュー */}
+                {(selectedMenuIds.length > 0 || Object.values(productQuantities).some(q => q > 0)) && (
+                  <div className="border-t border-gray-200 pt-3">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">明細</h3>
+                    <div className="space-y-1 text-xs text-gray-600 max-h-40 overflow-y-auto">
+                      {selectedMenuIds.map((menuId) => {
+                        const menu = menus.find((m) => m.id === menuId);
+                        if (!menu) return null;
+                        return (
+                          <div key={menuId} className="flex justify-between">
+                            <span className="truncate mr-2">{menu.name}</span>
+                            <span className="flex-shrink-0">{formatPrice(menu.price)}</span>
+                          </div>
+                        );
+                      })}
+                      {Object.entries(productQuantities).map(([productId, quantity]) => {
+                        if (quantity <= 0) return null;
+                        const product = products.find((p) => p.id === productId);
+                        if (!product) return null;
+                        return (
+                          <div key={productId} className="flex justify-between">
+                            <span className="truncate mr-2">{product.name} ×{quantity}</span>
+                            <span className="flex-shrink-0">{formatPrice(product.price * quantity)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 登録ボタン */}
               <button
-                onClick={handlePrevStep}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                戻る
-              </button>
-            ) : (
-              <div />
-            )}
-            {step < 3 ? (
-              <button
-                onClick={handleNextStep}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
-              >
-                次へ
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
+                type="button"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || calculateTotal === 0 || paymentTotal !== calculateTotal}
+                className="w-full mt-6 inline-flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                {isSubmitting ? '作成中...' : '会計を作成'}
-                <Check className="w-4 h-4" />
+                {isSubmitting ? '登録中...' : '会計を登録する'}
+                <Save className="w-5 h-5" />
               </button>
-            )}
+            </div>
           </div>
         </motion.div>
       </div>
+
+      {/* 顧客検索モーダル */}
+      <AnimatePresence>
+        {showCustomerSearch && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={() => setShowCustomerSearch(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">顧客検索</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerSearch(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                  placeholder="名前または電話番号で検索"
+                  autoFocus
+                />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto">
+                {isSearchingCustomers ? (
+                  <p className="text-center text-gray-500 py-4">検索中...</p>
+                ) : customerSearchResults.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">
+                    {customerSearchQuery ? '該当する顧客が見つかりません' : '検索キーワードを入力してください'}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {customerSearchResults.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => selectCustomer(customer)}
+                        className="w-full p-3 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 text-left transition-colors"
+                      >
+                        <p className="font-medium">{customer.name || '名前未登録'}</p>
+                        {customer.phone && <p className="text-sm text-gray-600">{customer.phone}</p>}
+                        {customer.email && <p className="text-sm text-gray-500">{customer.email}</p>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

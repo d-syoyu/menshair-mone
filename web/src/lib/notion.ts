@@ -8,8 +8,8 @@ import type {
   RichTextItemResponse,
   DatabaseObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { unstable_cache } from "next/cache";
 import { getProxiedImageUrl } from "./image-proxy";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 // Notion Client - only create if API key is set
 // SDK v5 uses 2025-09-03 API by default

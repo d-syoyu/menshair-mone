@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Check Notion database structure - SDK v5 (2025-09-03 API)
 import { Client } from "@notionhq/client";
 

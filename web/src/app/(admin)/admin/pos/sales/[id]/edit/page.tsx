@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Save,
   AlertTriangle,
-  Check,
   Clock,
   Package,
   Menu as MenuIcon,

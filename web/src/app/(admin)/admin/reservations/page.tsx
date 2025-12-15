@@ -179,6 +179,7 @@ function AdminReservationsContent() {
 
   useEffect(() => {
     fetchReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page]);
 
   // ハイライトされた予約までスクロール
@@ -831,7 +832,7 @@ function AdminReservationsContent() {
                           {/* メニュー詳細 */}
                           {reservation.items?.length > 0 && (
                             <div className="mb-3 space-y-2">
-                              {reservation.items.map((item, idx) => (
+                              {reservation.items.map((item) => (
                                 <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                                   <div
                                     className="w-1 h-10 rounded-full flex-shrink-0"

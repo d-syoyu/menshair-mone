@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const includeInactive = searchParams.get("includeInactive") === "true";
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (categoryId) {
       where.categoryId = categoryId;
     }

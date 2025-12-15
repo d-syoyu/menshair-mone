@@ -17,12 +17,9 @@ const Header = () => {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isAdminPath = pathname?.startsWith('/admin');
 
-  // 管理画面では表示しない
-  if (pathname?.startsWith('/admin')) {
-    return null;
-  }
-
+  // スクロールでヘッダー背景を切り替え
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -31,24 +28,24 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Prevent body scroll when mobile menu is open
+  // モバイルメニュー開閉時にスクロール固定
   useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflowY = 'hidden';
-    } else {
-      document.body.style.overflowY = '';
-    }
+    document.body.style.overflowY = mobileMenuOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflowY = '';
     };
   }, [mobileMenuOpen]);
+
+  if (isAdminPath) {
+    return null;
+  }
 
   return (
     <>
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
             ? 'bg-dark/95 backdrop-blur-md py-4 shadow-lg shadow-black/20'
@@ -57,10 +54,7 @@ const Header = () => {
       >
         <div className="container-wide flex justify-between items-center">
           {/* Logo */}
-          <Link
-            href="/"
-            className="relative z-50 group"
-          >
+          <Link href="/" className="relative z-50 group">
             <span className="text-2xl md:text-3xl font-serif tracking-[0.15em] text-white transition-colors duration-300">
               MONË
             </span>
@@ -85,9 +79,11 @@ const Header = () => {
                     <span className="text-xs tracking-[0.2em] uppercase">
                       {item.name}
                     </span>
-                    <span className={`absolute -bottom-1 left-0 h-[1px] bg-gradient-to-r from-accent to-gold transition-all duration-300 ${
-                      pathname === item.href ? 'w-full' : 'w-0 group-hover:w-full'
-                    }`} />
+                    <span
+                      className={`absolute -bottom-1 left-0 h-[1px] bg-gradient-to-r from-accent to-gold transition-all duration-300 ${
+                        pathname === item.href ? 'w-full' : 'w-0 group-hover:w-full'
+                      }`}
+                    />
                   </Link>
                 </li>
               ))}

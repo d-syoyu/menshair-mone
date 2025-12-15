@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
@@ -15,16 +15,11 @@ function LoginContent() {
   const error = searchParams.get('error');
 
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(STORAGE_KEY) || '';
+  });
   const [rememberEmail, setRememberEmail] = useState(true);
-
-  // 保存されたメールアドレスを読み込み
-  useEffect(() => {
-    const savedEmail = localStorage.getItem(STORAGE_KEY);
-    if (savedEmail) {
-      setEmail(savedEmail);
-    }
-  }, []);
 
   // Email マジックリンク
   const handleEmailLogin = async (e: React.FormEvent) => {

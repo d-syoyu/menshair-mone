@@ -125,6 +125,7 @@ export default function SaleDetailPage() {
 
   useEffect(() => {
     fetchSale();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleId]);
 
   const fetchSale = async () => {
@@ -486,7 +487,7 @@ export default function SaleDetailPage() {
             <div className="pt-4 border-t border-gray-100">
               <p className="text-sm font-medium text-gray-700 mb-3">支払方法</p>
               <div className="space-y-2">
-                {sale.payments.map((payment, index) => (
+                {sale.payments.map((payment) => (
                   <div
                     key={payment.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
