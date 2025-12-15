@@ -761,6 +761,70 @@ async function main() {
     "商品購入のみ"
   );
 
+  // 12/15（月）- 今日の会計（テスト用）
+  const dec15 = new Date("2025-12-15T00:00:00");
+
+  await createSale(
+    dec15,
+    "10:30",
+    0, // 田中
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [],
+    "CASH"
+  );
+
+  await createSale(
+    dec15,
+    "11:30",
+    1, // 鈴木
+    [
+      { name: "カット", category: "カット", price: 4950, duration: 40 },
+      { name: "カラー", category: "カラー", price: 4950, duration: 60 }
+    ],
+    [],
+    "CREDIT_CARD"
+  );
+
+  await createSale(
+    dec15,
+    "14:00",
+    2, // 山本
+    [{ name: "デザインパーマ", category: "パーマ", price: 7700, duration: 90 }],
+    [{ code: "P005", quantity: 1 }], // ワックス
+    "PAYPAY"
+  );
+
+  await createSale(
+    dec15,
+    "16:00",
+    3, // 佐藤
+    [
+      { name: "もみほぐしクレンジングSPA", category: "スパ&トリートメント", price: 2200, duration: 30 },
+      { name: "オーガニックノートシステムトリートメント3step", category: "スパ&トリートメント", price: 3300, duration: 40 }
+    ],
+    [],
+    "LINE_PAY"
+  );
+
+  await createSale(
+    dec15,
+    "17:30",
+    4, // 伊藤
+    [{ name: "フェードカット", category: "カット", price: 5500, duration: 50 }],
+    [{ code: "P006", quantity: 1 }], // ヘアオイル
+    "RAKUTEN_PAY"
+  );
+
+  // ウォークイン
+  await createSale(
+    dec15,
+    "18:30",
+    null, // ウォークイン
+    [{ name: "カット", category: "カット", price: 4950, duration: 40 }],
+    [],
+    "CASH"
+  );
+
   console.log("✅ Seeding completed!");
 }
 

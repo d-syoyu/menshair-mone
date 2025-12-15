@@ -217,12 +217,6 @@ export default function ReportsPage() {
   const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
   const formatShortPrice = (price: number) => price >= 10000 ? `¥${(price / 10000).toFixed(1)}万` : `¥${(price / 1000).toFixed(0)}k`;
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${weekdays[date.getDay()]}）`;
-  };
-
   const goToPrevDay = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
@@ -314,7 +308,6 @@ export default function ReportsPage() {
             <button onClick={goToNextDay} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={selectedDate === new Date().toISOString().split('T')[0]}>
               <ChevronRight className="w-5 h-5" />
             </button>
-            <span className="ml-2 text-gray-600">{formatDate(selectedDate)}</span>
           </motion.div>
         )}
 
@@ -404,11 +397,11 @@ export default function ReportsPage() {
                             <Pie
                               data={Object.entries(dailyReport.paymentMethodBreakdown).map(([m, d]) => ({ name: PAYMENT_METHOD_LABELS[m] || m, value: d.amount }))}
                               cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value"
-                              label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                             >
                               {Object.keys(dailyReport.paymentMethodBreakdown).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
                             <Tooltip formatter={(v: number) => formatPrice(v)} />
+                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -528,7 +521,7 @@ export default function ReportsPage() {
                               {Object.keys(monthlyReport.paymentMethodBreakdown).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
                             <Tooltip formatter={(v: number) => formatPrice(v)} />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -544,7 +537,7 @@ export default function ReportsPage() {
                             <XAxis dataKey="day" />
                             <YAxis tickFormatter={(v) => formatShortPrice(v)} />
                             <Tooltip formatter={(v: number) => [formatPrice(v), '売上']} />
-                            <Bar dataKey="amount" fill="#1F3D30" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="amount" fill="#D4A64A" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
