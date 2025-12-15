@@ -160,7 +160,18 @@ export async function POST(request: NextRequest) {
     // 管理者権限チェック
     const { error, user } = await checkAdminAuth();
     if (error) return error;
-    const createdByUserId = user?.id || null;
+
+    // createdByUserIdがデータベースに存在するか確認
+    let createdByUserId: string | null = null;
+    if (user?.id) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true },
+      });
+      if (userExists) {
+        createdByUserId = user.id;
+      }
+    }
 
     const body = await request.json();
     const validationResult = createSaleSchema.safeParse(body);
