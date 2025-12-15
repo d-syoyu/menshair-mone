@@ -885,26 +885,7 @@ export async function syncNewsletterTargetOptions(
   }
 
   try {
-    // SDK v5/API 2025-09-03では data_sources を使用するデータベースは
-    // データソースIDで更新する必要がある可能性がある
-    console.log("[Newsletter Sync] Getting data source ID...");
-
-    // まずデータベース情報を取得してdata_source IDを確認
-    const rawDatabase = await withRetry(
-      () => notion.databases.retrieve({ database_id: newsDatabaseId }),
-      "syncNewsletterTargetOptions:retrieve"
-    );
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawDb = rawDatabase as any;
-    const dataSources = rawDb.data_sources as Array<{ id: string; name: string }> | undefined;
-
-    // data_sourcesがある場合はそのIDを使用、なければ元のdatabase_idを使用
-    const targetDatabaseId = dataSources && dataSources.length > 0
-      ? dataSources[0].id
-      : newsDatabaseId;
-
-    console.log(`[Newsletter Sync] Using database ID: ${targetDatabaseId} (data_source: ${!!dataSources})`);
+    console.log(`[Newsletter Sync] Using database ID: ${newsDatabaseId}`);
 
     // 基本オプション + カテゴリオプションを作成
     const allOptions = [
@@ -924,7 +905,7 @@ export async function syncNewsletterTargetOptions(
     }
 
     const updateParams = {
-      database_id: targetDatabaseId,
+      database_id: newsDatabaseId,
       properties: {
         "配信先": {
           multi_select: {
