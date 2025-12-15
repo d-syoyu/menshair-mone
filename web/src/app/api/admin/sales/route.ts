@@ -21,20 +21,9 @@ const saleItemSchema = z.object({
   unitPrice: z.number().int().min(0),
 });
 
-// 支払詳細スキーマ
+// 支払詳細スキーマ（支払方法は動的に追加可能なためstringで受け付ける）
 const paymentSchema = z.object({
-  paymentMethod: z.enum([
-    "CASH",
-    "CREDIT_CARD",
-    "PAYPAY",
-    "LINE_PAY",
-    "RAKUTEN_PAY",
-    "AU_PAY",
-    "D_PAYMENT",
-    "MERPAY",
-    "BANK_TRANSFER",
-    "OTHER",
-  ]),
+  paymentMethod: z.string().min(1, "支払方法は必須です"),
   amount: z.number().int().positive(),
 });
 
