@@ -39,13 +39,24 @@ export async function POST() {
       );
     }
 
+    // メッセージを生成
+    const messages: string[] = [];
+    if (result.added.length > 0) {
+      messages.push(`${result.added.length}件追加`);
+    }
+    if (result.removed.length > 0) {
+      messages.push(`${result.removed.length}件削除`);
+    }
+    const message = messages.length > 0
+      ? `オプションを${messages.join("、")}しました`
+      : "すべてのオプションは既に同期済みです";
+
     return NextResponse.json({
       success: true,
-      message: result.added.length > 0
-        ? `${result.added.length}件のオプションを追加しました`
-        : "すべてのオプションは既に同期済みです",
+      message,
       categories: categories.map((c) => c.name),
       added: result.added,
+      removed: result.removed,
     });
   } catch (error) {
     console.error("[Sync Newsletter Options] Error:", error);

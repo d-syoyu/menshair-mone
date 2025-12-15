@@ -876,13 +876,14 @@ interface DatabasePropertiesResponse {
 /**
  * Notionデータベースの「配信先」マルチセレクトオプションを更新
  * カテゴリ別オプション（[カテゴリ名]利用あり/なし）を自動同期
+ * 無効化・削除されたカテゴリーのオプションは自動的に削除
  */
 export async function syncNewsletterTargetOptions(
   categories: { id: string; name: string }[]
-): Promise<{ success: boolean; error?: string; added: string[] }> {
+): Promise<{ success: boolean; error?: string; added: string[]; removed: string[] }> {
   const apiKey = process.env.NOTION_API_KEY;
   if (!apiKey || !newsDatabaseId) {
-    return { success: false, error: "Notion API not configured", added: [] };
+    return { success: false, error: "Notion API not configured", added: [], removed: [] };
   }
 
   try {
@@ -898,11 +899,12 @@ export async function syncNewsletterTargetOptions(
     });
 
     const dbInfo = await getResponse.json();
-    const existingOptions = dbInfo.properties?.["配信先"]?.multi_select?.options || [];
-    const existingNames = new Set(existingOptions.map((o: { name: string }) => o.name));
+    const existingOptions: { id?: string; name: string; color?: string }[] =
+      dbInfo.properties?.["配信先"]?.multi_select?.options || [];
+    const existingNames = new Set(existingOptions.map((o) => o.name));
     console.log(`[Newsletter Sync] Existing options: ${existingOptions.length}`);
 
-    // 基本オプション名
+    // 基本オプション名（これらは常に保持）
     const baseOptionNames = [
       "すべて",
       "管理者",
@@ -913,20 +915,34 @@ export async function syncNewsletterTargetOptions(
       "予約あり",
     ];
 
-    // カテゴリ別オプション名を追加
-    const categoryOptionNames: string[] = [];
+    // 有効なカテゴリ別オプション名
+    const validCategoryOptionNames: string[] = [];
     for (const category of categories) {
-      categoryOptionNames.push(`${category.name}${CATEGORY_USED_SUFFIX}`);
-      categoryOptionNames.push(`${category.name}${CATEGORY_NOT_USED_SUFFIX}`);
+      validCategoryOptionNames.push(`${category.name}${CATEGORY_USED_SUFFIX}`);
+      validCategoryOptionNames.push(`${category.name}${CATEGORY_NOT_USED_SUFFIX}`);
     }
 
-    const allOptionNames = [...baseOptionNames, ...categoryOptionNames];
+    // 保持すべき全オプション名
+    const validOptionNames = new Set([...baseOptionNames, ...validCategoryOptionNames]);
 
-    // 新しいオプションのみをフィルタリング（色付きで追加）
+    // 削除対象のオプションを特定（カテゴリベースのオプションのみ対象）
+    const removedOptions: string[] = [];
+    for (const opt of existingOptions) {
+      // カテゴリベースのオプション（〇〇利用あり/なし）かどうか判定
+      const isCategoryOption =
+        opt.name.endsWith(CATEGORY_USED_SUFFIX) ||
+        opt.name.endsWith(CATEGORY_NOT_USED_SUFFIX);
+
+      // カテゴリベースのオプションで、有効なオプションリストに含まれていない場合は削除対象
+      if (isCategoryOption && !validOptionNames.has(opt.name)) {
+        removedOptions.push(opt.name);
+      }
+    }
+
+    // 新規追加対象のオプション
     const newOptions: { name: string; color?: string }[] = [];
-    for (const name of allOptionNames) {
+    for (const name of validOptionNames) {
       if (!existingNames.has(name)) {
-        // 新しいオプションは色を指定
         const color = name.includes(CATEGORY_USED_SUFFIX) ? "green"
           : name.includes(CATEGORY_NOT_USED_SUFFIX) ? "red"
           : "default";
@@ -934,21 +950,28 @@ export async function syncNewsletterTargetOptions(
       }
     }
 
-    // 既存のオプションは色なしで含める
-    const allOptions = [
-      ...existingOptions.map((o: { name: string }) => ({ name: o.name })),
+    // 最終的なオプションリスト（削除対象を除外）
+    const removedSet = new Set(removedOptions);
+    const finalOptions: { name: string; color?: string }[] = [
+      // 既存オプション（削除対象以外）
+      ...existingOptions
+        .filter((o) => !removedSet.has(o.name))
+        .map((o) => ({ name: o.name })),
+      // 新規オプション
       ...newOptions,
     ];
 
-    console.log(`[Newsletter Sync] Total options: ${allOptions.length} (new: ${newOptions.length})`);
+    console.log(`[Newsletter Sync] Final options: ${finalOptions.length}`);
     console.log(`[Newsletter Sync] New options: ${newOptions.map(o => o.name).join(", ") || "(none)"}`);
+    console.log(`[Newsletter Sync] Removed options: ${removedOptions.join(", ") || "(none)"}`);
 
-    if (newOptions.length === 0) {
-      console.log(`[Newsletter Sync] All options already exist`);
-      return { success: true, added: [] };
+    // 変更がない場合はスキップ
+    if (newOptions.length === 0 && removedOptions.length === 0) {
+      console.log(`[Newsletter Sync] No changes needed`);
+      return { success: true, added: [], removed: [] };
     }
 
-    // 古いAPIバージョン（2022-06-28）を使用して直接REST APIを呼び出す
+    // Notion APIでオプションを更新
     const response = await fetch(`https://api.notion.com/v1/databases/${newsDatabaseId}`, {
       method: "PATCH",
       headers: {
@@ -960,7 +983,7 @@ export async function syncNewsletterTargetOptions(
         properties: {
           "配信先": {
             multi_select: {
-              options: allOptions,
+              options: finalOptions,
             },
           },
         },
@@ -971,7 +994,7 @@ export async function syncNewsletterTargetOptions(
 
     if (!response.ok) {
       console.error(`[Newsletter Sync] API error: ${response.status}`, result);
-      return { success: false, error: result.message || "API error", added: [] };
+      return { success: false, error: result.message || "API error", added: [], removed: [] };
     }
 
     console.log(`[Newsletter Sync] Update response keys: ${Object.keys(result).join(", ")}`);
@@ -983,11 +1006,11 @@ export async function syncNewsletterTargetOptions(
     }
 
     const addedNames = newOptions.map((opt) => opt.name);
-    console.log(`[Newsletter Sync] Added ${addedNames.length} new options`);
-    return { success: true, added: addedNames };
+    console.log(`[Newsletter Sync] Added ${addedNames.length}, Removed ${removedOptions.length} options`);
+    return { success: true, added: addedNames, removed: removedOptions };
   } catch (error) {
     console.error("[Newsletter Sync] Error:", error);
-    return { success: false, error: String(error), added: [] };
+    return { success: false, error: String(error), added: [], removed: [] };
   }
 }
 
