@@ -78,7 +78,7 @@ export default function GalleryClient({ items }: GalleryClientProps) {
       </section>
 
       {/* Category Filter */}
-      {categories.length > 2 && (
+      {categories.length > 1 && (
         <section className="container-wide pb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

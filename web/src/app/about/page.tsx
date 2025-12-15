@@ -130,16 +130,17 @@ export default function AboutPage() {
                   <Sparkles className="w-6 h-6 text-accent" />
                   <p className="text-xs tracking-[0.2em] text-accent-light uppercase">Head Spa</p>
                 </div>
-                <h3 className="text-2xl font-serif mb-6">ヘッドスパへのこだわり</h3>
+                <h3 className="text-2xl font-serif mb-6">手技のみでもみほぐす<br />男性のための本格ヘッドスパ</h3>
                 <div className="text-body space-y-4">
                   <p>
-                    頭皮の血行を促進し、日々の疲れを芯から癒すヘッドスパ。
-                    当サロンでは、お客様の頭皮状態を丁寧にカウンセリングし、
-                    最適な施術をご提案いたします。
+                    日々の疲れでコリ固まった頭皮を
+                    手でしか表現できない丁寧で深いもみほぐしを中心とした施術で柔らかくほぐし
+                    血行を促進させ頭の軽さ・スッキリ感を体感いただき
+                    毛髪の発育に欠かせない健康的な頭皮へと導きます。
                   </p>
                   <p>
-                    完全個室のプライベート空間で、
-                    日常の喧騒を忘れる極上のリラクゼーションタイムをお過ごしください。
+                    人の手の温度と圧が生む<br />
+                    『頭からの休息』をご提供させていただきます。
                   </p>
                 </div>
               </div>
@@ -162,16 +163,17 @@ export default function AboutPage() {
                   <Sparkles className="w-6 h-6 text-accent" />
                   <p className="text-xs tracking-[0.2em] text-accent-light uppercase">Shaving</p>
                 </div>
-                <h3 className="text-2xl font-serif mb-6">シェービングへのこだわり</h3>
+                <h3 className="text-2xl font-serif mb-6">シェービングは、<br />最高のスキンケアである</h3>
                 <div className="text-body space-y-4">
                   <p>
-                    熟練の技術による本格シェービングで、
-                    清潔感のある印象と極上の肌触りをご体感いただけます。
+                    barberのみに許されたシェービング技術。<br />
+                    髭を剃るのは勿論ですが、
+                    産毛や古い角質を取り除き、血行を促進させ
+                    肌本来の明るさ滑らかさを引き出します。
                   </p>
                   <p>
-                    丁寧なホットタオルとスキンケアで、
-                    ただ剃るだけでなく、肌を整える贅沢な時間をご提供します。
-                    大切な日の前のケアにもおすすめです。
+                    慌ただしい日常から少し離れ、<br />
+                    barberだからこそできる最高のスキンケアのお時間をご堪能ください。
                   </p>
                 </div>
               </div>

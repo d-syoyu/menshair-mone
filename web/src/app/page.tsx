@@ -57,7 +57,7 @@ const featuredMenus = [
     titleJa: 'シェービング',
     price: '¥2,200〜',
     duration: '15分〜',
-    description: 'コラーゲン配合シェービングソープで清潔感のある印象を',
+    description: '産毛や古い角質を除去し、肌本来の明るさ滑らかさを引き出す最高のスキンケア',
   },
   {
     title: 'Head Spa',
@@ -70,8 +70,8 @@ const featuredMenus = [
     title: 'Color',
     titleJa: 'カラー',
     price: '¥4,950〜',
-    duration: '90分〜',
-    description: 'デザインカット込みのカラーリングで理想のスタイルを実現',
+    duration: '60分〜',
+    description: '白髪染めからおしゃれ染めまで、あなたに合った色味をご提案',
   },
 ];
 

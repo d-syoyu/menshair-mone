@@ -185,21 +185,33 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
 // Get all published blog posts (News)
 export async function getBlogPosts(): Promise<BlogPost[]> {
   if (!notion || !newsDatabaseId) {
-    console.warn("Notion API not configured");
+    console.warn("Notion API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!newsDatabaseId);
     return [];
   }
 
   try {
-    // Get data_source_id (required for 2025-09-03 API)
+    // Try dataSources API first (2025-09-03), fallback to databases API
+    let response;
     const dataSourceId = await getNewsDataSourceId();
-    if (!dataSourceId) {
-      console.warn("Could not retrieve news data_source_id");
-      return [];
-    }
 
-    const response = await notion.dataSources.query({
-      data_source_id: dataSourceId,
-    });
+    if (dataSourceId) {
+      try {
+        response = await notion.dataSources.query({
+          data_source_id: dataSourceId,
+        });
+      } catch (dsError) {
+        console.warn("dataSources.query failed, falling back to databases.query:", dsError);
+        response = await notion.databases.query({
+          database_id: newsDatabaseId,
+        });
+      }
+    } else {
+      // Fallback to traditional databases.query
+      console.log("Using databases.query fallback for news");
+      response = await notion.databases.query({
+        database_id: newsDatabaseId,
+      });
+    }
 
     const posts: BlogPost[] = [];
     for (const page of response.results) {
@@ -211,6 +223,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
       }
     }
 
+    console.log(`Fetched ${posts.length} blog posts`);
     return posts;
   } catch (error) {
     console.error("Error fetching blog posts:", error);
@@ -228,17 +241,26 @@ export async function getBlogPostBySlug(
   }
 
   try {
-    // Get data_source_id (required for 2025-09-03 API)
+    // Try dataSources API first, fallback to databases API
+    let response;
     const dataSourceId = await getNewsDataSourceId();
-    if (!dataSourceId) {
-      console.warn("Could not retrieve news data_source_id");
-      return null;
-    }
 
-    // Get all items and filter by slug in code (to avoid property name issues)
-    const response = await notion.dataSources.query({
-      data_source_id: dataSourceId,
-    });
+    if (dataSourceId) {
+      try {
+        response = await notion.dataSources.query({
+          data_source_id: dataSourceId,
+        });
+      } catch (dsError) {
+        console.warn("dataSources.query failed for slug lookup, falling back:", dsError);
+        response = await notion.databases.query({
+          database_id: newsDatabaseId,
+        });
+      }
+    } else {
+      response = await notion.databases.query({
+        database_id: newsDatabaseId,
+      });
+    }
 
     // Find the page with matching slug
     let matchedPage: PageObjectResponse | null = null;
@@ -376,22 +398,39 @@ export interface GalleryItem {
 function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null {
   const properties = page.properties;
 
-  // タイトル (Title property)
-  const nameProp = properties["タイトル"] || properties["Name"];
-  if (nameProp?.type !== "title") return null;
-  const title = extractRichText(nameProp.title);
+  // タイトル (Title property) - 名前なしのtitle型を検索
+  let title = "";
+  for (const [, prop] of Object.entries(properties)) {
+    if (prop.type === "title" && prop.title?.length > 0) {
+      title = extractRichText(prop.title);
+      break;
+    }
+  }
+  // フォールバック: rich_textの「タイトル」「タイトル 」
+  if (!title) {
+    const titleProp = properties["タイトル"] || properties["タイトル "] || properties["Name"];
+    if (titleProp?.type === "rich_text") {
+      title = extractRichText(titleProp.rich_text);
+    }
+  }
+  if (!title) return null;
 
   // 公開 (Published)
   const publishedProp = properties["公開"] || properties["Published"];
   if (publishedProp?.type === "checkbox" && !publishedProp.checkbox) return null;
 
-  // カテゴリ (Category) - 説明文をカテゴリとして使用
-  const categoryProp = properties["Category"] || properties["説明文"];
+  // カテゴリー (Category) - 長音ありの「カテゴリー」に対応
+  const categoryProp = properties["カテゴリー"] || properties["カテゴリ"] || properties["Category"];
   let category = "";
   if (categoryProp?.type === "select" && categoryProp.select) {
     category = categoryProp.select.name;
-  } else if (categoryProp?.type === "rich_text") {
-    category = extractRichText(categoryProp.rich_text);
+  }
+  // 説明文をカテゴリの代わりに使用（フォールバック）
+  if (!category) {
+    const descProp = properties["説明文"];
+    if (descProp?.type === "rich_text") {
+      category = extractRichText(descProp.rich_text);
+    }
   }
 
   // Order - なければ0
@@ -438,21 +477,32 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
 // Get all published gallery items
 export async function getGalleryItems(): Promise<GalleryItem[]> {
   if (!notion || !galleryDatabaseId) {
-    console.warn("Notion Gallery API not configured");
+    console.warn("Notion Gallery API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!galleryDatabaseId);
     return [];
   }
 
   try {
-    // Get data_source_id (required for 2025-09-03 API)
+    // Try dataSources API first, fallback to databases API
+    let response;
     const dataSourceId = await getGalleryDataSourceId();
-    if (!dataSourceId) {
-      console.warn("Could not retrieve gallery data_source_id");
-      return [];
-    }
 
-    const response = await notion.dataSources.query({
-      data_source_id: dataSourceId,
-    });
+    if (dataSourceId) {
+      try {
+        response = await notion.dataSources.query({
+          data_source_id: dataSourceId,
+        });
+      } catch (dsError) {
+        console.warn("dataSources.query failed for gallery, falling back:", dsError);
+        response = await notion.databases.query({
+          database_id: galleryDatabaseId,
+        });
+      }
+    } else {
+      console.log("Using databases.query fallback for gallery");
+      response = await notion.databases.query({
+        database_id: galleryDatabaseId,
+      });
+    }
 
     const items: GalleryItem[] = [];
     for (const page of response.results) {
@@ -464,6 +514,7 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
       }
     }
 
+    console.log(`Fetched ${items.length} gallery items`);
     return items;
   } catch (error) {
     console.error("Error fetching gallery items:", error);
@@ -585,21 +636,32 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
 // Get all published products
 export async function getProducts(): Promise<Product[]> {
   if (!notion || !productsDatabaseId) {
-    console.warn("Notion Products API not configured");
+    console.warn("Notion Products API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!productsDatabaseId);
     return [];
   }
 
   try {
-    // Get data_source_id (required for 2025-09-03 API)
+    // Try dataSources API first, fallback to databases API
+    let response;
     const dataSourceId = await getProductsDataSourceId();
-    if (!dataSourceId) {
-      console.warn("Could not retrieve products data_source_id");
-      return [];
-    }
 
-    const response = await notion.dataSources.query({
-      data_source_id: dataSourceId,
-    });
+    if (dataSourceId) {
+      try {
+        response = await notion.dataSources.query({
+          data_source_id: dataSourceId,
+        });
+      } catch (dsError) {
+        console.warn("dataSources.query failed for products, falling back:", dsError);
+        response = await notion.databases.query({
+          database_id: productsDatabaseId,
+        });
+      }
+    } else {
+      console.log("Using databases.query fallback for products");
+      response = await notion.databases.query({
+        database_id: productsDatabaseId,
+      });
+    }
 
     const products: Product[] = [];
     for (const page of response.results) {
@@ -611,6 +673,7 @@ export async function getProducts(): Promise<Product[]> {
       }
     }
 
+    console.log(`Fetched ${products.length} products`);
     return products;
   } catch (error) {
     console.error("Error fetching products:", error);
