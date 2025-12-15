@@ -886,10 +886,21 @@ export async function syncNewsletterTargetOptions(
 
   try {
     // 現在のデータベース設定を取得
-    const database = await withRetry(
+    const rawDatabase = await withRetry(
       () => notion.databases.retrieve({ database_id: newsDatabaseId }),
       "syncNewsletterTargetOptions:retrieve"
-    ) as unknown as DatabasePropertiesResponse;
+    );
+
+    // デバッグ: レスポンス構造を確認
+    console.log("[Newsletter Sync] Database response keys:", Object.keys(rawDatabase));
+
+    // SDK v5では properties が直接アクセス可能
+    const database = rawDatabase as unknown as DatabasePropertiesResponse;
+
+    if (!database.properties) {
+      console.error("[Newsletter Sync] database.properties is undefined. Raw response:", JSON.stringify(rawDatabase, null, 2).substring(0, 500));
+      return { success: false, error: "データベース構造が取得できませんでした", added: [] };
+    }
 
     // 既存の「配信先」プロパティを取得
     const targetProperty = database.properties["配信先"];
