@@ -126,7 +126,6 @@ export default function EditSalePage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -153,6 +152,7 @@ export default function EditSalePage() {
     fetchDiscounts();
     fetchTaxRate();
     fetchPaymentMethods();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleId]);
 
   useEffect(() => {
@@ -292,11 +292,6 @@ export default function EditSalePage() {
     } catch (err) {
       console.error('Failed to fetch payment methods:', err);
     }
-  };
-
-  const showSuccess = (message: string) => {
-    setSuccess(message);
-    setTimeout(() => setSuccess(null), 3000);
   };
 
   const showError = (message: string) => {
@@ -446,6 +441,7 @@ export default function EditSalePage() {
       // Success - redirect to detail page
       router.push(`/admin/pos/sales/${saleId}`);
     } catch (err) {
+      console.error('Update sale failed:', err);
       showError('会計の更新に失敗しました');
     } finally {
       setIsSubmitting(false);
