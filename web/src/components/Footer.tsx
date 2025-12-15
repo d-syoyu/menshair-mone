@@ -30,7 +30,7 @@ const Footer = () => {
                 MONË
               </span>
               <span className="block text-[9px] tracking-[0.25em] text-text-muted uppercase mt-1">
-                Men&apos;s Hair & Depilation
+                Men&apos;s Hair Salon
               </span>
             </Link>
             <p className="text-text-secondary text-sm leading-relaxed mb-6">

@@ -263,7 +263,7 @@ export default function AboutPage() {
               <div>
                 <h3 className="text-2xl font-serif mb-6">MONË</h3>
                 <p className="text-xs tracking-[0.2em] text-text-muted uppercase mb-2">
-                  Men&apos;s Hair & Depilation Salon
+                  Men&apos;s Hair Salon
                 </p>
               </div>
 
