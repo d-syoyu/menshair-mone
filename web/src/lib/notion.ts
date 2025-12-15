@@ -888,34 +888,73 @@ export async function syncNewsletterTargetOptions(
   try {
     console.log(`[Newsletter Sync] Using database ID: ${newsDatabaseId}`);
 
-    // 基本オプション + カテゴリオプションを作成
-    const allOptions = [
-      { name: "すべて", color: "blue" },
-      { name: "管理者", color: "purple" },
-      { name: "新規顧客", color: "green" },
-      { name: "リピーター", color: "yellow" },
-      { name: "最近来店", color: "orange" },
-      { name: "休眠顧客", color: "red" },
-      { name: "予約あり", color: "pink" },
+    // まず既存のオプションを取得
+    const getResponse = await fetch(`https://api.notion.com/v1/databases/${newsDatabaseId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Notion-Version": "2022-06-28",
+      },
+    });
+
+    const dbInfo = await getResponse.json();
+    const existingOptions = dbInfo.properties?.["配信先"]?.multi_select?.options || [];
+    const existingNames = new Set(existingOptions.map((o: { name: string }) => o.name));
+    console.log(`[Newsletter Sync] Existing options: ${existingOptions.length}`);
+
+    // 基本オプション名
+    const baseOptionNames = [
+      "すべて",
+      "管理者",
+      "新規顧客",
+      "リピーター",
+      "最近来店",
+      "休眠顧客",
+      "予約あり",
     ];
 
-    // カテゴリ別オプションを追加
+    // カテゴリ別オプション名を追加
+    const categoryOptionNames: string[] = [];
     for (const category of categories) {
-      allOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" });
-      allOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" });
+      categoryOptionNames.push(`${category.name}${CATEGORY_USED_SUFFIX}`);
+      categoryOptionNames.push(`${category.name}${CATEGORY_NOT_USED_SUFFIX}`);
     }
 
-    console.log(`[Newsletter Sync] Sending update with ${allOptions.length} options...`);
-    console.log(`[Newsletter Sync] Options: ${allOptions.map(o => o.name).join(", ")}`);
+    const allOptionNames = [...baseOptionNames, ...categoryOptionNames];
+
+    // 新しいオプションのみをフィルタリング（色付きで追加）
+    const newOptions: { name: string; color?: string }[] = [];
+    for (const name of allOptionNames) {
+      if (!existingNames.has(name)) {
+        // 新しいオプションは色を指定
+        const color = name.includes(CATEGORY_USED_SUFFIX) ? "green"
+          : name.includes(CATEGORY_NOT_USED_SUFFIX) ? "red"
+          : "default";
+        newOptions.push({ name, color });
+      }
+    }
+
+    // 既存のオプションは色なしで含める
+    const allOptions = [
+      ...existingOptions.map((o: { name: string }) => ({ name: o.name })),
+      ...newOptions,
+    ];
+
+    console.log(`[Newsletter Sync] Total options: ${allOptions.length} (new: ${newOptions.length})`);
+    console.log(`[Newsletter Sync] New options: ${newOptions.map(o => o.name).join(", ") || "(none)"}`);
+
+    if (newOptions.length === 0) {
+      console.log(`[Newsletter Sync] All options already exist`);
+      return { success: true, added: [] };
+    }
 
     // 古いAPIバージョン（2022-06-28）を使用して直接REST APIを呼び出す
-    // SDK v5（API 2025-09-03）ではproperties更新が正しく動作しないため
     const response = await fetch(`https://api.notion.com/v1/databases/${newsDatabaseId}`, {
       method: "PATCH",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28", // 古いAPIバージョンを使用
+        "Notion-Version": "2022-06-28",
       },
       body: JSON.stringify({
         properties: {
@@ -941,12 +980,10 @@ export async function syncNewsletterTargetOptions(
     if (result.properties && result.properties["配信先"]) {
       const updatedOptions = result.properties["配信先"].multi_select?.options || [];
       console.log(`[Newsletter Sync] Response shows ${updatedOptions.length} options in 配信先`);
-    } else {
-      console.log(`[Newsletter Sync] No 配信先 in response properties`);
     }
 
-    const addedNames = allOptions.map((opt) => opt.name);
-    console.log(`[Newsletter Sync] Updated property with ${addedNames.length} options`);
+    const addedNames = newOptions.map((opt) => opt.name);
+    console.log(`[Newsletter Sync] Added ${addedNames.length} new options`);
     return { success: true, added: addedNames };
   } catch (error) {
     console.error("[Newsletter Sync] Error:", error);
