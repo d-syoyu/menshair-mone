@@ -354,11 +354,6 @@ export default function AboutPage() {
                     </div>
                   </div>
                 )}
-
-                <Link href="/booking" className="btn-primary inline-flex">
-                  ご予約はこちら
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
               </div>
             </motion.div>
 
