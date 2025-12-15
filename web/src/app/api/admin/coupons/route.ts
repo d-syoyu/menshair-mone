@@ -21,7 +21,7 @@ const createCouponSchema = z.object({
   isActive: z.boolean().default(true),
   applicableMenuIds: z.array(z.string()).optional(),
   applicableCategoryIds: z.array(z.string()).optional(),
-  applicableWeekdays: z.array(z.number().int().min(0).max(6())).optional(),
+  applicableWeekdays: z.array(z.number().int().min(0).max(6)).optional(),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "時間はHH:MM形式で入力してください").optional().nullable(),
   onlyFirstTime: z.boolean().optional(),
