@@ -55,9 +55,8 @@ const featuredMenus = [
   },
   {
     title: 'Shaving',
-    pricePrefix: 'カット＋ケアSV',
     titleJa: 'シェービング',
-    price: '¥5,500〜',
+    price: '¥2,200(単品価格)',
     duration: '15分〜',
     description: '産毛や古い角質を除去し、肌本来の明るさ滑らかさを引き出す最高のスキンケア',
   },
@@ -301,12 +300,8 @@ export default function Home() {
                   {menu.description}
                 </p>
                 <div className="flex justify-between items-center pt-4 border-t border-glass-border gap-4 mt-auto">
-                  <span className="text-xl font-light whitespace-nowrap">
-                    {'pricePrefix' in menu && menu.pricePrefix ? (
-                      <><span className="text-white">{menu.pricePrefix}　</span><span className="text-gold">{menu.price}</span></>
-                    ) : (
-                      <span className="text-gold">{menu.price}</span>
-                    )}
+                  <span className="text-xl font-light whitespace-nowrap text-gold">
+                    {menu.price}
                   </span>
                   <span className="text-sm text-text-muted whitespace-nowrap">{menu.duration}</span>
                 </div>

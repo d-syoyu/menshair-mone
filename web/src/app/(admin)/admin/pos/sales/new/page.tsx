@@ -1308,7 +1308,7 @@ export default function NewSalePage() {
                             newPayments[index].paymentMethod = e.target.value;
                             setPayments(newPayments);
                           }}
-                          className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          className="w-28 px-2 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)]"
                         >
                           {paymentMethods.map((method) => (
                             <option key={method.code} value={method.code}>
@@ -1325,7 +1325,7 @@ export default function NewSalePage() {
                             newPayments[index].amount = parseInt(e.target.value) || 0;
                             setPayments(newPayments);
                           }}
-                          className="w-24 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
+                          className="ml-auto w-24 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
                           placeholder="0"
                         />
                         <button
@@ -1335,7 +1335,8 @@ export default function NewSalePage() {
                             newPayments[index].amount = remainingAmount;
                             setPayments(newPayments);
                           }}
-                          className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap"
+                          className="px-4 py-2.5 text-sm font-medium bg-gray-700 hover:bg-gray-800 active:bg-gray-900 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
+                          style={{ color: '#FFFFFF' }}
                         >
                           全額
                         </button>
