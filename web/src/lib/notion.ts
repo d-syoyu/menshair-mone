@@ -885,9 +885,26 @@ export async function syncNewsletterTargetOptions(
   }
 
   try {
-    // SDK v5/API 2025-09-03では databases.retrieve が properties を返さないため、
-    // 直接 update で「配信先」プロパティを追加/更新する
-    console.log("[Newsletter Sync] Updating database properties directly...");
+    // SDK v5/API 2025-09-03では data_sources を使用するデータベースは
+    // データソースIDで更新する必要がある可能性がある
+    console.log("[Newsletter Sync] Getting data source ID...");
+
+    // まずデータベース情報を取得してdata_source IDを確認
+    const rawDatabase = await withRetry(
+      () => notion.databases.retrieve({ database_id: newsDatabaseId }),
+      "syncNewsletterTargetOptions:retrieve"
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawDb = rawDatabase as any;
+    const dataSources = rawDb.data_sources as Array<{ id: string; name: string }> | undefined;
+
+    // data_sourcesがある場合はそのIDを使用、なければ元のdatabase_idを使用
+    const targetDatabaseId = dataSources && dataSources.length > 0
+      ? dataSources[0].id
+      : newsDatabaseId;
+
+    console.log(`[Newsletter Sync] Using database ID: ${targetDatabaseId} (data_source: ${!!dataSources})`);
 
     // 基本オプション + カテゴリオプションを作成
     const allOptions = [
@@ -907,7 +924,7 @@ export async function syncNewsletterTargetOptions(
     }
 
     const updateParams = {
-      database_id: newsDatabaseId,
+      database_id: targetDatabaseId,
       properties: {
         "配信先": {
           multi_select: {
@@ -917,10 +934,37 @@ export async function syncNewsletterTargetOptions(
       },
     };
 
-    await withRetry(
+    console.log(`[Newsletter Sync] Sending update with ${allOptions.length} options...`);
+    console.log(`[Newsletter Sync] Options: ${allOptions.map(o => o.name).join(", ")}`);
+
+    const updateResult = await withRetry(
       () => (notion.databases.update as (params: typeof updateParams) => Promise<unknown>)(updateParams),
       "syncNewsletterTargetOptions:update"
     );
+
+    // レスポンスを確認
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resultAny = updateResult as any;
+    console.log(`[Newsletter Sync] Update response keys: ${Object.keys(resultAny).join(", ")}`);
+
+    // 更新後のプロパティを確認
+    if (resultAny.properties && resultAny.properties["配信先"]) {
+      const updatedOptions = resultAny.properties["配信先"].multi_select?.options || [];
+      console.log(`[Newsletter Sync] Response shows ${updatedOptions.length} options in 配信先`);
+    } else {
+      console.log(`[Newsletter Sync] No properties in response, checking via retrieve...`);
+      // 更新後に再取得して確認
+      const verifyDb = await withRetry(
+        () => notion.databases.retrieve({ database_id: newsDatabaseId }),
+        "syncNewsletterTargetOptions:verify"
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const verifyAny = verifyDb as any;
+      if (verifyAny.properties && verifyAny.properties["配信先"]) {
+        const verifiedOptions = verifyAny.properties["配信先"].multi_select?.options || [];
+        console.log(`[Newsletter Sync] Verified ${verifiedOptions.length} options after update`);
+      }
+    }
 
     const addedNames = allOptions.map((opt) => opt.name);
     console.log(`[Newsletter Sync] Updated property with ${addedNames.length} options`);
