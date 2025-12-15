@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,17 +11,29 @@ import {
   X,
   Check,
   AlertTriangle,
-  Percent,
-  DollarSign,
   Ticket,
   Calendar,
   Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { MENUS } from '@/constants/menu';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
+
+// 曜日の定義
+const WEEKDAYS = [
+  { value: 0, label: '日' },
+  { value: 1, label: '月' },
+  { value: 2, label: '火' },
+  { value: 3, label: '水' },
+  { value: 4, label: '木' },
+  { value: 5, label: '金' },
+  { value: 6, label: '土' },
+];
 
 interface Coupon {
   id: string;
@@ -61,6 +73,9 @@ export default function AdminCouponsPage() {
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [deletingCoupon, setDeletingCoupon] = useState<{ id: string; name: string } | null>(null);
 
+  // 折りたたみ状態
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   // Form state
   const [couponForm, setCouponForm] = useState({
     code: '',
@@ -74,14 +89,20 @@ export default function AdminCouponsPage() {
     usageLimitPerCustomer: null as number | null,
     minimumAmount: null as number | null,
     isActive: true,
-    applicableMenuIds: '' as string,
-    applicableCategoryIds: '' as string,
-    applicableWeekdays: '' as string,
+    applicableMenuIds: [] as string[],
+    applicableCategoryIds: [] as string[],
+    applicableWeekdays: [] as number[],
     startTime: '',
     endTime: '',
     onlyFirstTime: false,
     onlyReturning: false,
   });
+
+  // メニューからカテゴリを抽出
+  const categories = useMemo(() => {
+    const cats = new Set(MENUS.map((m) => m.category));
+    return Array.from(cats);
+  }, []);
 
   useEffect(() => {
     fetchCoupons();
@@ -149,14 +170,24 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: coupon.usageLimitPerCustomer,
         minimumAmount: coupon.minimumAmount,
         isActive: coupon.isActive,
-        applicableMenuIds: (coupon.applicableMenuIds || []).join(','),
-        applicableCategoryIds: (coupon.applicableCategoryIds || []).join(','),
-        applicableWeekdays: (coupon.applicableWeekdays || []).join(','),
+        applicableMenuIds: coupon.applicableMenuIds || [],
+        applicableCategoryIds: coupon.applicableCategoryIds || [],
+        applicableWeekdays: coupon.applicableWeekdays || [],
         startTime: coupon.startTime || '',
         endTime: coupon.endTime || '',
         onlyFirstTime: coupon.onlyFirstTime ?? false,
         onlyReturning: coupon.onlyReturning ?? false,
       });
+      // 詳細設定があれば開く
+      const hasAdvanced =
+        (coupon.applicableMenuIds && coupon.applicableMenuIds.length > 0) ||
+        (coupon.applicableCategoryIds && coupon.applicableCategoryIds.length > 0) ||
+        (coupon.applicableWeekdays && coupon.applicableWeekdays.length > 0) ||
+        coupon.startTime ||
+        coupon.endTime ||
+        coupon.onlyFirstTime ||
+        coupon.onlyReturning;
+      setShowAdvanced(!!hasAdvanced);
     } else {
       setEditingCoupon(null);
       const today = new Date();
@@ -174,14 +205,15 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: null,
         minimumAmount: null,
         isActive: true,
-        applicableMenuIds: '',
-        applicableCategoryIds: '',
-        applicableWeekdays: '',
+        applicableMenuIds: [],
+        applicableCategoryIds: [],
+        applicableWeekdays: [],
         startTime: '',
         endTime: '',
         onlyFirstTime: false,
         onlyReturning: false,
       });
+      setShowAdvanced(false);
     }
     setIsCouponModalOpen(true);
   };
@@ -206,19 +238,9 @@ export default function AdminCouponsPage() {
         usageLimitPerCustomer: couponForm.usageLimitPerCustomer,
         minimumAmount: couponForm.minimumAmount,
         isActive: couponForm.isActive,
-        applicableMenuIds: couponForm.applicableMenuIds
-          ? couponForm.applicableMenuIds.split(',').map((s) => s.trim()).filter(Boolean)
-          : [],
-        applicableCategoryIds: couponForm.applicableCategoryIds
-          ? couponForm.applicableCategoryIds.split(',').map((s) => s.trim()).filter(Boolean)
-          : [],
-        applicableWeekdays: couponForm.applicableWeekdays
-          ? couponForm.applicableWeekdays
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-              .map((n) => parseInt(n, 10))
-          : [],
+        applicableMenuIds: couponForm.applicableMenuIds,
+        applicableCategoryIds: couponForm.applicableCategoryIds,
+        applicableWeekdays: couponForm.applicableWeekdays,
         startTime: couponForm.startTime || undefined,
         endTime: couponForm.endTime || undefined,
         onlyFirstTime: couponForm.onlyFirstTime,
@@ -242,6 +264,36 @@ export default function AdminCouponsPage() {
     } catch (err) {
       showError(err instanceof Error ? err.message : 'エラーが発生しました');
     }
+  };
+
+  // メニュー選択のトグル
+  const toggleMenuId = (menuId: string) => {
+    setCouponForm((prev) => ({
+      ...prev,
+      applicableMenuIds: prev.applicableMenuIds.includes(menuId)
+        ? prev.applicableMenuIds.filter((id) => id !== menuId)
+        : [...prev.applicableMenuIds, menuId],
+    }));
+  };
+
+  // カテゴリ選択のトグル
+  const toggleCategory = (category: string) => {
+    setCouponForm((prev) => ({
+      ...prev,
+      applicableCategoryIds: prev.applicableCategoryIds.includes(category)
+        ? prev.applicableCategoryIds.filter((c) => c !== category)
+        : [...prev.applicableCategoryIds, category],
+    }));
+  };
+
+  // 曜日選択のトグル
+  const toggleWeekday = (day: number) => {
+    setCouponForm((prev) => ({
+      ...prev,
+      applicableWeekdays: prev.applicableWeekdays.includes(day)
+        ? prev.applicableWeekdays.filter((d) => d !== day)
+        : [...prev.applicableWeekdays, day],
+    }));
   };
 
   // Delete handlers
@@ -468,7 +520,7 @@ export default function AdminCouponsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-md md:max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -483,245 +535,324 @@ export default function AdminCouponsPage() {
                   </button>
                 </div>
 
-                <form onSubmit={handleCouponSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        クーポンコード <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={couponForm.code}
-                        onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)] font-mono"
-                        placeholder="WELCOME10"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        クーポン名 <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={couponForm.name}
-                        onChange={(e) => setCouponForm({ ...couponForm, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        placeholder="新規顧客10%OFF"
-                        required
-                      />
-                    </div>
-                  </div>
+                <form onSubmit={handleCouponSubmit} className="space-y-6">
+                  {/* 基本情報 */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900 border-b pb-2">基本情報</h3>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        割引種別 <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={couponForm.type}
-                        onChange={(e) => setCouponForm({
-                          ...couponForm,
-                          type: e.target.value as 'PERCENTAGE' | 'FIXED',
-                          value: 0
-                        })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                        required
-                      >
-                        <option value="PERCENTAGE">%割引</option>
-                        <option value="FIXED">固定額割引</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        割引値 <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          クーポンコード <span className="text-red-500">*</span>
+                        </label>
                         <input
-                          type="number"
-                          value={couponForm.value}
-                          onChange={(e) => setCouponForm({ ...couponForm, value: parseInt(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                          min="0"
-                          max={couponForm.type === 'PERCENTAGE' ? 100 : undefined}
-                          step="1"
+                          type="text"
+                          value={couponForm.code}
+                          onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)] font-mono"
+                          placeholder="WELCOME10"
                           required
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
-                          {couponForm.type === 'PERCENTAGE' ? '%' : '円'}
-                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          クーポン名 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={couponForm.name}
+                          onChange={(e) => setCouponForm({ ...couponForm, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                          placeholder="新規顧客10%OFF"
+                          required
+                        />
                       </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        有効開始日 <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={couponForm.validFrom}
-                        onChange={(e) => setCouponForm({ ...couponForm, validFrom: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        有効終了日 <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={couponForm.validUntil}
-                        onChange={(e) => setCouponForm({ ...couponForm, validUntil: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        利用上限（全体）
-                      </label>
-                      <input
-                        type="number"
-                        value={couponForm.usageLimit ?? ''}
-                        onChange={(e) => setCouponForm({ ...couponForm, usageLimit: e.target.value ? parseInt(e.target.value) : null })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        min="1"
-                        placeholder="無制限"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">空欄で無制限</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        顧客ごとの上限
-                      </label>
-                      <input
-                        type="number"
-                        value={couponForm.usageLimitPerCustomer ?? ''}
-                        onChange={(e) => setCouponForm({ ...couponForm, usageLimitPerCustomer: e.target.value ? parseInt(e.target.value) : null })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        min="1"
-                        placeholder="無制限"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">空欄で無制限</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      最低購入金額
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={couponForm.minimumAmount ?? ''}
-                        onChange={(e) => setCouponForm({ ...couponForm, minimumAmount: e.target.value ? parseInt(e.target.value) : null })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        min="0"
-                        placeholder="条件なし"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
-                        円
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">空欄で条件なし</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">対象メニューID（カンマ区切り）</label>
-                      <input
-                        type="text"
-                        value={couponForm.applicableMenuIds}
-                        onChange={(e) => setCouponForm({ ...couponForm, applicableMenuIds: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        placeholder="menu-cut,menu-color"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">対象カテゴリID/名（カンマ区切り）</label>
-                      <input
-                        type="text"
-                        value={couponForm.applicableCategoryIds}
-                        onChange={(e) => setCouponForm({ ...couponForm, applicableCategoryIds: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        placeholder="cut,color,spa"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">対象曜日（0=日〜6=土、カンマ区切り）</label>
-                      <input
-                        type="text"
-                        value={couponForm.applicableWeekdays}
-                        onChange={(e) => setCouponForm({ ...couponForm, applicableWeekdays: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                        placeholder="0,6"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">利用開始時間</label>
-                        <input
-                          type="time"
-                          value={couponForm.startTime}
-                          onChange={(e) => setCouponForm({ ...couponForm, startTime: e.target.value })}
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          割引種別 <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={couponForm.type}
+                          onChange={(e) => setCouponForm({
+                            ...couponForm,
+                            type: e.target.value as 'PERCENTAGE' | 'FIXED',
+                            value: 0
+                          })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          required
+                        >
+                          <option value="PERCENTAGE">%割引</option>
+                          <option value="FIXED">固定額割引</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          割引値 <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={couponForm.value}
+                            onChange={(e) => setCouponForm({ ...couponForm, value: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                            min="0"
+                            max={couponForm.type === 'PERCENTAGE' ? 100 : undefined}
+                            step="1"
+                            required
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
+                            {couponForm.type === 'PERCENTAGE' ? '%' : '円'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        説明
+                      </label>
+                      <textarea
+                        value={couponForm.description}
+                        onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        rows={2}
+                        placeholder="クーポンの説明を入力してください"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 有効期間 */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900 border-b pb-2">有効期間</h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          開始日 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={couponForm.validFrom}
+                          onChange={(e) => setCouponForm({ ...couponForm, validFrom: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">利用終了時間</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          終了日 <span className="text-red-500">*</span>
+                        </label>
                         <input
-                          type="time"
-                          value={couponForm.endTime}
-                          onChange={(e) => setCouponForm({ ...couponForm, endTime: e.target.value })}
+                          type="date"
+                          value={couponForm.validUntil}
+                          onChange={(e) => setCouponForm({ ...couponForm, validUntil: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          required
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={couponForm.onlyFirstTime}
-                        onChange={(e) => setCouponForm({ ...couponForm, onlyFirstTime: e.target.checked })}
-                        className="w-4 h-4 rounded border-gray-300"
-                      />
-                      初回来店限定
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={couponForm.onlyReturning}
-                        onChange={(e) => setCouponForm({ ...couponForm, onlyReturning: e.target.checked })}
-                        className="w-4 h-4 rounded border-gray-300"
-                      />
-                      リピーター限定
-                    </label>
+                  {/* 利用制限 */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900 border-b pb-2">利用制限</h3>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          全体上限
+                        </label>
+                        <input
+                          type="number"
+                          value={couponForm.usageLimit ?? ''}
+                          onChange={(e) => setCouponForm({ ...couponForm, usageLimit: e.target.value ? parseInt(e.target.value) : null })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                          min="1"
+                          placeholder="無制限"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          顧客ごと上限
+                        </label>
+                        <input
+                          type="number"
+                          value={couponForm.usageLimitPerCustomer ?? ''}
+                          onChange={(e) => setCouponForm({ ...couponForm, usageLimitPerCustomer: e.target.value ? parseInt(e.target.value) : null })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                          min="1"
+                          placeholder="無制限"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          最低金額
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={couponForm.minimumAmount ?? ''}
+                            onChange={(e) => setCouponForm({ ...couponForm, minimumAmount: e.target.value ? parseInt(e.target.value) : null })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)] pr-8"
+                            min="0"
+                            placeholder="なし"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">
+                            円
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      説明
-                    </label>
-                    <textarea
-                      value={couponForm.description}
-                      onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                      rows={2}
-                      placeholder="クーポンの説明を入力してください"
-                    />
+                  {/* 詳細設定（折りたたみ） */}
+                  <div className="border rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <span>詳細設定（対象メニュー・カテゴリ・曜日など）</span>
+                      {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+
+                    {showAdvanced && (
+                      <div className="px-4 pb-4 space-y-4 border-t">
+                        {/* 対象カテゴリ */}
+                        <div className="pt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            対象カテゴリ
+                            <span className="text-xs text-gray-500 ml-2">（選択なしで全カテゴリ対象）</span>
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {categories.map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => toggleCategory(cat)}
+                                className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                                  couponForm.applicableCategoryIds.includes(cat)
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 対象メニュー */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            対象メニュー
+                            <span className="text-xs text-gray-500 ml-2">（選択なしで全メニュー対象）</span>
+                          </label>
+                          <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                            {MENUS.map((menu) => (
+                              <label
+                                key={menu.id}
+                                className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={couponForm.applicableMenuIds.includes(menu.id)}
+                                  onChange={() => toggleMenuId(menu.id)}
+                                  className="w-4 h-4 rounded border-gray-300"
+                                />
+                                <span className="text-sm text-gray-700">{menu.name}</span>
+                                <span className="text-xs text-gray-400 ml-auto">{menu.category}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 対象曜日 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            対象曜日
+                            <span className="text-xs text-gray-500 ml-2">（選択なしで全曜日対象）</span>
+                          </label>
+                          <div className="flex gap-2">
+                            {WEEKDAYS.map((day) => (
+                              <button
+                                key={day.value}
+                                type="button"
+                                onClick={() => toggleWeekday(day.value)}
+                                className={`w-10 h-10 text-sm rounded-full border transition-colors ${
+                                  couponForm.applicableWeekdays.includes(day.value)
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                {day.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 時間帯 */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">利用開始時間</label>
+                            <input
+                              type="time"
+                              value={couponForm.startTime}
+                              onChange={(e) => setCouponForm({ ...couponForm, startTime: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">利用終了時間</label>
+                            <input
+                              type="time"
+                              value={couponForm.endTime}
+                              onChange={(e) => setCouponForm({ ...couponForm, endTime: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 顧客条件 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">顧客条件</label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={couponForm.onlyFirstTime}
+                                onChange={(e) => setCouponForm({
+                                  ...couponForm,
+                                  onlyFirstTime: e.target.checked,
+                                  onlyReturning: e.target.checked ? false : couponForm.onlyReturning
+                                })}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              初回来店限定
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={couponForm.onlyReturning}
+                                onChange={(e) => setCouponForm({
+                                  ...couponForm,
+                                  onlyReturning: e.target.checked,
+                                  onlyFirstTime: e.target.checked ? false : couponForm.onlyFirstTime
+                                })}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              リピーター限定
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
+                  {/* 有効/無効 */}
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -731,11 +862,11 @@ export default function AdminCouponsPage() {
                       className="w-4 h-4 rounded border-gray-300"
                     />
                     <label htmlFor="couponIsActive" className="text-sm text-gray-700">
-                      有効
+                      有効にする
                     </label>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
+                  <div className="flex justify-end gap-3 pt-4 border-t">
                     <button
                       type="button"
                       onClick={() => setIsCouponModalOpen(false)}

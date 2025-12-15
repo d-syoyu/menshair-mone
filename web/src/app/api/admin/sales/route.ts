@@ -3,9 +3,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { auth, checkAdminAuth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/auth";
 import { z } from "zod";
 import { parseLocalDate, parseLocalDateStart, parseLocalDateEnd } from "@/lib/date-utils";
+import { validateCoupon } from "@/lib/coupon-validation";
 
 // 会計明細スキーマ
 const saleItemSchema = z.object({
@@ -207,95 +208,44 @@ export async function POST(request: NextRequest) {
 
     // クーポンの検証（指定されている場合）
     if (data.couponId) {
-      const coupon = await prisma.coupon.findUnique({
+      // まずクーポンIDからクーポンコードを取得
+      const couponRecord = await prisma.coupon.findUnique({
         where: { id: data.couponId },
+        select: { code: true },
       });
 
-      if (!coupon) {
+      if (!couponRecord) {
         return NextResponse.json(
           { error: "指定されたクーポンが見つかりません" },
           { status: 400 }
         );
       }
 
-      if (!coupon.isActive) {
-        return NextResponse.json(
-          { error: "このクーポンは現在無効です" },
-          { status: 400 }
-        );
-      }
-
-      const now = new Date();
-      if (now < coupon.validFrom || now > coupon.validUntil) {
-        return NextResponse.json(
-          { error: "このクーポンは有効期間外です" },
-          { status: 400 }
-        );
-      }
-
-      if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-        return NextResponse.json(
-          { error: "このクーポンは利用上限に達しています" },
-          { status: 400 }
-        );
-      }
-
-      // 追加条件チェック
-      const menuIds = data.items.filter((i) => i.itemType === "MENU" && i.menuId).map((i) => i.menuId!) ;
-      const categories = data.items.filter((i) => i.category).map((i) => i.category as string);
+      // 共通検証関数で全条件をチェック
+      const menuIds = data.items
+        .filter((i) => i.itemType === "MENU" && i.menuId)
+        .map((i) => i.menuId!);
+      const categories = data.items
+        .filter((i) => i.category)
+        .map((i) => i.category as string);
       const saleDateObj = parseLocalDate(data.saleDate);
       const weekday = saleDateObj.getDay();
-      const currentTime = data.saleTime;
 
-      if (coupon.applicableMenuIds.length > 0 && !menuIds.every((id) => coupon.applicableMenuIds.includes(id))) {
+      const couponResult = await validateCoupon({
+        code: couponRecord.code,
+        subtotal,
+        customerId: data.userId,
+        menuIds,
+        categories,
+        weekday,
+        time: data.saleTime,
+      });
+
+      if (!couponResult.valid) {
         return NextResponse.json(
-          { error: "対象メニューにのみ利用できるクーポンです" },
+          { error: couponResult.error },
           { status: 400 }
         );
-      }
-      if (coupon.applicableCategoryIds.length > 0 && !categories.every((c) => coupon.applicableCategoryIds.includes(c))) {
-        return NextResponse.json(
-          { error: "対象カテゴリにのみ利用できるクーポンです" },
-          { status: 400 }
-        );
-      }
-      if (coupon.applicableWeekdays.length > 0 && !coupon.applicableWeekdays.includes(weekday)) {
-        return NextResponse.json(
-          { error: "利用できない曜日のクーポンです" },
-          { status: 400 }
-        );
-      }
-      if (coupon.startTime && coupon.endTime) {
-        if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
-          return NextResponse.json(
-            { error: `利用可能時間は${coupon.startTime}〜${coupon.endTime}です` },
-            { status: 400 }
-          );
-        }
-      }
-      if (coupon.minimumAmount !== null && subtotal < coupon.minimumAmount) {
-        return NextResponse.json(
-          { error: `このクーポンは¥${coupon.minimumAmount.toLocaleString()}以上のご購入で利用可能です` },
-          { status: 400 }
-        );
-      }
-      if (coupon.onlyFirstTime && data.userId) {
-        const saleCount = await prisma.sale.count({ where: { userId: data.userId } });
-        if (saleCount > 0) {
-          return NextResponse.json(
-            { error: "初回来店限定のクーポンです" },
-            { status: 400 }
-          );
-        }
-      }
-      if (coupon.onlyReturning && data.userId) {
-        const saleCount = await prisma.sale.count({ where: { userId: data.userId } });
-        if (saleCount === 0) {
-          return NextResponse.json(
-            { error: "リピーター限定のクーポンです" },
-            { status: 400 }
-          );
-        }
       }
     }
 
