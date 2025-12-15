@@ -892,15 +892,20 @@ export async function syncNewsletterTargetOptions(
     );
 
     // デバッグ: レスポンス構造を確認
-    console.log("[Newsletter Sync] Database response keys:", Object.keys(rawDatabase));
+    const dbKeys = Object.keys(rawDatabase);
+    console.log("[Newsletter Sync] Database response keys:", dbKeys);
 
-    // SDK v5では properties が直接アクセス可能
-    const database = rawDatabase as unknown as DatabasePropertiesResponse;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawDb = rawDatabase as any;
 
-    if (!database.properties) {
-      console.error("[Newsletter Sync] database.properties is undefined. Raw response:", JSON.stringify(rawDatabase, null, 2).substring(0, 500));
-      return { success: false, error: "データベース構造が取得できませんでした", added: [] };
+    // properties が存在しない場合（パーシャルレスポンスの可能性）
+    if (!rawDb.properties) {
+      console.error("[Newsletter Sync] properties not found. Keys:", dbKeys);
+      console.error("[Newsletter Sync] Full response:", JSON.stringify(rawDatabase, null, 2).substring(0, 1000));
+      return { success: false, error: "データベースのプロパティが取得できませんでした。Notionの統合設定を確認してください。", added: [] };
     }
+
+    const database = rawDatabase as unknown as DatabasePropertiesResponse;
 
     // 既存の「配信先」プロパティを取得
     const targetProperty = database.properties["配信先"];
