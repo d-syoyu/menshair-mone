@@ -880,7 +880,8 @@ interface DatabasePropertiesResponse {
 export async function syncNewsletterTargetOptions(
   categories: { id: string; name: string }[]
 ): Promise<{ success: boolean; error?: string; added: string[] }> {
-  if (!notion || !newsDatabaseId) {
+  const apiKey = process.env.NOTION_API_KEY;
+  if (!apiKey || !newsDatabaseId) {
     return { success: false, error: "Notion API not configured", added: [] };
   }
 
@@ -889,70 +890,59 @@ export async function syncNewsletterTargetOptions(
 
     // 基本オプション + カテゴリオプションを作成
     const allOptions = [
-      { name: "すべて", color: "blue" as const },
-      { name: "管理者", color: "purple" as const },
-      { name: "新規顧客", color: "green" as const },
-      { name: "リピーター", color: "yellow" as const },
-      { name: "最近来店", color: "orange" as const },
-      { name: "休眠顧客", color: "red" as const },
-      { name: "予約あり", color: "pink" as const },
+      { name: "すべて", color: "blue" },
+      { name: "管理者", color: "purple" },
+      { name: "新規顧客", color: "green" },
+      { name: "リピーター", color: "yellow" },
+      { name: "最近来店", color: "orange" },
+      { name: "休眠顧客", color: "red" },
+      { name: "予約あり", color: "pink" },
     ];
 
     // カテゴリ別オプションを追加
     for (const category of categories) {
-      allOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" as const });
-      allOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" as const });
+      allOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" });
+      allOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" });
     }
-
-    const updateParams = {
-      database_id: newsDatabaseId,
-      properties: {
-        "配信先": {
-          multi_select: {
-            options: allOptions,
-          },
-        },
-      },
-    };
 
     console.log(`[Newsletter Sync] Sending update with ${allOptions.length} options...`);
     console.log(`[Newsletter Sync] Options: ${allOptions.map(o => o.name).join(", ")}`);
 
-    const updateResult = await withRetry(
-      () => (notion.databases.update as (params: typeof updateParams) => Promise<unknown>)(updateParams),
-      "syncNewsletterTargetOptions:update"
-    );
+    // 古いAPIバージョン（2022-06-28）を使用して直接REST APIを呼び出す
+    // SDK v5（API 2025-09-03）ではproperties更新が正しく動作しないため
+    const response = await fetch(`https://api.notion.com/v1/databases/${newsDatabaseId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28", // 古いAPIバージョンを使用
+      },
+      body: JSON.stringify({
+        properties: {
+          "配信先": {
+            multi_select: {
+              options: allOptions,
+            },
+          },
+        },
+      }),
+    });
 
-    // レスポンスを確認
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resultAny = updateResult as any;
-    console.log(`[Newsletter Sync] Update response keys: ${Object.keys(resultAny).join(", ")}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(`[Newsletter Sync] API error: ${response.status}`, result);
+      return { success: false, error: result.message || "API error", added: [] };
+    }
+
+    console.log(`[Newsletter Sync] Update response keys: ${Object.keys(result).join(", ")}`);
 
     // 更新後のプロパティを確認
-    if (resultAny.properties && resultAny.properties["配信先"]) {
-      const updatedOptions = resultAny.properties["配信先"].multi_select?.options || [];
+    if (result.properties && result.properties["配信先"]) {
+      const updatedOptions = result.properties["配信先"].multi_select?.options || [];
       console.log(`[Newsletter Sync] Response shows ${updatedOptions.length} options in 配信先`);
     } else {
-      console.log(`[Newsletter Sync] No properties in response, checking via retrieve...`);
-      // 更新後に再取得して確認
-      const verifyDb = await withRetry(
-        () => notion.databases.retrieve({ database_id: newsDatabaseId }),
-        "syncNewsletterTargetOptions:verify"
-      );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const verifyAny = verifyDb as any;
-      console.log(`[Newsletter Sync] Retrieve response keys: ${Object.keys(verifyAny).join(", ")}`);
-      if (verifyAny.properties) {
-        console.log(`[Newsletter Sync] Properties keys: ${Object.keys(verifyAny.properties).join(", ")}`);
-        if (verifyAny.properties["配信先"]) {
-          const verifiedOptions = verifyAny.properties["配信先"].multi_select?.options || [];
-          console.log(`[Newsletter Sync] Verified ${verifiedOptions.length} options after update`);
-        } else {
-          console.log(`[Newsletter Sync] 配信先 property not found in properties`);
-        }
-      } else {
-        console.log(`[Newsletter Sync] No properties in retrieve response either`);
-      }
+      console.log(`[Newsletter Sync] No 配信先 in response properties`);
     }
 
     const addedNames = allOptions.map((opt) => opt.name);
