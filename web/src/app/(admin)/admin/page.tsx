@@ -107,6 +107,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (status !== 'authenticated' || session?.user?.role !== 'ADMIN') return;
 
+    // ニュースレター配信先オプションをNotionに同期（バックグラウンド）
+    fetch('/api/admin/sync-newsletter-options', { method: 'POST' })
+      .then(() => console.log('Newsletter options synced'))
+      .catch((err) => console.warn('Newsletter options sync failed:', err));
+
     const fetchData = async () => {
       try {
         // 今日の予約を取得
