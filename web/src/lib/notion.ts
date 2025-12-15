@@ -893,17 +893,52 @@ export async function syncNewsletterTargetOptions(
 
     // 既存の「配信先」プロパティを取得
     const targetProperty = database.properties["配信先"];
-    if (!targetProperty || targetProperty.type !== "multi_select" || !targetProperty.multi_select) {
-      return {
-        success: false,
-        error: "「配信先」プロパティが見つからないか、マルチセレクト型ではありません",
-        added: [],
+
+    // プロパティが存在しない場合は作成
+    if (!targetProperty || targetProperty.type !== "multi_select") {
+      console.log("[Newsletter Sync] Creating '配信先' property...");
+
+      // 基本オプション + カテゴリオプションを作成
+      const initialOptions = [
+        { name: "すべて", color: "blue" as const },
+        { name: "管理者", color: "purple" as const },
+        { name: "新規顧客", color: "green" as const },
+        { name: "リピーター", color: "yellow" as const },
+        { name: "最近来店", color: "orange" as const },
+        { name: "休眠顧客", color: "red" as const },
+        { name: "予約あり", color: "pink" as const },
+      ];
+
+      // カテゴリ別オプションを追加
+      for (const category of categories) {
+        initialOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" as const });
+        initialOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" as const });
+      }
+
+      const createParams = {
+        database_id: newsDatabaseId,
+        properties: {
+          "配信先": {
+            multi_select: {
+              options: initialOptions,
+            },
+          },
+        },
       };
+
+      await withRetry(
+        () => (notion.databases.update as (params: typeof createParams) => Promise<unknown>)(createParams),
+        "syncNewsletterTargetOptions:create"
+      );
+
+      const addedNames = initialOptions.map((opt) => opt.name);
+      console.log(`[Newsletter Sync] Created property with ${addedNames.length} options`);
+      return { success: true, added: addedNames };
     }
 
     // 既存のオプション名を取得
     const existingOptions = new Set(
-      targetProperty.multi_select.options.map((opt) => opt.name)
+      targetProperty.multi_select?.options.map((opt) => opt.name) || []
     );
 
     // カテゴリ別オプションを生成
