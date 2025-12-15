@@ -885,104 +885,27 @@ export async function syncNewsletterTargetOptions(
   }
 
   try {
-    // 現在のデータベース設定を取得
-    const rawDatabase = await withRetry(
-      () => notion.databases.retrieve({ database_id: newsDatabaseId }),
-      "syncNewsletterTargetOptions:retrieve"
-    );
+    // SDK v5/API 2025-09-03では databases.retrieve が properties を返さないため、
+    // 直接 update で「配信先」プロパティを追加/更新する
+    console.log("[Newsletter Sync] Updating database properties directly...");
 
-    // デバッグ: レスポンス構造を確認
-    const dbKeys = Object.keys(rawDatabase);
-    console.log("[Newsletter Sync] Database response keys:", dbKeys);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawDb = rawDatabase as any;
-
-    // properties が存在しない場合（パーシャルレスポンスの可能性）
-    if (!rawDb.properties) {
-      console.error("[Newsletter Sync] properties not found. Keys:", dbKeys);
-      console.error("[Newsletter Sync] Full response:", JSON.stringify(rawDatabase, null, 2).substring(0, 1000));
-      return { success: false, error: "データベースのプロパティが取得できませんでした。Notionの統合設定を確認してください。", added: [] };
-    }
-
-    const database = rawDatabase as unknown as DatabasePropertiesResponse;
-
-    // 既存の「配信先」プロパティを取得
-    const targetProperty = database.properties["配信先"];
-
-    // プロパティが存在しない場合は作成
-    if (!targetProperty || targetProperty.type !== "multi_select") {
-      console.log("[Newsletter Sync] Creating '配信先' property...");
-
-      // 基本オプション + カテゴリオプションを作成
-      const initialOptions = [
-        { name: "すべて", color: "blue" as const },
-        { name: "管理者", color: "purple" as const },
-        { name: "新規顧客", color: "green" as const },
-        { name: "リピーター", color: "yellow" as const },
-        { name: "最近来店", color: "orange" as const },
-        { name: "休眠顧客", color: "red" as const },
-        { name: "予約あり", color: "pink" as const },
-      ];
-
-      // カテゴリ別オプションを追加
-      for (const category of categories) {
-        initialOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" as const });
-        initialOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" as const });
-      }
-
-      const createParams = {
-        database_id: newsDatabaseId,
-        properties: {
-          "配信先": {
-            multi_select: {
-              options: initialOptions,
-            },
-          },
-        },
-      };
-
-      await withRetry(
-        () => (notion.databases.update as (params: typeof createParams) => Promise<unknown>)(createParams),
-        "syncNewsletterTargetOptions:create"
-      );
-
-      const addedNames = initialOptions.map((opt) => opt.name);
-      console.log(`[Newsletter Sync] Created property with ${addedNames.length} options`);
-      return { success: true, added: addedNames };
-    }
-
-    // 既存のオプション名を取得
-    const existingOptions = new Set(
-      targetProperty.multi_select?.options.map((opt) => opt.name) || []
-    );
-
-    // カテゴリ別オプションを生成
-    const newOptions: { name: string; color?: string }[] = [];
-    for (const category of categories) {
-      const usedOption = `${category.name}${CATEGORY_USED_SUFFIX}`;
-      const notUsedOption = `${category.name}${CATEGORY_NOT_USED_SUFFIX}`;
-
-      if (!existingOptions.has(usedOption)) {
-        newOptions.push({ name: usedOption, color: "green" });
-      }
-      if (!existingOptions.has(notUsedOption)) {
-        newOptions.push({ name: notUsedOption, color: "red" });
-      }
-    }
-
-    if (newOptions.length === 0) {
-      console.log("[Newsletter Sync] No new options to add");
-      return { success: true, added: [] };
-    }
-
-    // 既存オプション + 新規オプションをマージ
+    // 基本オプション + カテゴリオプションを作成
     const allOptions = [
-      ...(targetProperty.multi_select?.options || []),
-      ...newOptions,
+      { name: "すべて", color: "blue" as const },
+      { name: "管理者", color: "purple" as const },
+      { name: "新規顧客", color: "green" as const },
+      { name: "リピーター", color: "yellow" as const },
+      { name: "最近来店", color: "orange" as const },
+      { name: "休眠顧客", color: "red" as const },
+      { name: "予約あり", color: "pink" as const },
     ];
 
-    // データベースを更新（SDK v5の型定義をバイパス）
+    // カテゴリ別オプションを追加
+    for (const category of categories) {
+      allOptions.push({ name: `${category.name}${CATEGORY_USED_SUFFIX}`, color: "green" as const });
+      allOptions.push({ name: `${category.name}${CATEGORY_NOT_USED_SUFFIX}`, color: "red" as const });
+    }
+
     const updateParams = {
       database_id: newsDatabaseId,
       properties: {
@@ -995,13 +918,12 @@ export async function syncNewsletterTargetOptions(
     };
 
     await withRetry(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       () => (notion.databases.update as (params: typeof updateParams) => Promise<unknown>)(updateParams),
       "syncNewsletterTargetOptions:update"
     );
 
-    const addedNames = newOptions.map((opt) => opt.name);
-    console.log(`[Newsletter Sync] Added ${addedNames.length} options:`, addedNames);
+    const addedNames = allOptions.map((opt) => opt.name);
+    console.log(`[Newsletter Sync] Updated property with ${addedNames.length} options`);
     return { success: true, added: addedNames };
   } catch (error) {
     console.error("[Newsletter Sync] Error:", error);
