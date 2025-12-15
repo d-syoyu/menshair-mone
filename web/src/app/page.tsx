@@ -50,28 +50,24 @@ const featuredMenus = [
     title: 'Cut',
     titleJa: 'カット',
     price: '¥4,950〜',
-    duration: '60分〜',
     description: '骨格や髪質を見極め、大人の男性に相応しいスタイルをご提案',
   },
   {
     title: 'Shaving',
     titleJa: 'シェービング',
     price: '¥2,200～',
-    duration: '15分〜',
     description: '産毛や古い角質を除去し、肌本来の明るさ滑らかさを引き出す最高のスキンケア',
   },
   {
     title: 'Head Spa',
     titleJa: 'ヘッドスパ',
     price: '¥2,200〜',
-    duration: '10分〜',
     description: '頭皮の血行を促進し、日々の疲れを癒す極上のリラクゼーション',
   },
   {
     title: 'Color',
     titleJa: 'カラー',
     price: '¥4,950〜',
-    duration: '60分〜',
     description: '白髪染めからおしゃれ染めまで、あなたに合った色味をご提案',
   },
 ];
@@ -299,7 +295,7 @@ export default function Home() {
                 <p className="text-body flex-grow">
                   {menu.description}
                 </p>
-                <div className="flex justify-between items-center pt-4 border-t border-glass-border gap-4 mt-auto">
+                <div className="pt-4 border-t border-glass-border mt-auto">
                   {menu.title === 'Shaving' ? (
                     <span className="text-xl font-light whitespace-nowrap">
                       <span className="text-gold">{menu.price}</span>
@@ -310,7 +306,6 @@ export default function Home() {
                       {menu.price}
                     </span>
                   )}
-                  <span className="text-sm text-text-muted whitespace-nowrap">{menu.duration}</span>
                 </div>
               </motion.div>
             ))}

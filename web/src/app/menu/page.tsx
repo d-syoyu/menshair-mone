@@ -50,7 +50,6 @@ export default function MenuPage() {
   })).filter(group => group.items.length > 0);
 
   const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
-  const formatDuration = (duration: number) => `${duration}分`;
 
   return (
     <div className="min-h-screen pt-32">
@@ -103,14 +102,9 @@ export default function MenuPage() {
                         <div className="w-full sm:w-auto sm:flex-1 sm:min-w-0 sm:mr-4 mb-2 sm:mb-0">
                           <span className="text-base md:text-lg">{item.name}</span>
                         </div>
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="text-sm text-text-muted whitespace-nowrap">
-                            {formatDuration(item.duration)}
-                          </span>
-                          <span className="text-lg md:text-xl text-gold font-light min-w-[100px] text-right">
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
+                        <span className="text-lg md:text-xl text-gold font-light">
+                          {formatPrice(item.price)}
+                        </span>
                       </div>
                     ))}
                   </div>
