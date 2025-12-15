@@ -617,12 +617,8 @@ async function fetchGalleryItemsInternal(): Promise<GalleryItem[]> {
   }
 }
 
-// Get all published gallery items - キャッシュ付き（60秒）
-export const getGalleryItems = unstable_cache(
-  fetchGalleryItemsInternal,
-  ["notion-gallery-items"],
-  { revalidate: 60, tags: ["notion-gallery"] }
-);
+// Get all published gallery items - キャッシュなし（リアルタイム取得）
+export const getGalleryItems = fetchGalleryItemsInternal;
 
 // ============================================
 // Products (商品) 関連
@@ -791,12 +787,8 @@ async function fetchProductsInternal(): Promise<Product[]> {
   }
 }
 
-// Get all published products - キャッシュ付き（60秒）
-export const getProducts = unstable_cache(
-  fetchProductsInternal,
-  ["notion-products"],
-  { revalidate: 60, tags: ["notion-products"] }
-);
+// Get all published products - キャッシュなし（リアルタイム取得）
+export const getProducts = fetchProductsInternal;
 
 // ============================================
 // ニュースページの更新機能（Webhook用）

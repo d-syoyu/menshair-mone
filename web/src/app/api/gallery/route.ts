@@ -4,7 +4,9 @@
 import { NextResponse } from "next/server";
 import { getGalleryItems } from "@/lib/notion";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+// 動的レンダリング（キャッシュなし）
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   try {

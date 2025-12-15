@@ -2,7 +2,9 @@ import { Phone, Instagram } from 'lucide-react';
 import { getProducts } from '@/lib/notion';
 import ProductsClient from './ProductsClient';
 
-export const revalidate = 60; // 60秒ごとに再検証
+// 動的レンダリングに変更（キャッシュなし）
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ProductsPage() {
   // Notionから商品を取得

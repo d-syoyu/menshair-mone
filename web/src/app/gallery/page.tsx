@@ -4,7 +4,9 @@
 import { getGalleryItems } from "@/lib/notion";
 import GalleryClient from "./GalleryClient";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+// 動的レンダリングに変更（キャッシュなし）
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function GalleryPage() {
   // Fetch items from Notion
