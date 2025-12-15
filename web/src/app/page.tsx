@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import type { BlogPost } from '@/lib/notion';
 import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Clock, MapPin, Calendar } from 'lucide-react';
@@ -49,13 +50,14 @@ const featuredMenus = [
     title: 'Cut',
     titleJa: 'カット',
     price: '¥4,950〜',
-    duration: '60分',
+    duration: '60分〜',
     description: '骨格や髪質を見極め、大人の男性に相応しいスタイルをご提案',
   },
   {
     title: 'Shaving',
+    pricePrefix: 'カット＋ケアSV',
     titleJa: 'シェービング',
-    price: '¥2,200〜',
+    price: '¥5,500〜',
     duration: '15分〜',
     description: '産毛や古い角質を除去し、肌本来の明るさ滑らかさを引き出す最高のスキンケア',
   },
@@ -75,21 +77,6 @@ const featuredMenus = [
   },
 ];
 
-// お知らせデータ（ダミー）
-const newsItems = [
-  {
-    date: '2025.12.10',
-    title: '年末年始の営業時間のお知らせ',
-  },
-  {
-    date: '2025.12.01',
-    title: '新メニュー「プレミアムヘッドスパ」登場',
-  },
-  {
-    date: '2025.11.20',
-    title: '公式Webサイトをリニューアルしました',
-  },
-];
 
 export default function Home() {
   const containerRef = useRef(null);
@@ -100,6 +87,24 @@ export default function Home() {
 
   const heroTextY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
+
+  // ニュースデータをAPIから取得
+  const [newsItems, setNewsItems] = useState<BlogPost[]>([]);
+  useEffect(() => {
+    fetch('/api/news')
+      .then((res) => res.json())
+      .then((data: BlogPost[]) => {
+        // 公開日の降順（新しい順）にソートして最新3件を表示
+        const sorted = [...data].sort((a, b) => {
+          // publishedAt は "YYYY.MM.DD" 形式
+          const dateA = a.publishedAt?.replace(/\./g, '') || '0';
+          const dateB = b.publishedAt?.replace(/\./g, '') || '0';
+          return dateB.localeCompare(dateA);
+        });
+        setNewsItems(sorted.slice(0, 3));
+      })
+      .catch((err) => console.error('Failed to fetch news:', err));
+  }, []);
 
   return (
     <div ref={containerRef} className="min-h-screen overflow-x-clip">
@@ -282,7 +287,7 @@ export default function Home() {
               <motion.div
                 key={menu.title}
                 variants={fadeInUp}
-                className="menu-card"
+                className="menu-card flex flex-col"
               >
                 <div className="mb-4">
                 <p className="text-xs tracking-[0.2em] text-accent-light uppercase mb-1">
@@ -292,16 +297,18 @@ export default function Home() {
                   {menu.titleJa}
                 </h3>
               </div>
-                <p className="text-body mb-4">
+                <p className="text-body flex-grow">
                   {menu.description}
                 </p>
-                <div className="flex justify-between items-center pt-4 border-t border-glass-border">
-                  <span className="text-xl text-gold font-light">
-                    {menu.price}
+                <div className="flex justify-between items-center pt-4 border-t border-glass-border gap-4 mt-auto">
+                  <span className="text-xl font-light whitespace-nowrap">
+                    {'pricePrefix' in menu && menu.pricePrefix ? (
+                      <><span className="text-white">{menu.pricePrefix}　</span><span className="text-gold">{menu.price}</span></>
+                    ) : (
+                      <span className="text-gold">{menu.price}</span>
+                    )}
                   </span>
-                  <span className="text-sm text-text-muted">
-                    {menu.duration}
-                  </span>
+                  <span className="text-sm text-text-muted whitespace-nowrap">{menu.duration}</span>
                 </div>
               </motion.div>
             ))}
@@ -339,22 +346,28 @@ export default function Home() {
           <motion.div variants={fadeInUp} className="divider-line-long mb-8" />
 
           <div className="space-y-0">
-            {newsItems.map((news, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                className="news-card group cursor-pointer"
-              >
-                <Link href="/news" className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
-                  <span className="text-sm text-text-muted font-light tracking-wider">
-                    {news.date}
-                  </span>
-                  <span className="text-text-secondary group-hover:text-white transition-colors">
-                    {news.title}
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
+            {newsItems.length > 0 ? (
+              newsItems.map((news) => (
+                <motion.div
+                  key={news.id}
+                  variants={fadeInUp}
+                  className="news-card group cursor-pointer"
+                >
+                  <Link href={`/news/${news.slug}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
+                    <span className="text-sm text-text-muted font-light tracking-wider">
+                      {news.publishedAt}
+                    </span>
+                    <span className="text-text-secondary group-hover:text-white transition-colors">
+                      {news.title}
+                    </span>
+                  </Link>
+                </motion.div>
+              ))
+            ) : (
+              <motion.p variants={fadeInUp} className="text-text-muted text-center py-8">
+                お知らせはありません
+              </motion.p>
+            )}
           </div>
         </div>
       </AnimatedSection>

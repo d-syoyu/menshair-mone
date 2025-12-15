@@ -9,6 +9,14 @@ export default async function NewsPage() {
   // Notionからニュースを取得
   const news = await getNews();
 
+  // 公開日の降順（新しい順）にソート
+  const sortedNews = [...news].sort((a, b) => {
+    // publishedAt は "YYYY.MM.DD" 形式
+    const dateA = a.publishedAt?.replace(/\./g, '') || '0';
+    const dateB = b.publishedAt?.replace(/\./g, '') || '0';
+    return dateB.localeCompare(dateA);
+  });
+
   return (
     <div className="min-h-screen pt-32">
       {/* Hero */}
@@ -25,7 +33,7 @@ export default async function NewsPage() {
       </section>
 
       {/* News List & CTA */}
-      <NewsClient news={news} />
+      <NewsClient news={sortedNews} />
     </div>
   );
 }
