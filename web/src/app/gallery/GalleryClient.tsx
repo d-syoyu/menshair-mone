@@ -3,8 +3,12 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, useInView, AnimatePresence, type Variants } from "framer-motion";
-import { X, ArrowRight } from "lucide-react";
+import { X, ArrowRight, ChevronDown } from "lucide-react";
 import type { GalleryItem } from "@/lib/notion";
+
+// 初期表示件数
+const INITIAL_DISPLAY_COUNT = 9;
+const LOAD_MORE_COUNT = 9;
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -49,12 +53,28 @@ interface GalleryClientProps {
 export default function GalleryClient({ items }: GalleryClientProps) {
   const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
   const [filter, setFilter] = useState<string>("all");
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT);
 
   // Get unique categories
   const categories = ["all", ...new Set(items.map((item) => item.category).filter(Boolean))];
 
   // Filter items
   const filteredItems = filter === "all" ? items : items.filter((item) => item.category === filter);
+
+  // Pagination
+  const visibleItems = filteredItems.slice(0, displayCount);
+  const hasMore = displayCount < filteredItems.length;
+  const remainingCount = filteredItems.length - displayCount;
+
+  const handleLoadMore = () => {
+    setDisplayCount((prev) => Math.min(prev + LOAD_MORE_COUNT, filteredItems.length));
+  };
+
+  // Reset display count when filter changes
+  const handleFilterChange = (cat: string) => {
+    setFilter(cat);
+    setDisplayCount(INITIAL_DISPLAY_COUNT);
+  };
 
   return (
     <div className="min-h-screen pt-32">
@@ -89,7 +109,7 @@ export default function GalleryClient({ items }: GalleryClientProps) {
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setFilter(cat)}
+                onClick={() => handleFilterChange(cat)}
                 className={`px-4 py-2 text-sm tracking-wider transition-all duration-300 ${
                   filter === cat
                     ? "bg-accent text-white"
@@ -111,8 +131,9 @@ export default function GalleryClient({ items }: GalleryClientProps) {
               <p>現在、公開中の画像はありません。</p>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredItems.map((item) => (
+              {visibleItems.map((item) => (
                 <motion.div
                   key={item.id}
                   variants={fadeInUp}
@@ -144,6 +165,33 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                 </motion.div>
               ))}
             </div>
+
+            {/* もっと見るボタン */}
+            {hasMore && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-10 text-center"
+              >
+                <button
+                  onClick={handleLoadMore}
+                  className="inline-flex items-center gap-2 px-8 py-3 border border-glass-border text-text-secondary hover:text-white hover:border-accent transition-all duration-300 group"
+                >
+                  <span className="text-sm tracking-wider">
+                    もっと見る（残り {remainingCount} 件）
+                  </span>
+                  <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+                </button>
+              </motion.div>
+            )}
+
+            {/* 全件表示時のメッセージ */}
+            {!hasMore && filteredItems.length > INITIAL_DISPLAY_COUNT && (
+              <p className="mt-8 text-center text-sm text-text-muted">
+                全 {filteredItems.length} 件を表示中
+              </p>
+            )}
+            </>
           )}
         </div>
       </AnimatedSection>

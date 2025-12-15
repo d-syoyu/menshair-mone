@@ -1,57 +1,12 @@
 import { Phone, Instagram } from 'lucide-react';
-import { getProducts, type Product } from '@/lib/notion';
+import { getProducts } from '@/lib/notion';
 import ProductsClient from './ProductsClient';
-
-// モックデータ（Notion未設定時のフォールバック）
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'サンプルシャンプー',
-    price: '¥3,300',
-    category: 'シャンプー',
-    description: 'サロン専売のプレミアムシャンプー。頭皮に優しく、髪にハリとコシを与えます。',
-    image: null,
-    order: 1,
-  },
-  {
-    id: '2',
-    name: 'サンプルトリートメント',
-    price: '¥3,850',
-    category: 'トリートメント',
-    description: 'ダメージヘアを集中補修。サロン帰りのツヤ髪を自宅でも再現できます。',
-    image: null,
-    order: 2,
-  },
-  {
-    id: '3',
-    name: 'スタイリングワックス',
-    price: '¥2,200',
-    category: 'スタイリング',
-    description: '自然なツヤと程よいホールド力。ビジネスシーンにも最適なマットな仕上がり。',
-    image: null,
-    order: 3,
-  },
-  {
-    id: '4',
-    name: 'スカルプエッセンス',
-    price: '¥5,500',
-    category: '美容液',
-    description: '頭皮環境を整え、健やかな髪の成長をサポート。毎日のケアにおすすめです。',
-    image: null,
-    order: 4,
-  },
-];
 
 export const revalidate = 60; // 60秒ごとに再検証
 
 export default async function ProductsPage() {
   // Notionから商品を取得
-  let products = await getProducts();
-
-  // Notionデータがない場合はモックデータを使用
-  if (products.length === 0) {
-    products = mockProducts;
-  }
+  const products = await getProducts();
 
   return (
     <div className="min-h-screen pt-32">

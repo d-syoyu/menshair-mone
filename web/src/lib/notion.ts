@@ -8,13 +8,75 @@ import type {
   RichTextItemResponse,
   DatabaseObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { unstable_cache } from "next/cache";
 import { getProxiedImageUrl } from "./image-proxy";
 
 // Notion Client - only create if API key is set
 // SDK v5 uses 2025-09-03 API by default
+// タイムアウトを10秒に設定（Vercelのデフォルト関数タイムアウトに合わせる）
 const notion = process.env.NOTION_API_KEY
-  ? new Client({ auth: process.env.NOTION_API_KEY })
+  ? new Client({
+      auth: process.env.NOTION_API_KEY,
+      timeoutMs: 10000, // 10秒タイムアウト
+    })
   : null;
+
+// SDK v5では databases.query が型定義から除外されているが、実際には動作する
+// フォールバック用の型定義
+interface DatabaseQueryResponse {
+  results: Array<PageObjectResponse | { id: string; object: "page" }>;
+  next_cursor: string | null;
+  has_more: boolean;
+}
+type DatabasesQueryFn = (args: { database_id: string }) => Promise<DatabaseQueryResponse>;
+
+// queryDatabaseを遅延初期化するためのヘルパー関数
+function getQueryDatabase(): DatabasesQueryFn | null {
+  if (!notion) return null;
+  const notionWithQuery = notion as unknown as { databases: { query: DatabasesQueryFn } };
+  return notionWithQuery.databases.query.bind(notionWithQuery.databases);
+}
+
+// リトライ設定
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1秒
+
+// リトライ付きAPI呼び出しヘルパー
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  context: string,
+  retries = MAX_RETRIES
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const isRetryable =
+        error instanceof Error &&
+        (error.message.includes("timeout") ||
+         error.message.includes("ETIMEDOUT") ||
+         error.message.includes("ECONNRESET") ||
+         error.message.includes("rate_limited") ||
+         error.message.includes("502") ||
+         error.message.includes("503") ||
+         error.message.includes("504"));
+
+      if (!isRetryable || attempt === retries) {
+        console.error(`[Notion ${context}] Failed after ${attempt} attempt(s):`, error);
+        throw error;
+      }
+
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
+      console.warn(`[Notion ${context}] Attempt ${attempt} failed, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
 
 const newsDatabaseId = process.env.NOTION_DATABASE_ID_NEWS;
 const galleryDatabaseId = process.env.NOTION_DATABASE_ID_GALLERY;
@@ -31,9 +93,10 @@ async function getNewsDataSourceId(): Promise<string | null> {
   if (!notion || !newsDatabaseId) return null;
 
   try {
-    const database = await notion.databases.retrieve({
-      database_id: newsDatabaseId,
-    }) as DatabaseObjectResponse;
+    const database = await withRetry(
+      () => notion.databases.retrieve({ database_id: newsDatabaseId }) as Promise<DatabaseObjectResponse>,
+      "getNewsDataSourceId"
+    );
 
     if (database.data_sources && database.data_sources.length > 0) {
       cachedNewsDataSourceId = database.data_sources[0].id;
@@ -52,9 +115,10 @@ async function getGalleryDataSourceId(): Promise<string | null> {
   if (!notion || !galleryDatabaseId) return null;
 
   try {
-    const database = await notion.databases.retrieve({
-      database_id: galleryDatabaseId,
-    }) as DatabaseObjectResponse;
+    const database = await withRetry(
+      () => notion.databases.retrieve({ database_id: galleryDatabaseId }) as Promise<DatabaseObjectResponse>,
+      "getGalleryDataSourceId"
+    );
 
     if (database.data_sources && database.data_sources.length > 0) {
       cachedGalleryDataSourceId = database.data_sources[0].id;
@@ -182,8 +246,8 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
   };
 }
 
-// Get all published blog posts (News)
-export async function getBlogPosts(): Promise<BlogPost[]> {
+// Get all published blog posts (News) - 内部実装
+async function fetchBlogPostsInternal(): Promise<BlogPost[]> {
   if (!notion || !newsDatabaseId) {
     console.warn("Notion API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!newsDatabaseId);
     return [];
@@ -196,21 +260,28 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 
     if (dataSourceId) {
       try {
-        response = await notion.dataSources.query({
-          data_source_id: dataSourceId,
-        });
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getBlogPosts:dataSources"
+        );
       } catch (dsError) {
         console.warn("dataSources.query failed, falling back to databases.query:", dsError);
-        response = await notion.databases.query({
-          database_id: newsDatabaseId,
-        });
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: newsDatabaseId }),
+          "getBlogPosts:databases"
+        );
       }
     } else {
       // Fallback to traditional databases.query
       console.log("Using databases.query fallback for news");
-      response = await notion.databases.query({
-        database_id: newsDatabaseId,
-      });
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return [];
+      response = await withRetry(
+        () => queryDb({ database_id: newsDatabaseId }),
+        "getBlogPosts:fallback"
+      );
     }
 
     const posts: BlogPost[] = [];
@@ -231,6 +302,13 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   }
 }
 
+// Get all published blog posts (News) - キャッシュ付き（60秒）
+export const getBlogPosts = unstable_cache(
+  fetchBlogPostsInternal,
+  ["notion-blog-posts"],
+  { revalidate: 60, tags: ["notion-news"] }
+);
+
 // Get a single blog post by slug
 export async function getBlogPostBySlug(
   slug: string
@@ -247,19 +325,26 @@ export async function getBlogPostBySlug(
 
     if (dataSourceId) {
       try {
-        response = await notion.dataSources.query({
-          data_source_id: dataSourceId,
-        });
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getBlogPostBySlug:dataSources"
+        );
       } catch (dsError) {
         console.warn("dataSources.query failed for slug lookup, falling back:", dsError);
-        response = await notion.databases.query({
-          database_id: newsDatabaseId,
-        });
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: newsDatabaseId }),
+          "getBlogPostBySlug:databases"
+        );
       }
     } else {
-      response = await notion.databases.query({
-        database_id: newsDatabaseId,
-      });
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return null;
+      response = await withRetry(
+        () => queryDb({ database_id: newsDatabaseId }),
+        "getBlogPostBySlug:fallback"
+      );
     }
 
     // Find the page with matching slug
@@ -330,11 +415,14 @@ async function getPageBlocks(pageId: string): Promise<BlockObjectResponse[]> {
 
   try {
     do {
-      const response = await notion.blocks.children.list({
-        block_id: pageId,
-        start_cursor: cursor,
-        page_size: 100,
-      });
+      const response = await withRetry(
+        () => notion.blocks.children.list({
+          block_id: pageId,
+          start_cursor: cursor,
+          page_size: 100,
+        }),
+        `getPageBlocks:${pageId.slice(0, 8)}`
+      );
 
       for (const block of response.results) {
         if ("type" in block) {
@@ -474,8 +562,8 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
   };
 }
 
-// Get all published gallery items
-export async function getGalleryItems(): Promise<GalleryItem[]> {
+// Get all published gallery items - 内部実装
+async function fetchGalleryItemsInternal(): Promise<GalleryItem[]> {
   if (!notion || !galleryDatabaseId) {
     console.warn("Notion Gallery API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!galleryDatabaseId);
     return [];
@@ -488,20 +576,27 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
 
     if (dataSourceId) {
       try {
-        response = await notion.dataSources.query({
-          data_source_id: dataSourceId,
-        });
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getGalleryItems:dataSources"
+        );
       } catch (dsError) {
         console.warn("dataSources.query failed for gallery, falling back:", dsError);
-        response = await notion.databases.query({
-          database_id: galleryDatabaseId,
-        });
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: galleryDatabaseId }),
+          "getGalleryItems:databases"
+        );
       }
     } else {
       console.log("Using databases.query fallback for gallery");
-      response = await notion.databases.query({
-        database_id: galleryDatabaseId,
-      });
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return [];
+      response = await withRetry(
+        () => queryDb({ database_id: galleryDatabaseId }),
+        "getGalleryItems:fallback"
+      );
     }
 
     const items: GalleryItem[] = [];
@@ -521,6 +616,13 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
     return [];
   }
 }
+
+// Get all published gallery items - キャッシュ付き（60秒）
+export const getGalleryItems = unstable_cache(
+  fetchGalleryItemsInternal,
+  ["notion-gallery-items"],
+  { revalidate: 60, tags: ["notion-gallery"] }
+);
 
 // ============================================
 // Products (商品) 関連
@@ -543,9 +645,10 @@ async function getProductsDataSourceId(): Promise<string | null> {
   if (!notion || !productsDatabaseId) return null;
 
   try {
-    const database = await notion.databases.retrieve({
-      database_id: productsDatabaseId,
-    }) as DatabaseObjectResponse;
+    const database = await withRetry(
+      () => notion.databases.retrieve({ database_id: productsDatabaseId }) as Promise<DatabaseObjectResponse>,
+      "getProductsDataSourceId"
+    );
 
     if (database.data_sources && database.data_sources.length > 0) {
       cachedProductsDataSourceId = database.data_sources[0].id;
@@ -633,8 +736,8 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
   };
 }
 
-// Get all published products
-export async function getProducts(): Promise<Product[]> {
+// Get all published products - 内部実装
+async function fetchProductsInternal(): Promise<Product[]> {
   if (!notion || !productsDatabaseId) {
     console.warn("Notion Products API not configured - NOTION_API_KEY:", !!process.env.NOTION_API_KEY, "DATABASE_ID:", !!productsDatabaseId);
     return [];
@@ -647,20 +750,27 @@ export async function getProducts(): Promise<Product[]> {
 
     if (dataSourceId) {
       try {
-        response = await notion.dataSources.query({
-          data_source_id: dataSourceId,
-        });
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getProducts:dataSources"
+        );
       } catch (dsError) {
         console.warn("dataSources.query failed for products, falling back:", dsError);
-        response = await notion.databases.query({
-          database_id: productsDatabaseId,
-        });
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: productsDatabaseId }),
+          "getProducts:databases"
+        );
       }
     } else {
       console.log("Using databases.query fallback for products");
-      response = await notion.databases.query({
-        database_id: productsDatabaseId,
-      });
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return [];
+      response = await withRetry(
+        () => queryDb({ database_id: productsDatabaseId }),
+        "getProducts:fallback"
+      );
     }
 
     const products: Product[] = [];
@@ -680,3 +790,215 @@ export async function getProducts(): Promise<Product[]> {
     return [];
   }
 }
+
+// Get all published products - キャッシュ付き（60秒）
+export const getProducts = unstable_cache(
+  fetchProductsInternal,
+  ["notion-products"],
+  { revalidate: 60, tags: ["notion-products"] }
+);
+
+// ============================================
+// ニュースページの更新機能（Webhook用）
+// ============================================
+
+// ニュースページのステータスを更新
+export async function updateNewsPageStatus(
+  pageId: string,
+  status: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!notion) {
+    return { success: false, error: "Notion API not configured" };
+  }
+
+  try {
+    await withRetry(
+      () =>
+        notion.pages.update({
+          page_id: pageId,
+          properties: {
+            // ステータスプロパティ（SelectまたはStatus型）
+            "ステータス": {
+              select: { name: status },
+            },
+          },
+        }),
+      `updateNewsPageStatus:${pageId.slice(0, 8)}`
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update news page status:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// ニュースページをIDで取得（メール送信用）
+export async function getNewsPageById(pageId: string): Promise<BlogPost | null> {
+  if (!notion) {
+    return null;
+  }
+
+  try {
+    const page = await withRetry(
+      () => notion.pages.retrieve({ page_id: pageId }) as Promise<PageObjectResponse>,
+      `getNewsPageById:${pageId.slice(0, 8)}`
+    );
+
+    if (!("properties" in page)) {
+      return null;
+    }
+
+    return extractPageProperties(page);
+  } catch (error) {
+    console.error("Failed to get news page:", error);
+    return null;
+  }
+}
+
+// ============================================
+// ニュースレター配信先オプション同期
+// ============================================
+
+// 基本セグメント（手動で追加するオプション）
+const BASE_SEGMENTS = [
+  "すべて",
+  "新規顧客",
+  "リピーター",
+  "最近来店",
+  "休眠顧客",
+  "予約あり",
+];
+
+// カテゴリ別オプションのサフィックス
+const CATEGORY_USED_SUFFIX = "利用あり";
+const CATEGORY_NOT_USED_SUFFIX = "利用なし";
+
+// データベースプロパティの型定義（SDK v5対応）
+interface DatabasePropertiesResponse {
+  properties: Record<string, {
+    type: string;
+    multi_select?: {
+      options: Array<{ id?: string; name: string; color?: string }>;
+    };
+    [key: string]: unknown;
+  }>;
+}
+
+/**
+ * Notionデータベースの「配信先」マルチセレクトオプションを更新
+ * カテゴリ別オプション（[カテゴリ名]利用あり/なし）を自動同期
+ */
+export async function syncNewsletterTargetOptions(
+  categories: { id: string; name: string }[]
+): Promise<{ success: boolean; error?: string; added: string[] }> {
+  if (!notion || !newsDatabaseId) {
+    return { success: false, error: "Notion API not configured", added: [] };
+  }
+
+  try {
+    // 現在のデータベース設定を取得
+    const database = await withRetry(
+      () => notion.databases.retrieve({ database_id: newsDatabaseId }),
+      "syncNewsletterTargetOptions:retrieve"
+    ) as unknown as DatabasePropertiesResponse;
+
+    // 既存の「配信先」プロパティを取得
+    const targetProperty = database.properties["配信先"];
+    if (!targetProperty || targetProperty.type !== "multi_select" || !targetProperty.multi_select) {
+      return {
+        success: false,
+        error: "「配信先」プロパティが見つからないか、マルチセレクト型ではありません",
+        added: [],
+      };
+    }
+
+    // 既存のオプション名を取得
+    const existingOptions = new Set(
+      targetProperty.multi_select.options.map((opt) => opt.name)
+    );
+
+    // カテゴリ別オプションを生成
+    const newOptions: { name: string; color?: string }[] = [];
+    for (const category of categories) {
+      const usedOption = `${category.name}${CATEGORY_USED_SUFFIX}`;
+      const notUsedOption = `${category.name}${CATEGORY_NOT_USED_SUFFIX}`;
+
+      if (!existingOptions.has(usedOption)) {
+        newOptions.push({ name: usedOption, color: "green" });
+      }
+      if (!existingOptions.has(notUsedOption)) {
+        newOptions.push({ name: notUsedOption, color: "red" });
+      }
+    }
+
+    if (newOptions.length === 0) {
+      console.log("[Newsletter Sync] No new options to add");
+      return { success: true, added: [] };
+    }
+
+    // 既存オプション + 新規オプションをマージ
+    const allOptions = [
+      ...targetProperty.multi_select.options,
+      ...newOptions,
+    ];
+
+    // データベースを更新（SDK v5の型定義をバイパス）
+    const updateParams = {
+      database_id: newsDatabaseId,
+      properties: {
+        "配信先": {
+          multi_select: {
+            options: allOptions,
+          },
+        },
+      },
+    };
+
+    await withRetry(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      () => (notion.databases.update as (params: typeof updateParams) => Promise<unknown>)(updateParams),
+      "syncNewsletterTargetOptions:update"
+    );
+
+    const addedNames = newOptions.map((opt) => opt.name);
+    console.log(`[Newsletter Sync] Added ${addedNames.length} options:`, addedNames);
+    return { success: true, added: addedNames };
+  } catch (error) {
+    console.error("[Newsletter Sync] Error:", error);
+    return { success: false, error: String(error), added: [] };
+  }
+}
+
+/**
+ * ニュースページから「配信先」プロパティを取得
+ */
+export async function getNewsletterTargets(pageId: string): Promise<string[]> {
+  if (!notion) {
+    return [];
+  }
+
+  try {
+    const page = await withRetry(
+      () => notion.pages.retrieve({ page_id: pageId }) as Promise<PageObjectResponse>,
+      `getNewsletterTargets:${pageId.slice(0, 8)}`
+    );
+
+    if (!("properties" in page)) {
+      return [];
+    }
+
+    const targetProp = page.properties["配信先"];
+    if (targetProp?.type !== "multi_select") {
+      console.warn("[Newsletter] 配信先プロパティが見つかりません");
+      return [];
+    }
+
+    return targetProp.multi_select.map((opt) => opt.name);
+  } catch (error) {
+    console.error("[Newsletter] Error fetching targets:", error);
+    return [];
+  }
+}
+
+// Notionクライアントをエクスポート（直接操作用）
+export { notion as notionClient };
