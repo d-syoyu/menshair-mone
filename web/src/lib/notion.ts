@@ -180,7 +180,8 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
   }
 
   // 公開 (Published) - checkbox型
-  const publishedProp = properties["公開"] || properties["Published"];
+  // ニュースは「web公開」、ギャラリー・商品は「公開」を使用
+  const publishedProp = properties["web公開"] || properties["公開"] || properties["Published"];
   if (publishedProp?.type === "checkbox") {
     if (!publishedProp.checkbox) return null;
   }
