@@ -510,17 +510,6 @@ export default function EditSalePage() {
 
         {/* Notifications */}
         <AnimatePresence>
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              {success}
-            </motion.div>
-          )}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
