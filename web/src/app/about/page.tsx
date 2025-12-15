@@ -317,7 +317,7 @@ export default function AboutPage() {
 
               <div className="pt-6">
                 <p className="text-body mb-4">
-                  谷町線 守口駅から徒歩5分<br />
+                  谷町線 守口駅から徒歩8分<br />
                   ※ 完全予約制となっております<br />
                   ※ 駐車場あり（1台）・クレジットカード利用可
                 </p>
