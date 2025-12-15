@@ -188,12 +188,10 @@ export async function POST(request: NextRequest) {
     // 合計割引額（店頭割引 + クーポン割引）
     const totalDiscount = data.discountAmount + data.couponDiscount;
 
-    // 税額計算（小計から割引額を引いた金額に対して税率を適用）
-    const taxableAmount = Math.max(0, subtotal - totalDiscount);
-    const taxAmount = Math.floor(taxableAmount * (taxRate / 100));
-
-    // 合計金額（税込・割引後）
-    const totalAmount = taxableAmount + taxAmount;
+    // 内税方式: 小計は税込価格、割引後の金額から消費税を逆算
+    const totalAmount = Math.max(0, subtotal - totalDiscount);
+    // 内税計算: 税込金額 × 税率 ÷ (100 + 税率)
+    const taxAmount = Math.floor(totalAmount * taxRate / (100 + taxRate));
 
     // クーポンの検証（指定されている場合）
     if (data.couponId) {
