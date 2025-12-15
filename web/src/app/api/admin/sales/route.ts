@@ -86,17 +86,18 @@ export async function GET(request: NextRequest) {
     const paymentMethod = searchParams.get("paymentMethod");
     const paymentStatus = searchParams.get("paymentStatus");
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // 日付範囲フィルタ（タイムゾーン対応）
     if (startDate || endDate) {
-      where.saleDate = {};
+      const dateFilter: Record<string, Date> = {};
       if (startDate) {
-        where.saleDate.gte = parseLocalDateStart(startDate);
+        dateFilter.gte = parseLocalDateStart(startDate);
       }
       if (endDate) {
-        where.saleDate.lte = parseLocalDateEnd(endDate);
+        dateFilter.lte = parseLocalDateEnd(endDate);
       }
+      where.saleDate = dateFilter;
     }
 
     // 顧客名検索
