@@ -941,9 +941,17 @@ export async function syncNewsletterTargetOptions(
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const verifyAny = verifyDb as any;
-      if (verifyAny.properties && verifyAny.properties["配信先"]) {
-        const verifiedOptions = verifyAny.properties["配信先"].multi_select?.options || [];
-        console.log(`[Newsletter Sync] Verified ${verifiedOptions.length} options after update`);
+      console.log(`[Newsletter Sync] Retrieve response keys: ${Object.keys(verifyAny).join(", ")}`);
+      if (verifyAny.properties) {
+        console.log(`[Newsletter Sync] Properties keys: ${Object.keys(verifyAny.properties).join(", ")}`);
+        if (verifyAny.properties["配信先"]) {
+          const verifiedOptions = verifyAny.properties["配信先"].multi_select?.options || [];
+          console.log(`[Newsletter Sync] Verified ${verifiedOptions.length} options after update`);
+        } else {
+          console.log(`[Newsletter Sync] 配信先 property not found in properties`);
+        }
+      } else {
+        console.log(`[Newsletter Sync] No properties in retrieve response either`);
       }
     }
 
