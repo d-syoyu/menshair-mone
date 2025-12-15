@@ -479,8 +479,8 @@ export default function SalesListPage() {
                                 <span>-{formatPrice(sale.discountAmount)}</span>
                               </div>
                             )}
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">消費税（{sale.taxRate}%）</span>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>（うち消費税 {sale.taxRate}%）</span>
                               <span>{formatPrice(sale.taxAmount)}</span>
                             </div>
                           </div>

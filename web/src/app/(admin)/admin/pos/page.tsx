@@ -76,23 +76,30 @@ export default function POSDashboard() {
     fetchData();
   }, []);
 
+  // ローカルタイムゾーンでYYYY-MM-DD形式の日付文字列を生成
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const fetchData = async () => {
     try {
       // 今日の日付
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = formatLocalDate(today);
 
       // 今週の開始日（月曜日）
       const weekStart = new Date(today);
       const dayOfWeek = today.getDay();
       const daysToMonday = dayOfWeek === 0 ? -6 : -(dayOfWeek - 1);
       weekStart.setDate(weekStart.getDate() + daysToMonday);
-      const weekStartStr = weekStart.toISOString().split('T')[0];
+      const weekStartStr = formatLocalDate(weekStart);
 
       // 今月の開始日
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthStartStr = monthStart.toISOString().split('T')[0];
+      const monthStartStr = formatLocalDate(monthStart);
 
       // 本日の会計を取得
       const todayRes = await fetch(`/api/admin/sales?startDate=${todayStr}&endDate=${todayStr}`);

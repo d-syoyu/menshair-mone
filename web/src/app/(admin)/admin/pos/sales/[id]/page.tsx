@@ -470,8 +470,8 @@ export default function SaleDetailPage() {
                   <span>-{formatPrice(sale.discountAmount)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">消費税（{sale.taxRate}%）</span>
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>（うち消費税 {sale.taxRate}%）</span>
                 <span>{formatPrice(sale.taxAmount)}</span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-gray-200">

@@ -273,34 +273,49 @@ export default function DailyReportPage() {
               >
                 <h2 className="text-lg font-medium mb-4">支払方法別</h2>
                 {paymentChartData.length > 0 ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={paymentChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
-                          label={({ name, percent }: any) =>
-                            `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                          }
+                  <>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={paymentChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {paymentChartData.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => formatPrice(value)} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {paymentChartData.map((item, index) => (
+                        <div
+                          key={item.name}
+                          className="flex items-center justify-between text-sm"
                         >
-                          {paymentChartData.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded"
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
                             />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => formatPrice(value)}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                            <span>{item.name}</span>
+                          </div>
+                          <span className="font-medium">{formatPrice(item.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <p className="text-gray-500 text-center py-8">データがありません</p>
                 )}

@@ -461,7 +461,7 @@ export default function MonthlyReportPage() {
                             name === 'amount' ? '売上' : '件数',
                           ]}
                         />
-                        <Bar dataKey="amount" fill="#1F3D30" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="amount" fill="#D4A64A" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
