@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useInView, type Variants } from 'framer-motion';
-import { ArrowRight, MapPin, Phone, Clock, Calendar, Sparkles } from 'lucide-react';
+import { ArrowRight, MapPin, Phone, Clock, Calendar, Sparkles, CreditCard } from 'lucide-react';
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -36,7 +36,27 @@ function AnimatedSection({ children, className = '' }: { children: React.ReactNo
   );
 }
 
+interface PaymentMethod {
+  code: string;
+  displayName: string;
+}
+
 export default function AboutPage() {
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const res = await fetch('/api/payment-methods');
+        const data = await res.json();
+        setPaymentMethods(data.paymentMethods || []);
+      } catch (error) {
+        console.error('Failed to fetch payment methods:', error);
+      }
+    };
+    fetchPaymentMethods();
+  }, []);
+
   return (
     <div className="min-h-screen pt-32">
       {/* Hero */}
@@ -315,13 +335,27 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              <div className="pt-6">
-                <p className="text-body mb-4">
+              <div className="pt-6 space-y-4">
+                <p className="text-body">
                   谷町線 守口駅から徒歩8分<br />
                   ※ 完全予約制となっております<br />
-                  ※ 駐車場あり（1台）・クレジットカード利用可
+                  ※ 駐車場あり（1台）
                 </p>
-                <Link href="/booking" className="btn-primary">
+
+                {/* 支払方法 */}
+                {paymentMethods.length > 0 && (
+                  <div className="flex items-start gap-4">
+                    <CreditCard className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Payment</p>
+                      <p className="text-text-secondary">
+                        {paymentMethods.map(pm => pm.displayName).join(' / ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Link href="/booking" className="btn-primary inline-flex">
                   ご予約はこちら
                   <ArrowRight className="w-4 h-4" />
                 </Link>
