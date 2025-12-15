@@ -973,7 +973,7 @@ export async function syncNewsletterTargetOptions(
 
     // 既存オプション + 新規オプションをマージ
     const allOptions = [
-      ...targetProperty.multi_select.options,
+      ...(targetProperty.multi_select?.options || []),
       ...newOptions,
     ];
 
