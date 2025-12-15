@@ -302,12 +302,8 @@ async function fetchBlogPostsInternal(): Promise<BlogPost[]> {
   }
 }
 
-// Get all published blog posts (News) - キャッシュ付き（60秒）
-export const getBlogPosts = unstable_cache(
-  fetchBlogPostsInternal,
-  ["notion-blog-posts"],
-  { revalidate: 60, tags: ["notion-news"] }
-);
+// Get all published blog posts (News) - キャッシュなし（リアルタイム取得）
+export const getBlogPosts = fetchBlogPostsInternal;
 
 // Get a single blog post by slug
 export async function getBlogPostBySlug(

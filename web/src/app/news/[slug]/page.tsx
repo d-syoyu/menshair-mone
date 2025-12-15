@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { getNewsBySlug, getAllNewsSlugs, type BlogPostDetail } from "@/lib/notion";
 import NewsDetailClient from "./NewsDetailClient";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+// 動的レンダリングに変更（キャッシュなし）
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // Fallback data when Notion is not configured
 const fallbackPosts: Record<string, BlogPostDetail> = {
