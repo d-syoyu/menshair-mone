@@ -387,7 +387,7 @@ export default function Home() {
 
               <motion.div variants={fadeInUp} className="space-y-8">
                 <div className="flex items-start gap-4">
-                  <MapPin className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <MapPin className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Address</p>
                     <p className="text-lg text-text-secondary">
@@ -398,7 +398,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Clock className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <Clock className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Hours</p>
                     <div className="space-y-2">
@@ -422,7 +422,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Calendar className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <Calendar className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Reservation</p>
                     <p className="text-text-secondary">完全予約制</p>
