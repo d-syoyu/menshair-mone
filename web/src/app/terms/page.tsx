@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 const fadeInUp = {
@@ -7,7 +8,26 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
 };
 
+interface PaymentMethod {
+  code: string;
+  displayName: string;
+}
+
 export default function TermsPage() {
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const res = await fetch('/api/payment-methods');
+        const data = await res.json();
+        setPaymentMethods(data.paymentMethods || []);
+      } catch (error) {
+        console.error('Failed to fetch payment methods:', error);
+      }
+    };
+    fetchPaymentMethods();
+  }, []);
   return (
     <div className="min-h-screen pt-32 pb-20">
       <div className="container-narrow">
@@ -72,7 +92,13 @@ export default function TermsPage() {
               <h2 className="text-xl font-serif text-text-primary mb-4">第5条（料金・お支払い）</h2>
               <ol className="list-decimal list-inside space-y-2 leading-relaxed">
                 <li>施術料金は、当サロンが定める料金表に基づきます。</li>
-                <li>お支払いは、現金またはクレジットカードにて承ります。</li>
+                <li>
+                  お支払いは、
+                  {paymentMethods.length > 0
+                    ? paymentMethods.map((pm) => pm.displayName).join('、')
+                    : '現金またはクレジットカード'}
+                  にて承ります。
+                </li>
                 <li>料金は予告なく変更する場合がございます。</li>
               </ol>
             </section>

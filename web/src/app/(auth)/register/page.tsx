@@ -189,11 +189,11 @@ export default function RegisterPage() {
             {/* Terms */}
             <p className="text-xs text-center text-text-muted">
               登録により、
-              <Link href="/terms" className="text-accent hover:text-accent-light">
+              <Link href="/terms" className="text-accent-light hover:text-white">
                 利用規約
               </Link>
               および
-              <Link href="/privacy" className="text-accent hover:text-accent-light">
+              <Link href="/privacy" className="text-accent-light hover:text-white">
                 プライバシーポリシー
               </Link>
               に同意したものとみなされます。
@@ -202,7 +202,7 @@ export default function RegisterPage() {
             <div className="pt-4 border-t border-glass-border">
               <p className="text-center text-sm text-text-secondary">
                 すでにアカウントをお持ちの方は
-                <Link href="/login" className="text-accent hover:text-accent-light ml-1">
+                <Link href="/login" className="text-accent-light hover:text-white ml-1">
                   ログイン
                 </Link>
               </p>
