@@ -55,7 +55,7 @@ const featuredMenus = [
   {
     title: 'Shaving',
     titleJa: 'シェービング',
-    price: '¥2,200～',
+    price: '¥2,200〜',
     description: '産毛や古い角質を除去し、肌本来の明るさ滑らかさを引き出す最高のスキンケア',
   },
   {
