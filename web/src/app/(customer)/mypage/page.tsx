@@ -162,7 +162,7 @@ export default function MyPage() {
               </p>
               <Link
                 href="/booking"
-                className="inline-flex items-center gap-2 text-accent-light hover:text-accent transition-colors"
+                className="btn-primary"
               >
                 予約する
                 <ArrowRight className="w-4 h-4" />
