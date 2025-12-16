@@ -4,3 +4,18 @@ next-dev.out
 
 # Claude Code local settings (contains API keys)
 .claude/settings.local.json
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Debug/test scripts that might contain credentials
+check-*.mjs
+check-*.ts
+**/check-*.mjs
+**/check-*.ts
+
+# Database
+*.db
+*.sqlite
