@@ -1530,7 +1530,7 @@ function AdminReservationsContent() {
                     onClick={() => setEditTab('reservation')}
                     className={`flex-1 py-2 text-sm rounded-lg transition-colors ${
                       editTab === 'reservation'
-                        ? 'bg-[var(--color-accent)] text-white'
+                        ? 'bg-[var(--color-accent)] text-white font-medium'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -1540,7 +1540,7 @@ function AdminReservationsContent() {
                     onClick={() => setEditTab('customer')}
                     className={`flex-1 py-2 text-sm rounded-lg transition-colors ${
                       editTab === 'customer'
-                        ? 'bg-[var(--color-accent)] text-white'
+                        ? 'bg-[var(--color-accent)] text-white font-medium'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >

@@ -19,3 +19,4 @@ check-*.ts
 # Database
 *.db
 *.sqlite
+nul

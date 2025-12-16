@@ -735,7 +735,7 @@ export default function AdminCouponsPage() {
                                 onClick={() => toggleCategory(cat)}
                                 className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                                   couponForm.applicableCategoryIds.includes(cat)
-                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)] font-medium'
                                     : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
                                 }`}
                               >
@@ -784,7 +784,7 @@ export default function AdminCouponsPage() {
                                 onClick={() => toggleWeekday(day.value)}
                                 className={`w-10 h-10 text-sm rounded-full border transition-colors ${
                                   couponForm.applicableWeekdays.includes(day.value)
-                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)] font-medium'
                                     : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
                                 }`}
                               >
