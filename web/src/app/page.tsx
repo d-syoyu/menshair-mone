@@ -111,17 +111,17 @@ export default function Home() {
           {/* Image 1 - Zoom In */}
           <div
             className="absolute inset-0 bg-cover bg-center ken-burns-1"
-            style={{ backgroundImage: 'url(/image1.jpeg)' }}
+            style={{ backgroundImage: 'url(/image1.webp)' }}
           />
           {/* Image 2 - Zoom Out */}
           <div
             className="absolute inset-0 bg-cover bg-center ken-burns-2"
-            style={{ backgroundImage: 'url(/image2.jpeg)' }}
+            style={{ backgroundImage: 'url(/image2.webp)' }}
           />
           {/* Image 3 - Pan */}
           <div
             className="absolute inset-0 bg-cover bg-center ken-burns-3"
-            style={{ backgroundImage: 'url(/image3.jpeg)' }}
+            style={{ backgroundImage: 'url(/image3.webp)' }}
           />
 
           {/* Overlay for text readability - darker for white background areas, stronger on mobile */}
@@ -219,7 +219,7 @@ export default function Home() {
             <motion.div variants={fadeInUp} className="relative">
               <div className="relative aspect-[4/5] glass-card overflow-hidden">
                 <Image
-                  src="/entrance.jpeg"
+                  src="/entrance.webp"
                   alt="MONË店舗入口"
                   fill
                   className="object-cover"

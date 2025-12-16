@@ -105,7 +105,7 @@ export default function AboutPage() {
             <motion.div variants={fadeInUp} className="mb-4 max-w-3xl mx-auto">
               <div className="relative aspect-[4/3] rounded overflow-hidden border border-glass-border">
                 <Image
-                  src="/entrance.jpeg"
+                  src="/entrance.webp"
                   alt="MONË 店舗入口"
                   fill
                   className="object-cover"
@@ -138,7 +138,7 @@ export default function AboutPage() {
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
-                  src="/shampoo2.jpeg"
+                  src="/shampoo2.webp"
                   alt="ヘッドスパ"
                   fill
                   className="object-cover"
@@ -171,7 +171,7 @@ export default function AboutPage() {
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
-                  src="/shaving.jpeg"
+                  src="/shaving.webp"
                   alt="シェービング"
                   fill
                   className="object-cover"
@@ -221,7 +221,7 @@ export default function AboutPage() {
                 {/* Stylist Photo */}
                 <div className="w-48 h-48 md:w-56 md:h-56 rounded-full flex-shrink-0 border border-glass-border overflow-hidden relative">
                   <Image
-                    src="/staff.png"
+                    src="/staff.webp"
                     alt="原崎 裕二 - MONË オーナー/スタイリスト"
                     fill
                     className="object-cover"
