@@ -1651,7 +1651,7 @@ export default function NewSalePage() {
                   </h2>
                   <div className="space-y-3">
                     {payments.map((payment, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={index} className="flex flex-wrap items-center gap-2">
                         <select
                           value={payment.paymentMethod}
                           onChange={(e) => {
@@ -1659,7 +1659,7 @@ export default function NewSalePage() {
                             newPayments[index].paymentMethod = e.target.value;
                             setPayments(newPayments);
                           }}
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          className="flex-1 min-w-[120px] px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
                         >
                           {paymentMethods.map((method) => (
                             <option key={method.code} value={method.code}>
@@ -1667,34 +1667,36 @@ export default function NewSalePage() {
                             </option>
                           ))}
                         </select>
-                        <input
-                          type="number"
-                          min="0"
-                          value={payment.amount}
-                          onChange={(e) => {
-                            const newPayments = [...payments];
-                            newPayments[index].amount = parseInt(e.target.value) || 0;
-                            setPayments(newPayments);
-                          }}
-                          className="w-28 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleSetFullAmount(index)}
-                          className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          全額
-                        </button>
-                        {payments.length > 1 && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            value={payment.amount}
+                            onChange={(e) => {
+                              const newPayments = [...payments];
+                              newPayments[index].amount = parseInt(e.target.value) || 0;
+                              setPayments(newPayments);
+                            }}
+                            className="w-24 sm:w-28 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
+                            placeholder="0"
+                          />
                           <button
                             type="button"
-                            onClick={() => handleRemovePayment(index)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            onClick={() => handleSetFullAmount(index)}
+                            className="px-2 sm:px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            全額
                           </button>
-                        )}
+                          {payments.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePayment(index)}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -479,7 +479,7 @@ export default function Home() {
           <motion.p variants={fadeInUp} className="text-subheading mb-4">
             Reservation
           </motion.p>
-          <motion.h2 variants={fadeInUp} className="text-heading mb-6">
+          <motion.h2 variants={fadeInUp} className="text-[clamp(1.3rem,4vw,2.75rem)] font-light leading-tight mb-6 whitespace-nowrap">
             ご予約をお待ちしております
           </motion.h2>
           <motion.div variants={fadeInUp} className="divider-line mx-auto mb-8" />
