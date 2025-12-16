@@ -99,10 +99,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.sub = user.id;
+    async jwt({ token, user, account }) {
+      // 初回サインイン時（userが存在する場合）
+      if (user && account) {
+        // データベースからユーザーを取得して正しいIDを設定
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          select: { id: true, role: true },
+        });
+
+        if (dbUser) {
+          token.sub = dbUser.id;
+          token.role = dbUser.role;
+        } else {
+          // フォールバック
+          token.role = user.role || "CUSTOMER";
+          token.sub = user.id;
+        }
       }
       return token;
     },
