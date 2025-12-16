@@ -13,8 +13,8 @@ const fadeInUp = {
 
 interface Reservation {
   id: string;
-  menuName: string;
-  price: number;
+  menuSummary: string;
+  totalPrice: number;
   date: string;
   startTime: string;
   endTime: string;
@@ -174,7 +174,7 @@ export default function ReservationsPage() {
                         <div className="flex items-center gap-3">
                           <Scissors className="w-5 h-5 text-accent-light" />
                           <div>
-                            <p className="font-medium text-white">{reservation.menuName}</p>
+                            <p className="font-medium text-white">{reservation.menuSummary}</p>
                             <span
                               className={`inline-block text-xs px-2 py-0.5 rounded mt-1 ${STATUS_LABELS[reservation.status].color}`}
                             >
@@ -183,7 +183,7 @@ export default function ReservationsPage() {
                           </div>
                         </div>
                         <p className="text-gold">
-                          ¥{reservation.price.toLocaleString()}
+                          ¥{reservation.totalPrice.toLocaleString()}
                         </p>
                       </div>
 
@@ -250,7 +250,7 @@ export default function ReservationsPage() {
                         <div className="flex items-center gap-3">
                           <Scissors className="w-5 h-5 text-text-muted" />
                           <div>
-                            <p className="font-medium text-text-secondary">{reservation.menuName}</p>
+                            <p className="font-medium text-text-secondary">{reservation.menuSummary}</p>
                             <span
                               className={`inline-block text-xs px-2 py-0.5 rounded mt-1 ${STATUS_LABELS[reservation.status].color}`}
                             >
@@ -259,7 +259,7 @@ export default function ReservationsPage() {
                           </div>
                         </div>
                         <p className="text-text-muted">
-                          ¥{reservation.price.toLocaleString()}
+                          ¥{reservation.totalPrice.toLocaleString()}
                         </p>
                       </div>
 
@@ -302,7 +302,7 @@ export default function ReservationsPage() {
             </p>
 
             <div className="bg-dark-gray/50 p-4 rounded mb-6 border border-glass-border">
-              <p className="font-medium text-white mb-1">{selectedReservation.menuName}</p>
+              <p className="font-medium text-white mb-1">{selectedReservation.menuSummary}</p>
               <p className="text-sm text-text-muted">
                 {formatDate(selectedReservation.date)} {selectedReservation.startTime}〜
               </p>
