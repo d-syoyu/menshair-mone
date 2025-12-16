@@ -381,8 +381,13 @@ export default function NewSalePage() {
     setCustomerName(reservation.user.name || '');
     setCustomerPhone(reservation.user.phone || '');
 
-    // 予約のメニューを自動選択
-    const menuIds = reservation.items.map(item => item.menuId);
+    // 予約のメニューを自動選択（メニュー名でDBメニューと照合）
+    const menuIds = reservation.items.map(item => {
+      // メニュー名でDBメニューを検索
+      const dbMenu = menus.find(m => m.name === item.menuName);
+      // 見つかればDBメニューのID、なければ予約のmenuIdを使用
+      return dbMenu?.id || item.menuId;
+    });
     setSelectedMenuIds(menuIds);
 
     // 予約のクーポンを自動適用

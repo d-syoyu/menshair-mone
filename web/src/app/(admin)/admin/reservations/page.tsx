@@ -22,7 +22,33 @@ import {
   Pencil,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
-import { CATEGORY_COLORS, MENUS, MENU_CATEGORY_LIST, type MenuItem } from '@/constants/menu';
+import { CATEGORY_COLORS } from '@/constants/menu';
+
+// DBメニューの型定義
+interface DbMenu {
+  id: string;
+  name: string;
+  categoryId: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  displayOrder: number;
+  category: {
+    id: string;
+    name: string;
+    nameEn: string;
+    color: string;
+    displayOrder: number;
+  };
+}
+
+interface DbCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  color: string;
+  displayOrder: number;
+}
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -176,6 +202,25 @@ function AdminReservationsContent() {
   const [editNote, setEditNote] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // DBメニュー
+  const [dbMenus, setDbMenus] = useState<DbMenu[]>([]);
+  const [dbCategories, setDbCategories] = useState<DbCategory[]>([]);
+
+  // メニュー取得
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const res = await fetch('/api/menus');
+        const data = await res.json();
+        setDbMenus(data.menus || []);
+        setDbCategories(data.categories || []);
+      } catch (error) {
+        console.error('Failed to fetch menus:', error);
+      }
+    };
+    fetchMenus();
+  }, []);
 
   useEffect(() => {
     fetchReservations();
@@ -340,7 +385,7 @@ function AdminReservationsContent() {
 
   // 選択中のメニュー合計
   const getSelectedMenusTotal = () => {
-    const menus = selectedMenuIds.map(id => MENUS.find(m => m.id === id)).filter((m): m is MenuItem => !!m);
+    const menus = selectedMenuIds.map(id => dbMenus.find(m => m.id === id)).filter((m): m is DbMenu => !!m);
     const totalPrice = menus.reduce((sum, m) => sum + m.price, 0);
     const totalDuration = menus.reduce((sum, m) => sum + m.duration, 0);
     return { totalPrice, totalDuration, menus };
@@ -407,7 +452,7 @@ function AdminReservationsContent() {
 
   // 編集中のメニュー合計
   const getEditMenusTotal = () => {
-    const menus = editMenuIds.map(id => MENUS.find(m => m.id === id)).filter((m): m is MenuItem => !!m);
+    const menus = editMenuIds.map(id => dbMenus.find(m => m.id === id)).filter((m): m is DbMenu => !!m);
     const totalPrice = menus.reduce((sum, m) => sum + m.price, 0);
     const totalDuration = menus.reduce((sum, m) => sum + m.duration, 0);
     return { totalPrice, totalDuration, menus };
@@ -1301,8 +1346,8 @@ function AdminReservationsContent() {
                     </div>
 
                     <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {MENU_CATEGORY_LIST.map(category => {
-                        const categoryMenus = MENUS.filter(m => m.category === category.id);
+                      {dbCategories.map(category => {
+                        const categoryMenus = dbMenus.filter(m => m.categoryId === category.id);
                         if (categoryMenus.length === 0) return null;
 
                         const isExpanded = expandedNewCategories.includes(category.id);
@@ -1324,10 +1369,10 @@ function AdminReservationsContent() {
                             >
                               <span
                                 className="w-3 h-3 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: CATEGORY_COLORS[category.id] }}
+                                style={{ backgroundColor: category.color || CATEGORY_COLORS[category.name] }}
                               />
                               <span className="flex-1 text-left font-medium text-gray-700 text-sm">
-                                {category.id}
+                                {category.name}
                               </span>
                               {selectedCount > 0 && (
                                 <span className="px-2 py-0.5 text-xs bg-[var(--color-accent)] text-white rounded-full">
@@ -1589,8 +1634,8 @@ function AdminReservationsContent() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">メニュー</label>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {MENU_CATEGORY_LIST.map(category => {
-                          const categoryMenus = MENUS.filter(m => m.category === category.id);
+                        {dbCategories.map(category => {
+                          const categoryMenus = dbMenus.filter(m => m.categoryId === category.id);
                           if (categoryMenus.length === 0) return null;
 
                           const isExpanded = expandedEditCategories.includes(category.id);
@@ -1612,10 +1657,10 @@ function AdminReservationsContent() {
                               >
                                 <span
                                   className="w-3 h-3 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: CATEGORY_COLORS[category.id] }}
+                                  style={{ backgroundColor: category.color || CATEGORY_COLORS[category.name] }}
                                 />
                                 <span className="flex-1 text-left font-medium text-gray-700 text-sm">
-                                  {category.id}
+                                  {category.name}
                                 </span>
                                 {selectedCount > 0 && (
                                   <span className="px-2 py-0.5 text-xs bg-[var(--color-accent)] text-white rounded-full">

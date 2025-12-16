@@ -12,14 +12,6 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
-import {
-  MENU_ITEMS,
-  MENU_CATEGORY_LIST,
-  calculateMenuTotals,
-  CATEGORY_COLORS,
-  getCategoryTextColor,
-  type MenuItem
-} from '@/constants/menu';
 import { CLOSED_DAY } from '@/constants/salon';
 
 const fadeInUp: Variants = {
@@ -39,6 +31,33 @@ const cardVariant: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
+
+// DBから取得するメニューの型
+interface DbMenu {
+  id: string;
+  name: string;
+  categoryId: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  displayOrder: number;
+  category: {
+    id: string;
+    name: string;
+    nameEn: string;
+    color: string;
+    displayOrder: number;
+  };
+}
+
+// DBから取得するカテゴリの型
+interface DbCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  color: string;
+  displayOrder: number;
+}
 
 interface TimeSlot {
   time: string;
@@ -63,19 +82,24 @@ const CATEGORY_INITIALS: Record<string, string> = {
   "パーマ": "P",
   "トリートメント": "Tr",
   "縮毛矯正": "St",
-  "スパ": "Sp",
+  "スパ・トリートメント": "Sp",
+  "シャンプー＆セット": "S",
+  "メンズシェービング": "Sv",
   "その他": "+",
 };
 
-// カテゴリー英語タイトル
-const CATEGORY_TITLES: Record<string, string> = {
-  "カット": "Cut",
-  "カラー": "Color",
-  "パーマ": "Perm",
-  "トリートメント": "Treatment",
-  "縮毛矯正": "Straightening",
-  "スパ": "Head Spa",
-  "その他": "Other",
+// カテゴリの文字色を取得
+const getCategoryTextColor = (categoryName: string): string => {
+  const textColors: Record<string, string> = {
+    "カット": "#FFFFFF",
+    "カラー": "#FFFFFF",
+    "パーマ": "#1F2937",
+    "縮毛矯正": "#1F2937",
+    "スパ・トリートメント": "#FFFFFF",
+    "シャンプー＆セット": "#1F2937",
+    "メンズシェービング": "#1F2937",
+  };
+  return textColors[categoryName] || "#FFFFFF";
 };
 
 function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -107,9 +131,41 @@ export default function BookingPage() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [holidays, setHolidays] = useState<Array<{ date: string; startTime: string | null; endTime: string | null }>>([]);
 
+  // DBから取得したメニューとカテゴリ
+  const [menus, setMenus] = useState<DbMenu[]>([]);
+  const [categories, setCategories] = useState<DbCategory[]>([]);
+  const [isLoadingMenus, setIsLoadingMenus] = useState(true);
+
+  // メニューとカテゴリをAPIから取得
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const res = await fetch('/api/menus');
+        const data = await res.json();
+        setMenus(data.menus || []);
+        setCategories(data.categories || []);
+      } catch (error) {
+        console.error('Failed to fetch menus:', error);
+      } finally {
+        setIsLoadingMenus(false);
+      }
+    };
+    fetchMenus();
+  }, []);
+
   // 選択されたメニューの合計を計算
-  const selectedMenus = selectedMenuIds.map(id => MENU_ITEMS.find(m => m.id === id)).filter((m): m is MenuItem => m !== undefined);
-  const totals = selectedMenuIds.length > 0 ? calculateMenuTotals(selectedMenuIds) : null;
+  const selectedMenus = selectedMenuIds
+    .map(id => menus.find(m => m.id === id))
+    .filter((m): m is DbMenu => m !== undefined);
+
+  const totals = selectedMenuIds.length > 0 ? {
+    totalPrice: selectedMenus.reduce((sum, m) => sum + m.price, 0),
+    totalDuration: selectedMenus.reduce((sum, m) => sum + m.duration, 0),
+    menuSummary: selectedMenus.map(m => m.name).join(' + '),
+    earliestLastBookingTime: selectedMenus.reduce((earliest, m) => {
+      return m.lastBookingTime < earliest ? m.lastBookingTime : earliest;
+    }, '20:00'),
+  } : null;
 
   // 月が変わったら不定休を取得
   useEffect(() => {
@@ -214,7 +270,7 @@ export default function BookingPage() {
 
   // メニューの選択/解除を切り替え
   const toggleMenuSelect = (menuId: string) => {
-    const menu = MENU_ITEMS.find(m => m.id === menuId);
+    const menu = menus.find(m => m.id === menuId);
     if (!menu) return;
 
     if (selectedMenuIds.includes(menuId)) {
@@ -222,8 +278,8 @@ export default function BookingPage() {
     } else {
       // 同じカテゴリが既に選択されていたら、まず解除
       const existingMenuInCategory = selectedMenuIds.find(id => {
-        const m = MENU_ITEMS.find(item => item.id === id);
-        return m?.category === menu.category;
+        const m = menus.find(item => item.id === id);
+        return m?.categoryId === menu.categoryId;
       });
       if (existingMenuInCategory) {
         setSelectedMenuIds(prev => [...prev.filter(id => id !== existingMenuInCategory), menuId]);
@@ -271,9 +327,21 @@ export default function BookingPage() {
   };
 
   // カテゴリ内の選択済みメニューを取得
-  const getSelectedMenuInCategory = (categoryId: string): MenuItem | undefined => {
-    return selectedMenus.find(m => m.category === categoryId);
+  const getSelectedMenuInCategory = (categoryId: string): DbMenu | undefined => {
+    return selectedMenus.find(m => m.categoryId === categoryId);
   };
+
+  // ローディング中
+  if (isLoadingMenus) {
+    return (
+      <div className="min-h-screen bg-dark pt-24 md:pt-32 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-text-muted">メニューを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-dark pt-24 md:pt-32">
@@ -334,9 +402,9 @@ export default function BookingPage() {
         <AnimatedSection className="container-wide pb-12 md:pb-20">
           {/* Category Tile Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8 md:mb-12">
-            {MENU_CATEGORY_LIST.map((category) => {
-              const categoryItems = MENU_ITEMS.filter(item => item.category === category.id);
-              const categoryColor = CATEGORY_COLORS[category.id] || '#888';
+            {categories.map((category) => {
+              const categoryItems = menus.filter(item => item.categoryId === category.id);
+              const categoryColor = category.color || '#888';
               const selectedMenu = getSelectedMenuInCategory(category.id);
               const isExpanded = expandedCategory === category.id;
               const hasSelection = !!selectedMenu;
@@ -372,16 +440,16 @@ export default function BookingPage() {
                         className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full text-sm sm:text-base font-serif font-light tracking-wide text-white transition-transform group-hover:scale-105"
                         style={{ backgroundColor: categoryColor }}
                       >
-                        {CATEGORY_INITIALS[category.id]}
+                        {CATEGORY_INITIALS[category.name] || category.name.charAt(0)}
                       </span>
                     </div>
 
                     {/* Category Info */}
                     <div className="mt-auto flex-1 flex flex-col justify-end">
                       <p className="text-[8px] sm:text-[10px] text-text-muted uppercase tracking-[0.12em] sm:tracking-[0.15em] mb-0.5">
-                        {CATEGORY_TITLES[category.id]}
+                        {category.nameEn}
                       </p>
-                      <h3 className="font-medium text-xs sm:text-sm md:text-base text-white leading-tight break-words">{category.id}</h3>
+                      <h3 className="font-medium text-xs sm:text-sm md:text-base text-white leading-tight break-words">{category.name}</h3>
 
                       {selectedMenu ? (
                         <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-glass-border">
@@ -501,8 +569,8 @@ export default function BookingPage() {
                         <span
                           className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0 mt-0.5"
                           style={{
-                            backgroundColor: CATEGORY_COLORS[menu.category],
-                            color: getCategoryTextColor(menu.category)
+                            backgroundColor: menu.category.color,
+                            color: getCategoryTextColor(menu.category.name)
                           }}
                         >
                           {index + 1}
@@ -510,7 +578,7 @@ export default function BookingPage() {
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm sm:text-base text-white break-words leading-snug">{menu.name}</p>
                           <p className="text-[10px] sm:text-xs text-text-muted">
-                            {menu.category} / 約{menu.duration}分
+                            {menu.category.name} / 約{menu.duration}分
                           </p>
                         </div>
                       </div>
@@ -574,14 +642,14 @@ export default function BookingPage() {
                   key={menu.id}
                   className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-white bg-glass-light rounded"
                   style={{
-                    borderLeft: `3px solid ${CATEGORY_COLORS[menu.category]}`,
+                    borderLeft: `3px solid ${menu.category.color}`,
                   }}
                 >
                   <span
                     className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs flex-shrink-0"
                     style={{
-                      backgroundColor: CATEGORY_COLORS[menu.category],
-                      color: getCategoryTextColor(menu.category)
+                      backgroundColor: menu.category.color,
+                      color: getCategoryTextColor(menu.category.name)
                     }}
                   >
                     {index + 1}

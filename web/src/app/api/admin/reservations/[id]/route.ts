@@ -5,8 +5,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { getMenuById, calculateMenuTotals } from "@/constants/menu";
 import { parseLocalDate } from "@/lib/date-utils";
+
+// DB Menuの型定義
+interface DbMenu {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  categoryId: string;
+  category: {
+    id: string;
+    name: string;
+  };
+}
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -228,13 +241,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     } = {};
 
     // メニューが変更された場合
-    let newMenus: { id: string; name: string; category: string; price: number; duration: number }[] | null = null;
+    let newMenus: DbMenu[] | null = null;
     let totalDuration = existingReservation.totalDuration;
 
     if (menuIds) {
-      const menus = menuIds
-        .map((menuId) => getMenuById(menuId))
-        .filter((m): m is NonNullable<typeof m> => m !== undefined);
+      const menus = await prisma.menu.findMany({
+        where: {
+          id: { in: menuIds },
+          isActive: true,
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }) as DbMenu[];
 
       if (menus.length !== menuIds.length) {
         return NextResponse.json(
@@ -243,11 +267,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
       }
 
-      const totals = calculateMenuTotals(menuIds);
-      updateData.totalPrice = totals.totalPrice;
-      updateData.totalDuration = totals.totalDuration;
-      updateData.menuSummary = totals.menuSummary;
-      totalDuration = totals.totalDuration;
+      // 合計計算（DBメニューから直接）
+      updateData.totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
+      updateData.totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
+      updateData.menuSummary = menus.map((m) => m.name).join("、");
+      totalDuration = updateData.totalDuration;
       newMenus = menus;
     }
 
@@ -329,7 +353,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const effectiveWeekday = effectiveDate.getDay();
     const effectiveMenuIds = menuIds ?? existingReservation.items.map((i) => i.menuId);
     const effectiveCategories =
-      newMenus?.map((m) => m.category) ?? existingReservation.items.map((i) => i.category);
+      newMenus?.map((m) => m.category.name) ?? existingReservation.items.map((i) => i.category);
 
     if (nextCouponCode !== undefined) {
       if (!nextCouponCode || nextCouponCode.trim() === "") {
@@ -370,7 +394,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             reservationId: id,
             menuId: menu.id,
             menuName: menu.name,
-            category: menu.category,
+            category: menu.category.name,
             price: menu.price,
             duration: menu.duration,
             orderIndex: index,

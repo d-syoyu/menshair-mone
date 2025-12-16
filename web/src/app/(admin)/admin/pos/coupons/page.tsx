@@ -17,7 +17,23 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { MENUS } from '@/constants/menu';
+// DBメニューの型定義
+interface DbMenu {
+  id: string;
+  name: string;
+  categoryId: string;
+  price: number;
+  duration: number;
+  category: {
+    id: string;
+    name: string;
+  };
+}
+
+interface DbCategory {
+  id: string;
+  name: string;
+}
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -98,10 +114,28 @@ export default function AdminCouponsPage() {
     onlyReturning: false,
   });
 
+  // DBメニュー
+  const [dbMenus, setDbMenus] = useState<DbMenu[]>([]);
+  const [dbCategories, setDbCategories] = useState<DbCategory[]>([]);
+
   // メニューからカテゴリを抽出
   const categories = useMemo(() => {
-    const cats = new Set(MENUS.map((m) => m.category));
-    return Array.from(cats);
+    return dbCategories.map(c => c.name);
+  }, [dbCategories]);
+
+  // メニュー取得
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const res = await fetch('/api/menus');
+        const data = await res.json();
+        setDbMenus(data.menus || []);
+        setDbCategories(data.categories || []);
+      } catch (error) {
+        console.error('Failed to fetch menus:', error);
+      }
+    };
+    fetchMenus();
   }, []);
 
   useEffect(() => {
@@ -752,7 +786,7 @@ export default function AdminCouponsPage() {
                             <span className="text-xs text-gray-500 ml-2">（選択なしで全メニュー対象）</span>
                           </label>
                           <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
-                            {MENUS.map((menu) => (
+                            {dbMenus.map((menu) => (
                               <label
                                 key={menu.id}
                                 className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
@@ -764,7 +798,7 @@ export default function AdminCouponsPage() {
                                   className="w-4 h-4 rounded border-gray-300"
                                 />
                                 <span className="text-sm text-gray-700">{menu.name}</span>
-                                <span className="text-xs text-gray-400 ml-auto">{menu.category}</span>
+                                <span className="text-xs text-gray-400 ml-auto">{menu.category.name}</span>
                               </label>
                             ))}
                           </div>

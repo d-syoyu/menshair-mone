@@ -5,15 +5,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { createReservationSchema } from "@/lib/validations";
-import {
-  calculateMenuTotals,
-  hasDuplicateCategories,
-  getMenuById,
-} from "@/constants/menu";
 import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
 import { parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
+
+// DB Menuの型定義
+interface DbMenu {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  categoryId: string;
+  category: {
+    id: string;
+    name: string;
+  };
+}
 
 // GET /api/reservations - 予約一覧取得
 export async function GET(request: NextRequest) {
@@ -109,10 +118,23 @@ export async function POST(request: NextRequest) {
     const { menuIds, date: dateStr, startTime, note, couponCode } =
       validationResult.data;
 
+    // DBからメニュー取得（UUID配列で検索）
+    const menus = await prisma.menu.findMany({
+      where: {
+        id: { in: menuIds },
+        isActive: true,
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    }) as DbMenu[];
+
     // メニュー存在チェック
-    const menus = menuIds
-      .map((id) => getMenuById(id))
-      .filter((m): m is NonNullable<typeof m> => m !== undefined);
     if (menus.length !== menuIds.length) {
       return NextResponse.json(
         { error: "指定されたメニューが見つかりません" },
@@ -121,7 +143,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 同カテゴリ重複チェック（1カテゴリ1メニュー）
-    if (hasDuplicateCategories(menuIds)) {
+    const categoryIds = menus.map((m) => m.categoryId);
+    const hasDuplicateCategories = categoryIds.length !== new Set(categoryIds).size;
+    if (hasDuplicateCategories) {
       return NextResponse.json(
         { error: "同じカテゴリのメニューは複数選択できません" },
         { status: 400 }
@@ -153,9 +177,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 合計計算
-    const { totalPrice, totalDuration, menuSummary, earliestLastBookingTime } =
-      calculateMenuTotals(menuIds);
+    // 合計計算（DBメニューから直接計算）
+    const totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
+    const totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
+    const menuSummary = menus.map((m) => m.name).join("、");
+    const earliestLastBookingTime = menus.reduce(
+      (earliest, menu) => (menu.lastBookingTime < earliest ? menu.lastBookingTime : earliest),
+      "23:59"
+    );
 
     // 最終受付時間チェック
     if (startTime >= earliestLastBookingTime) {
@@ -185,7 +214,7 @@ export async function POST(request: NextRequest) {
         subtotal: totalPrice,
         customerId: session.user.id,
         menuIds,
-        categories: menus.map((m) => m.category),
+        categories: menus.map((m) => m.category.name),
         weekday,
         time: startTime,
       });
@@ -266,7 +295,7 @@ export async function POST(request: NextRequest) {
           reservationId: newReservation.id,
           menuId: menu.id,
           menuName: menu.name,
-          category: menu.category,
+          category: menu.category.name,
           price: menu.price,
           duration: menu.duration,
           orderIndex: index,

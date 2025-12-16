@@ -5,8 +5,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { getMenuById, calculateMenuTotals } from "@/constants/menu";
 import { parseLocalDate } from "@/lib/date-utils";
+
+// DB Menuの型定義
+interface DbMenu {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  categoryId: string;
+  category: {
+    id: string;
+    name: string;
+  };
+}
 
 // 予約作成スキーマ
 const createReservationSchema = z.object({
@@ -218,10 +231,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // メニュー情報を取得
-    const menus = menuIds
-      .map((id) => getMenuById(id))
-      .filter((m): m is NonNullable<typeof m> => m !== undefined);
+    // DBからメニュー情報を取得
+    const menus = await prisma.menu.findMany({
+      where: {
+        id: { in: menuIds },
+        isActive: true,
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    }) as DbMenu[];
 
     if (menus.length !== menuIds.length) {
       return NextResponse.json(
@@ -230,8 +254,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 合計計算
-    const { totalPrice, totalDuration, menuSummary } = calculateMenuTotals(menuIds);
+    // 合計計算（DBメニューから直接）
+    const totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
+    const totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
+    const menuSummary = menus.map((m) => m.name).join("、");
 
     // 終了時間を計算
     const startMinutes = timeToMinutes(startTime);
@@ -253,7 +279,7 @@ export async function POST(request: NextRequest) {
           subtotal: totalPrice,
           customerId: userId,
           menuIds,
-          categories: menus.map((m) => m.category),
+          categories: menus.map((m) => m.category.name),
           weekday,
           time: startTime,
         });
@@ -323,7 +349,7 @@ export async function POST(request: NextRequest) {
           create: menus.map((menu, index) => ({
             menuId: menu.id,
             menuName: menu.name,
-            category: menu.category,
+            category: menu.category.name,
             price: menu.price,
             duration: menu.duration,
             orderIndex: index,

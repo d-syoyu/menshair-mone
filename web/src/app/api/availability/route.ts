@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { MENU_ITEMS, calculateMenuTotals } from "@/constants/menu";
 import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import {
   generateTimeSlots,
@@ -103,19 +102,39 @@ export async function GET(request: NextRequest) {
     if (menuIdsParam) {
       const menuIds = menuIdsParam.split(",").filter(Boolean);
 
+      // DBからメニュー取得（UUID配列で検索）
+      const menus = await prisma.menu.findMany({
+        where: {
+          id: { in: menuIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          price: true,
+          duration: true,
+          lastBookingTime: true,
+        },
+      });
+
       // 全メニューが存在するか確認
-      const invalidMenuId = menuIds.find(id => !MENU_ITEMS.find(m => m.id === id));
-      if (invalidMenuId) {
+      if (menus.length !== menuIds.length) {
+        const foundIds = new Set(menus.map(m => m.id));
+        const invalidMenuId = menuIds.find(id => !foundIds.has(id));
         return NextResponse.json(
           { error: `指定されたメニューが見つかりません: ${invalidMenuId}` },
           { status: 400 }
         );
       }
 
-      // 合計計算
-      const totals = calculateMenuTotals(menuIds);
-      totalDuration = totals.totalDuration;
-      totalPrice = totals.totalPrice;
+      // 合計計算（DBメニューから直接）
+      totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
+      totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
+
+      // メニューの最終受付時間を考慮
+      const menuEarliestLastBookingTime = menus.reduce(
+        (earliest, menu) => (menu.lastBookingTime < earliest ? menu.lastBookingTime : earliest),
+        "23:59"
+      );
 
       // 閉店時間から施術時間を引いて、計算上の最終受付時間を算出
       const closeTimeMinutes = businessHours.close.split(':').map(Number);
@@ -125,10 +144,9 @@ export async function GET(request: NextRequest) {
       const calculatedLastBookingMins = calculatedLastBookingMinutes % 60;
       const calculatedLastBookingTime = `${calculatedLastBookingHours.toString().padStart(2, '0')}:${calculatedLastBookingMins.toString().padStart(2, '0')}`;
 
-      // 計算上の最終受付時間と営業時間の最終受付時間のうち、早い方を使用
-      earliestLastBookingTime = calculatedLastBookingTime < businessHours.lastBooking
-        ? calculatedLastBookingTime
-        : businessHours.lastBooking;
+      // 計算上の最終受付時間、営業時間の最終受付時間、メニューの最終受付時間のうち、最も早い方を使用
+      earliestLastBookingTime = [calculatedLastBookingTime, businessHours.lastBooking, menuEarliestLastBookingTime]
+        .reduce((earliest, time) => (time < earliest ? time : earliest));
     }
 
     // その日の予約を取得

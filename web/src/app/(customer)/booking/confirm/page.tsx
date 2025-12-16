@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, Scissors, ArrowLeft, Check } from 'lucide-react';
-import { MENU_ITEMS, calculateMenuTotals, CATEGORY_COLORS, getCategoryTextColor, type MenuItem } from '@/constants/menu';
 import { SALON_INFO } from '@/constants/salon';
 
 const fadeInUp = {
@@ -15,6 +14,38 @@ const fadeInUp = {
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
+// DBから取得するメニューの型
+interface DbMenu {
+  id: string;
+  name: string;
+  categoryId: string;
+  price: number;
+  duration: number;
+  lastBookingTime: string;
+  displayOrder: number;
+  category: {
+    id: string;
+    name: string;
+    nameEn: string;
+    color: string;
+    displayOrder: number;
+  };
+}
+
+// カテゴリの文字色を取得
+const getCategoryTextColor = (categoryName: string): string => {
+  const textColors: Record<string, string> = {
+    "カット": "#FFFFFF",
+    "カラー": "#FFFFFF",
+    "パーマ": "#1F2937",
+    "縮毛矯正": "#1F2937",
+    "スパ・トリートメント": "#FFFFFF",
+    "シャンプー＆セット": "#1F2937",
+    "メンズシェービング": "#1F2937",
+  };
+  return textColors[categoryName] || "#FFFFFF";
+};
+
 function BookingConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,19 +53,61 @@ function BookingConfirmContent() {
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // 複数メニュー対応
+  // DBから取得したメニュー
+  const [allMenus, setAllMenus] = useState<DbMenu[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // URLパラメータから取得
   const menuIdsParam = searchParams.get('menuIds');
   const dateStr = searchParams.get('date');
   const time = searchParams.get('time');
-
   const menuIds = menuIdsParam ? menuIdsParam.split(',').filter(Boolean) : [];
-  const menus = menuIds.map(id => MENU_ITEMS.find(m => m.id === id)).filter((m): m is MenuItem => m !== undefined);
   const date = dateStr ? new Date(dateStr) : null;
 
-  // 合計計算
-  const totals = menuIds.length > 0 ? calculateMenuTotals(menuIds) : null;
+  // メニューをAPIから取得
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const res = await fetch('/api/menus');
+        const data = await res.json();
+        setAllMenus(data.menus || []);
+      } catch (error) {
+        console.error('Failed to fetch menus:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMenus();
+  }, []);
 
-  if (menus.length === 0 || !date || !time || !totals) {
+  // 選択されたメニューを取得
+  const selectedMenus = menuIds
+    .map(id => allMenus.find(m => m.id === id))
+    .filter((m): m is DbMenu => m !== undefined);
+
+  // 合計計算
+  const totals = selectedMenus.length > 0 ? {
+    totalPrice: selectedMenus.reduce((sum, m) => sum + m.price, 0),
+    totalDuration: selectedMenus.reduce((sum, m) => sum + m.duration, 0),
+    menuSummary: selectedMenus.map(m => m.name).join(' + '),
+    earliestLastBookingTime: selectedMenus.reduce((earliest, m) => {
+      return m.lastBookingTime < earliest ? m.lastBookingTime : earliest;
+    }, '20:00'),
+  } : null;
+
+  // ローディング中
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark pt-32 pb-20">
+        <div className="container-narrow text-center">
+          <div className="inline-block w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-text-muted">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedMenus.length === 0 || !date || !time || !totals) {
     return (
       <div className="min-h-screen bg-dark pt-32 pb-20">
         <div className="container-narrow text-center">
@@ -157,14 +230,14 @@ function BookingConfirmContent() {
                   メニュー
                 </p>
                 <div className="space-y-3">
-                  {menus.map((menu, index) => (
+                  {selectedMenus.map((menu, index) => (
                     <div key={menu.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span
                           className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
                           style={{
-                            backgroundColor: CATEGORY_COLORS[menu.category] || '#888',
-                            color: getCategoryTextColor(menu.category)
+                            backgroundColor: menu.category.color || '#888',
+                            color: getCategoryTextColor(menu.category.name)
                           }}
                         >
                           {index + 1}
