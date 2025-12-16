@@ -312,8 +312,10 @@ export default function NewSalePage() {
       const today = new Date().toISOString().split('T')[0];
       const res = await fetch(`/api/admin/reservations?status=CONFIRMED`);
       const data = await res.json();
+      // APIは { reservations: [...] } を返す
+      const reservationList = data.reservations || [];
       // 本日以降の予約のみフィルタリング
-      const filtered = data.filter((r: Reservation) => r.date >= today);
+      const filtered = reservationList.filter((r: Reservation) => r.date >= today);
       setReservations(filtered);
     } catch (err) {
       console.error('Failed to fetch reservations:', err);
