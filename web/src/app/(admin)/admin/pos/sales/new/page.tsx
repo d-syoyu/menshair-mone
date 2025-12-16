@@ -135,6 +135,20 @@ interface AppliedCoupon {
   message: string;
 }
 
+interface AvailableCoupon {
+  id: string;
+  code: string;
+  name: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  description: string | null;
+  validFrom: string;
+  validUntil: string;
+  minimumAmount: number | null;
+  usageLimit: number | null;
+  usageCount: number;
+}
+
 // ========== ステップ定義 ==========
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -191,6 +205,7 @@ export default function NewSalePage() {
   // 割引・クーポン
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
@@ -221,6 +236,7 @@ export default function NewSalePage() {
       fetchPaymentMethods(),
       fetchTaxRate(),
       fetchReservations(),
+      fetchCoupons(),
     ]).then(() => setIsLoading(false));
   }, []);
 
@@ -304,6 +320,16 @@ export default function NewSalePage() {
     }
   };
 
+  const fetchCoupons = async () => {
+    try {
+      const res = await fetch('/api/admin/coupons');
+      const data = await res.json();
+      setAvailableCoupons(data);
+    } catch (err) {
+      console.error('Failed to fetch coupons:', err);
+    }
+  };
+
   // ========== 顧客検索 ==========
 
   const searchCustomers = async (query: string) => {
@@ -314,7 +340,7 @@ export default function NewSalePage() {
 
     setIsSearchingCustomers(true);
     try {
-      const res = await fetch(`/api/admin/customers?search=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/admin/customers?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       setCustomerSearchResults(data);
     } catch (err) {
@@ -498,6 +524,58 @@ export default function NewSalePage() {
     setCouponError(null);
   };
 
+  const selectCoupon = async (coupon: AvailableCoupon) => {
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const menuIds = selectedMenuIds;
+      const categories = selectedMenuIds
+        .map(id => menus.find(m => m.id === id)?.category.name)
+        .filter(Boolean) as string[];
+
+      const saleWeekday = new Date(saleDate).getDay();
+
+      const res = await fetch('/api/admin/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: coupon.code,
+          subtotal: calculateSubtotal,
+          customerId: selectedUserId,
+          menuIds,
+          categories,
+          weekday: saleWeekday,
+          time: saleTime,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        setAppliedCoupon({
+          id: data.coupon.id,
+          code: data.coupon.code,
+          name: data.coupon.name,
+          type: data.coupon.type,
+          value: data.coupon.value,
+          discountAmount: data.discountAmount,
+          message: data.message,
+        });
+        setCouponCode(coupon.code);
+        setSuccess('クーポンを適用しました');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setCouponError(data.error);
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError('クーポンの検証に失敗しました');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
   // ========== 支払方法 ==========
 
   const handleAddPayment = () => {
@@ -653,8 +731,13 @@ export default function NewSalePage() {
   const canProceedFromStep = (step: Step): boolean => {
     switch (step) {
       case 1:
-        // 会計元・日時：予約選択またはウォークインでOK
-        return true;
+        // 会計元・日時：予約選択、または顧客情報（登録顧客or名前入力）が必須
+        if (selectedReservation) {
+          return true; // 予約が選択されていればOK
+        }
+        // ウォークインの場合は顧客情報が必要
+        return !!(selectedUserId || customerName.trim());
+
       case 2:
         // 施術メニュー：メニューまたは商品が選択されていればOK（スキップ可能）
         return true;
@@ -978,11 +1061,17 @@ export default function NewSalePage() {
                 </div>
 
                 {/* ナビゲーション */}
-                <div className="flex justify-end">
+                <div className="flex flex-col items-end gap-2">
+                  {!canProceedFromStep(1) && (
+                    <p className="text-sm text-red-500">
+                      予約を選択するか、顧客情報を入力してください
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={goToNextStep}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                    disabled={!canProceedFromStep(1)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     次へ：メニュー選択
                     <ArrowRight className="w-5 h-5" />
@@ -1399,22 +1488,80 @@ export default function NewSalePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="クーポンコードを入力"
-                        />
-                        <button
-                          type="button"
-                          onClick={validateCoupon}
-                          disabled={isValidatingCoupon || !couponCode.trim()}
-                          className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {isValidatingCoupon ? '検証中...' : '適用'}
-                        </button>
+                      <div className="space-y-3">
+                        {/* クーポン一覧 */}
+                        {availableCoupons.length > 0 ? (
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {availableCoupons.map((coupon) => {
+                              const isLimitReached = coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit;
+                              const discountText = coupon.type === 'PERCENTAGE'
+                                ? `${coupon.value}%OFF`
+                                : `¥${coupon.value.toLocaleString()}OFF`;
+
+                              return (
+                                <button
+                                  key={coupon.id}
+                                  type="button"
+                                  onClick={() => selectCoupon(coupon)}
+                                  disabled={isValidatingCoupon || isLimitReached}
+                                  className={`w-full flex items-center justify-between p-3 border rounded-lg text-left transition-colors ${
+                                    isLimitReached
+                                      ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                                      : 'border-gray-200 hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 cursor-pointer'
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900">{coupon.name}</span>
+                                      <span className="px-2 py-0.5 text-xs bg-[var(--color-gold)]/10 text-[var(--color-gold)] rounded">
+                                        {discountText}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      コード: {coupon.code}
+                                      {coupon.minimumAmount && coupon.minimumAmount > 0 && (
+                                        <span className="ml-2">・¥{coupon.minimumAmount.toLocaleString()}以上</span>
+                                      )}
+                                    </p>
+                                    {coupon.description && (
+                                      <p className="text-xs text-gray-400 mt-0.5 truncate">{coupon.description}</p>
+                                    )}
+                                    {isLimitReached && (
+                                      <p className="text-xs text-red-500 mt-0.5">利用上限に達しました</p>
+                                    )}
+                                  </div>
+                                  <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 py-4 text-center">利用可能なクーポンはありません</p>
+                        )}
+
+                        {/* コード入力（折りたたみ） */}
+                        <details className="border border-gray-200 rounded-lg">
+                          <summary className="px-3 py-2 text-sm text-gray-600 cursor-pointer hover:bg-gray-50">
+                            コードを直接入力
+                          </summary>
+                          <div className="p-3 pt-0 flex gap-2">
+                            <input
+                              type="text"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                              placeholder="クーポンコードを入力"
+                            />
+                            <button
+                              type="button"
+                              onClick={validateCoupon}
+                              disabled={isValidatingCoupon || !couponCode.trim()}
+                              className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {isValidatingCoupon ? '検証中...' : '適用'}
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     )}
                     {couponError && (
