@@ -145,7 +145,7 @@ export default function MyPage() {
             <h2 className="text-lg font-medium text-white">直近の予約</h2>
             <Link
               href="/mypage/reservations"
-              className="text-sm text-accent-light hover:text-accent transition-colors"
+              className="text-sm text-accent-light hover:text-white transition-colors"
             >
               すべて見る
             </Link>

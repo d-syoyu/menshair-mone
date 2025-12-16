@@ -104,14 +104,14 @@ const Footer = () => {
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                <MapPin className="w-4 h-4 text-accent-light mt-0.5 flex-shrink-0" />
                 <span className="text-text-secondary">
                   〒570-0036<br />
                   大阪府守口市八雲中町1-24-1
                 </span>
               </li>
               <li className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-accent flex-shrink-0" />
+                <Phone className="w-4 h-4 text-accent-light flex-shrink-0" />
                 <a
                   href="tel:06-6908-4859"
                   className="text-text-secondary transition-colors duration-300 hover:text-white"
@@ -120,7 +120,7 @@ const Footer = () => {
                 </a>
               </li>
               <li className="flex items-center gap-3 text-sm">
-                <Instagram className="w-4 h-4 text-accent flex-shrink-0" />
+                <Instagram className="w-4 h-4 text-accent-light flex-shrink-0" />
                 <a
                   href="https://instagram.com/barber_shop0601mone"
                   target="_blank"
@@ -135,7 +135,7 @@ const Footer = () => {
             {/* Hours */}
             <div className="mt-6 pt-6 border-t border-glass-border">
               <div className="flex items-center gap-3 mb-3">
-                <Clock className="w-4 h-4 text-accent" />
+                <Clock className="w-4 h-4 text-accent-light" />
                 <p className="text-xs tracking-[0.15em] uppercase text-text-muted">Hours</p>
               </div>
               <div className="text-sm text-text-secondary space-y-2">
