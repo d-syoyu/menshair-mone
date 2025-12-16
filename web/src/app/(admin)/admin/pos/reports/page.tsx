@@ -123,6 +123,8 @@ interface AnalyticsData {
   period: { startDate: string; endDate: string };
   summary: {
     totalSales: number;
+    totalSubtotal: number;
+    totalTax: number;
     saleCount: number;
     averagePerCustomer: number;
     totalMenuAmount: number;
@@ -554,8 +556,18 @@ export default function ReportsPage() {
                 {/* Summary */}
                 <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                    <p className="text-sm text-gray-500 mb-2">総売上</p>
+                    <p className="text-sm text-gray-500 mb-2">総売上（税込）</p>
                     <p className="text-2xl sm:text-3xl font-light text-[var(--color-gold)]">{formatPrice(analyticsData.summary.totalSales)}</p>
+                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">税抜</span>
+                        <span className="text-gray-700">{formatPrice(analyticsData.summary.totalSubtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">消費税</span>
+                        <span className="text-gray-700">{formatPrice(analyticsData.summary.totalTax)}</span>
+                      </div>
+                    </div>
                   </div>
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                     <p className="text-sm text-gray-500 mb-2">会計件数</p>

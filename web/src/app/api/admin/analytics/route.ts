@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
 
     // 基本統計
     const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const totalSubtotal = sales.reduce((sum, sale) => sum + sale.subtotal, 0);
+    const totalTax = sales.reduce((sum, sale) => sum + sale.taxAmount, 0);
     const saleCount = sales.length;
     const averagePerCustomer = saleCount > 0 ? Math.round(totalSales / saleCount) : 0;
 
@@ -242,6 +244,8 @@ export async function GET(request: NextRequest) {
       },
       summary: {
         totalSales,
+        totalSubtotal,
+        totalTax,
         saleCount,
         averagePerCustomer,
         totalMenuAmount,
