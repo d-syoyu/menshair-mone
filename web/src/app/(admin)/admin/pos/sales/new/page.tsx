@@ -184,7 +184,7 @@ export default function NewSalePage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
 
   // 会計元
-  const [sourceType, setSourceType] = useState<SourceType>('walkin');
+  const [sourceType, setSourceType] = useState<SourceType>('reservation');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
