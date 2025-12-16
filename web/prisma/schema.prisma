@@ -240,14 +240,14 @@ model Sale {
   // 予約との紐付け
   reservationId   String?         @unique // 予約ID（予約から作成時）
 
-  // 金額情報
-  subtotal        Int             // 小計（税抜）
-  taxAmount       Int             // 消費税額
+  // 金額情報（内税方式）
+  subtotal        Int             // アイテム合計（税込・割引前）
+  taxAmount       Int             // 消費税額（totalAmountから逆算）
   taxRate         Int             // 消費税率（%）※スナップショット
-  discountAmount  Int             @default(0) // 店頭割引額
+  discountAmount  Int             @default(0) // 店頭割引額（税込価格から引く）
   couponId        String?         // 適用クーポンID
-  couponDiscount  Int             @default(0) // クーポン割引額
-  totalAmount     Int             // 合計金額（税込・割引後）
+  couponDiscount  Int             @default(0) // クーポン割引額（税込価格から引く）
+  totalAmount     Int             // 合計金額（税込・割引後）= subtotal - 割引
 
   // 支払情報
   paymentMethod   String          // 主要支払方法（集計用）
