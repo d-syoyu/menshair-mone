@@ -400,9 +400,7 @@ export default function NewSalePage() {
       });
     }
 
-    // 予約日時を設定
-    setSaleDate(reservation.date.split('T')[0]);
-    setSaleTime(reservation.startTime);
+    // 会計日時は現在の日時を維持（予約日時は設定しない）
   };
 
   const clearReservation = () => {
