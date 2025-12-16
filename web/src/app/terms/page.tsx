@@ -93,11 +93,11 @@ export default function TermsPage() {
               <ol className="list-decimal list-inside space-y-2 leading-relaxed">
                 <li>施術料金は、当サロンが定める料金表に基づきます。</li>
                 <li>
-                  お支払いは、
-                  {paymentMethods.length > 0
-                    ? paymentMethods.map((pm) => pm.displayName).join('、')
-                    : '現金またはクレジットカード'}
-                  にて承ります。
+                  {paymentMethods.length > 0 ? (
+                    <>お支払いは、{paymentMethods.map((pm) => pm.displayName).join('、')}にて承ります。</>
+                  ) : (
+                    <>お支払い方法については、店舗にお問い合わせください。</>
+                  )}
                 </li>
                 <li>料金は予告なく変更する場合がございます。</li>
               </ol>
