@@ -1200,14 +1200,33 @@ export default function NewSalePage() {
                 {selectedMenuIds.length > 0 && (
                   <div className="bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 rounded-xl p-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">選択中のメニュー</h3>
-                    <div className="space-y-1 text-sm">
+                    <div className="space-y-2">
                       {selectedMenuIds.map((menuId) => {
+                        // DBメニューから検索
                         const menu = menus.find((m) => m.id === menuId);
-                        if (!menu) return null;
+                        // 予約のアイテムから検索（予約選択時）
+                        const reservationItem = selectedReservation?.items.find((item) => item.menuId === menuId);
+
+                        const name = menu?.name || reservationItem?.menuName || menuId;
+                        const price = menu?.price || reservationItem?.price || 0;
+                        const duration = menu?.duration || reservationItem?.duration || 0;
+
                         return (
-                          <div key={menuId} className="flex justify-between">
-                            <span>{menu.name}</span>
-                            <span className="text-[var(--color-gold)]">{formatPrice(menu.price)}</span>
+                          <div key={menuId} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-100">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{name}</p>
+                              <p className="text-xs text-gray-500">{duration}分</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-[var(--color-gold)] font-medium">{formatPrice(price)}</span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedMenuIds((prev) => prev.filter((id) => id !== menuId))}
+                                className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
