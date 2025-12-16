@@ -141,14 +141,8 @@ export default function MyPage() {
           variants={fadeInUp}
           className="glass-card p-6 mb-8"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6">
             <h2 className="text-lg font-medium text-white">直近の予約</h2>
-            <Link
-              href="/mypage/reservations"
-              className="text-sm text-accent-light hover:text-white transition-colors"
-            >
-              すべて見る
-            </Link>
           </div>
 
           {isLoading ? (
