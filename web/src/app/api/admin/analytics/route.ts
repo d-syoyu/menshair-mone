@@ -41,8 +41,13 @@ export async function GET(request: NextRequest) {
 
     // 基本統計
     const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const totalSubtotal = sales.reduce((sum, sale) => sum + sale.subtotal, 0);
-    const totalTax = sales.reduce((sum, sale) => sum + sale.taxAmount, 0);
+    // 割引後の実際の税額を計算（税込総額から逆算）
+    // 各会計の税率を使用して正確に計算
+    const totalTax = sales.reduce((sum, sale) => {
+      // 内税計算: 税込金額 × 税率 ÷ (100 + 税率)
+      return sum + Math.floor(sale.totalAmount * sale.taxRate / (100 + sale.taxRate));
+    }, 0);
+    const totalSubtotal = totalSales - totalTax;
     const saleCount = sales.length;
     const averagePerCustomer = saleCount > 0 ? Math.round(totalSales / saleCount) : 0;
 
