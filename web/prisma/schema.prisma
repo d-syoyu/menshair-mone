@@ -293,7 +293,8 @@ model SaleItem {
   // メニューの場合
   menuId      String?
   menuName    String?
-  category    String?
+  categoryId  String?      // カテゴリID（フィルタリング用）
+  category    String?      // カテゴリ名（表示用スナップショット）
   duration    Int?
 
   // 店販商品の場合
@@ -309,6 +310,7 @@ model SaleItem {
   sale        Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   @@index([saleId])
+  @@index([categoryId])
   @@unique([saleId, orderIndex])
 }
 

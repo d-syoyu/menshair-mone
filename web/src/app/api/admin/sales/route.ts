@@ -311,12 +311,24 @@ export async function POST(request: NextRequest) {
       // 会計明細作成
       for (let i = 0; i < data.items.length; i++) {
         const item = data.items[i];
+
+        // menuIdからcategoryIdを取得（メニューの場合）
+        let categoryId: string | null = null;
+        if (item.itemType === "MENU" && item.menuId) {
+          const menu = await tx.menu.findUnique({
+            where: { id: item.menuId },
+            select: { categoryId: true },
+          });
+          categoryId = menu?.categoryId ?? null;
+        }
+
         await tx.saleItem.create({
           data: {
             saleId: newSale.id,
             itemType: item.itemType,
             menuId: item.menuId,
             menuName: item.menuName,
+            categoryId: categoryId,
             category: item.category,
             duration: item.duration,
             productId: item.productId,

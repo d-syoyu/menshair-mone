@@ -545,7 +545,8 @@ async function main() {
           itemType: "MENU",
           menuId: dbMenu?.id || null,
           menuName: menu.name,
-          category: menu.category,
+          categoryId: dbMenu?.categoryId || null, // カテゴリID（フィルタリング用）
+          category: menu.category, // カテゴリ名（表示用スナップショット）
           duration: menu.duration,
           quantity: 1,
           unitPrice: menu.price,

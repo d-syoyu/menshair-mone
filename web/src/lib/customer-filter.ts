@@ -319,6 +319,7 @@ async function getCustomerIdsByTarget(target: string): Promise<Set<string>> {
 
 /**
  * カテゴリ別に顧客IDを取得（会計ベース）
+ * categoryIdでフィルタリングするため、カテゴリ名を変更しても正しく動作する
  * @param categoryName カテゴリ名
  * @param hasUsed true: 利用したことがある, false: 利用したことがない
  */
@@ -345,6 +346,7 @@ async function getCustomersByCategory(
 
   if (hasUsed) {
     // そのカテゴリの施術を受けたことがあるユーザー（会計ベース）
+    // categoryIdでフィルタリング（カテゴリ名変更に影響されない）
     const usersWithCategory = await prisma.sale.findMany({
       where: {
         paymentStatus: "PAID",
@@ -352,7 +354,7 @@ async function getCustomersByCategory(
         items: {
           some: {
             itemType: "MENU",
-            category: category.name,
+            categoryId: category.id,
           },
         },
       },
@@ -378,7 +380,7 @@ async function getCustomersByCategory(
       },
     });
 
-    // 2. そのカテゴリを利用したことがあるユーザーを取得
+    // 2. そのカテゴリを利用したことがあるユーザーを取得（categoryIdでフィルタリング）
     const usersWithCategory = await prisma.sale.findMany({
       where: {
         paymentStatus: "PAID",
@@ -386,7 +388,7 @@ async function getCustomersByCategory(
         items: {
           some: {
             itemType: "MENU",
-            category: category.name,
+            categoryId: category.id,
           },
         },
       },
