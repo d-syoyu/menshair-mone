@@ -20,6 +20,7 @@ interface DbMenu {
   name: string;
   categoryId: string;
   price: number;
+  priceVariable: boolean; // 価格変動あり
   duration: number;
   lastBookingTime: string;
   displayOrder: number;
@@ -246,7 +247,7 @@ function BookingConfirmContent() {
                       </div>
                       <div className="text-right">
                         <span className="text-gold">
-                          ¥{menu.price.toLocaleString()}
+                          ¥{menu.price.toLocaleString()}{menu.priceVariable ? '〜' : ''}
                         </span>
                         <span className="text-sm text-text-muted ml-2">
                           ({menu.duration}分)

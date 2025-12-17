@@ -17,6 +17,7 @@ interface Menu {
   id: string;
   name: string;
   price: number;
+  priceVariable: boolean; // 価格変動あり
   duration: number;
   displayOrder: number;
   category: Category;
@@ -49,7 +50,8 @@ export default function MenuPage() {
     items: menus.filter(menu => menu.category.id === category.id),
   })).filter(group => group.items.length > 0);
 
-  const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
+  const formatPrice = (price: number, priceVariable?: boolean) =>
+    `¥${price.toLocaleString()}${priceVariable ? '〜' : ''}`;
 
   return (
     <div className="min-h-screen pt-32">
@@ -103,7 +105,7 @@ export default function MenuPage() {
                           <span className="text-base md:text-lg">{item.name}</span>
                         </div>
                         <span className="text-lg md:text-xl text-gold font-light">
-                          {formatPrice(item.price)}
+                          {formatPrice(item.price, item.priceVariable)}
                         </span>
                       </div>
                     ))}

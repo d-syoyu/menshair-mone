@@ -161,6 +161,7 @@ model Menu {
   name            String   // メニュー名
   categoryId      String   // カテゴリID
   price           Int      // 価格
+  priceVariable   Boolean  @default(false) // 価格変動あり（会計時に金額変更可能）
   duration        Int      // 所要時間（分）
   lastBookingTime String   // 最終受付時間 (例: "19:00")
   displayOrder    Int      @default(0) // 表示順

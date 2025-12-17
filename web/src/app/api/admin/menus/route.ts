@@ -11,6 +11,7 @@ const createMenuSchema = z.object({
   name: z.string().min(1, "メニュー名は必須です"),
   categoryId: z.string().min(1, "カテゴリは必須です"),
   price: z.number().int().positive("価格は正の整数で入力してください"),
+  priceVariable: z.boolean().default(false), // 価格変動あり
   duration: z.number().int().positive("所要時間は正の整数で入力してください"),
   lastBookingTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません（例: 19:00）"),
   displayOrder: z.number().int().default(0),
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, categoryId, price, duration, lastBookingTime, displayOrder, isActive } = validationResult.data;
+    const { name, categoryId, price, priceVariable, duration, lastBookingTime, displayOrder, isActive } = validationResult.data;
 
     // カテゴリ存在チェック
     const category = await prisma.category.findUnique({
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
         name,
         categoryId,
         price,
+        priceVariable,
         duration,
         lastBookingTime,
         displayOrder,

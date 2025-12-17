@@ -38,6 +38,7 @@ interface DbMenu {
   name: string;
   categoryId: string;
   price: number;
+  priceVariable: boolean; // 価格変動あり
   duration: number;
   lastBookingTime: string;
   displayOrder: number;
@@ -455,7 +456,7 @@ export default function BookingPage() {
                         <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-glass-border">
                           <p className="text-[10px] sm:text-xs text-text-secondary leading-snug break-words">{selectedMenu.name}</p>
                           <p className="text-gold font-light text-xs sm:text-sm mt-0.5">
-                            ¥{selectedMenu.price.toLocaleString()}
+                            ¥{selectedMenu.price.toLocaleString()}{selectedMenu.priceVariable ? '〜' : ''}
                           </p>
                         </div>
                       ) : (
@@ -513,7 +514,7 @@ export default function BookingPage() {
                                   <div className="flex-1">
                                     <p className="font-medium text-sm sm:text-base text-white leading-snug mb-1">{menu.name}</p>
                                     <div className="flex items-center gap-3 text-xs sm:text-sm">
-                                      <span className="text-gold font-medium">¥{menu.price.toLocaleString()}</span>
+                                      <span className="text-gold font-medium">¥{menu.price.toLocaleString()}{menu.priceVariable ? '〜' : ''}</span>
                                       <span className="text-text-muted">約{menu.duration}分</span>
                                     </div>
                                   </div>
@@ -584,7 +585,7 @@ export default function BookingPage() {
                       </div>
                       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                         <span className="text-gold font-light text-sm sm:text-lg whitespace-nowrap">
-                          ¥{menu.price.toLocaleString()}
+                          ¥{menu.price.toLocaleString()}{menu.priceVariable ? '〜' : ''}
                         </span>
                         <button
                           onClick={() => toggleMenuSelect(menu.id)}

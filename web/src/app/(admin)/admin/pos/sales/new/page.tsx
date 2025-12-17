@@ -41,6 +41,7 @@ interface Menu {
   name: string;
   categoryId: string;
   price: number;
+  priceVariable: boolean; // 価格変動あり
   duration: number;
   displayOrder: number;
   isActive: boolean;
@@ -198,6 +199,7 @@ export default function NewSalePage() {
 
   // 明細
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
+  const [customMenuPrices, setCustomMenuPrices] = useState<Record<string, number>>({}); // 価格変動ありメニューのカスタム価格
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
   const [expandedMenuCategories, setExpandedMenuCategories] = useState<string[]>([]);
   const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
@@ -247,7 +249,9 @@ export default function NewSalePage() {
     try {
       const res = await fetch('/api/admin/menus');
       const data = await res.json();
-      setMenus(data.filter((m: Menu) => m.isActive));
+      if (Array.isArray(data)) {
+        setMenus(data.filter((m: Menu) => m.isActive));
+      }
     } catch (err) {
       console.error('Failed to fetch menus:', err);
     }
@@ -257,7 +261,12 @@ export default function NewSalePage() {
     try {
       const res = await fetch('/api/admin/products');
       const data = await res.json();
-      setProducts(data.filter((p: Product) => p.isActive));
+      if (Array.isArray(data)) {
+        setProducts(data.filter((p: Product) => p.isActive));
+      } else {
+        console.error('Unexpected products response:', data);
+        setProducts([]);
+      }
     } catch (err) {
       console.error('Failed to fetch products:', err);
     }
@@ -277,7 +286,12 @@ export default function NewSalePage() {
     try {
       const res = await fetch('/api/admin/discounts');
       const data = await res.json();
-      setDiscounts(data.filter((d: Discount) => d.isActive));
+      if (Array.isArray(data)) {
+        setDiscounts(data.filter((d: Discount) => d.isActive));
+      } else {
+        console.error('Unexpected discounts response:', data);
+        setDiscounts([]);
+      }
     } catch (err) {
       console.error('Failed to fetch discounts:', err);
     }
@@ -420,13 +434,21 @@ export default function NewSalePage() {
 
   // ========== 金額計算 ==========
 
+  // メニューの実際の価格を取得（カスタム価格があれば使用）
+  const getMenuPrice = (menuId: string): number => {
+    if (customMenuPrices[menuId] !== undefined) {
+      return customMenuPrices[menuId];
+    }
+    const menu = menus.find((m) => m.id === menuId);
+    return menu?.price || 0;
+  };
+
   const calculateSubtotal = useMemo(() => {
     let subtotal = 0;
 
-    // メニュー小計
+    // メニュー小計（カスタム価格を使用）
     selectedMenuIds.forEach((menuId) => {
-      const menu = menus.find((m) => m.id === menuId);
-      if (menu) subtotal += menu.price;
+      subtotal += getMenuPrice(menuId);
     });
 
     // 商品小計
@@ -438,7 +460,8 @@ export default function NewSalePage() {
     });
 
     return subtotal;
-  }, [selectedMenuIds, productQuantities, menus, products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMenuIds, productQuantities, menus, products, customMenuPrices]);
 
   const getDiscountAmount = useMemo(() => {
     if (selectedDiscount) {
@@ -650,7 +673,7 @@ export default function NewSalePage() {
         unitPrice: number;
       }> = [];
 
-      // メニュー明細
+      // メニュー明細（カスタム価格を使用）
       selectedMenuIds.forEach((menuId) => {
         const menu = menus.find((m) => m.id === menuId);
         if (menu) {
@@ -661,7 +684,7 @@ export default function NewSalePage() {
             category: menu.category.name,
             duration: menu.duration,
             quantity: 1,
-            unitPrice: menu.price,
+            unitPrice: getMenuPrice(menuId),
           });
         }
       });
@@ -1723,9 +1746,29 @@ export default function NewSalePage() {
                           const menu = menus.find((m) => m.id === menuId);
                           if (!menu) return null;
                           return (
-                            <div key={menuId} className="flex justify-between">
-                              <span className="text-gray-600">{menu.name}</span>
-                              <span>{formatPrice(menu.price)}</span>
+                            <div key={menuId} className="flex justify-between items-center gap-2 py-2">
+                              <span className="text-gray-600 flex items-center gap-1 text-base">
+                                {menu.name}
+                                {menu.priceVariable && (
+                                  <span className="text-xs text-orange-500">（変動）</span>
+                                )}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-400">¥</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={customMenuPrices[menuId] !== undefined ? customMenuPrices[menuId] : menu.price}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setCustomMenuPrices(prev => ({
+                                      ...prev,
+                                      [menuId]: value,
+                                    }));
+                                  }}
+                                  className="w-28 px-3 py-3 text-right text-base border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                                />
+                              </div>
                             </div>
                           );
                         })}

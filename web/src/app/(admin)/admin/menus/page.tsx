@@ -58,6 +58,7 @@ interface Menu {
   name: string;
   categoryId: string;
   price: number;
+  priceVariable: boolean; // 価格変動あり
   duration: number;
   lastBookingTime: string;
   displayOrder: number;
@@ -101,6 +102,7 @@ export default function AdminMenusPage() {
     name: '',
     categoryId: '',
     price: 0,
+    priceVariable: false, // 価格変動あり
     duration: 60,
     lastBookingTime: '19:00',
     displayOrder: 0,
@@ -215,6 +217,7 @@ export default function AdminMenusPage() {
         name: menu.name,
         categoryId: menu.categoryId,
         price: menu.price,
+        priceVariable: menu.priceVariable || false,
         duration: menu.duration,
         lastBookingTime: menu.lastBookingTime,
         displayOrder: menu.displayOrder,
@@ -226,6 +229,7 @@ export default function AdminMenusPage() {
         name: '',
         categoryId: categories[0]?.id || '',
         price: 0,
+        priceVariable: false,
         duration: 60,
         lastBookingTime: '19:00',
         displayOrder: menus.length,
@@ -292,7 +296,8 @@ export default function AdminMenusPage() {
     }
   };
 
-  const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
+  const formatPrice = (price: number, priceVariable?: boolean) =>
+    `¥${price.toLocaleString()}${priceVariable ? '〜' : ''}`;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
@@ -516,7 +521,7 @@ export default function AdminMenusPage() {
                               {/* Price */}
                               <div className="text-right flex-shrink-0">
                                 <p className="text-lg text-[var(--color-gold)]">
-                                  {formatPrice(menu.price)}
+                                  {formatPrice(menu.price, menu.priceVariable)}
                                 </p>
                               </div>
 
@@ -839,6 +844,19 @@ export default function AdminMenusPage() {
                         required
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="menuPriceVariable"
+                      checked={menuForm.priceVariable}
+                      onChange={(e) => setMenuForm({ ...menuForm, priceVariable: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <label htmlFor="menuPriceVariable" className="text-sm text-gray-700">
+                      価格変動あり（会計時に金額変更可能）
+                    </label>
                   </div>
 
                   <div>
