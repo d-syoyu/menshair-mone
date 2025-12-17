@@ -5,6 +5,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { syncNewsletterTargetOptions } from "@/lib/notion";
+
+// Notion配信先オプション同期（バックグラウンド実行）
+async function syncNewsletterOptionsBackground() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { displayOrder: "asc" },
+    });
+    const result = await syncNewsletterTargetOptions(categories);
+    if (result.success) {
+      console.log(`[Category API] Notion同期完了: 追加${result.added.length}件, 削除${result.removed.length}件`);
+    } else {
+      console.warn(`[Category API] Notion同期失敗: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("[Category API] Notion同期エラー:", error);
+  }
+}
 
 // カテゴリ更新スキーマ
 const updateCategorySchema = z.object({
@@ -108,6 +128,11 @@ export async function PUT(
       data: validationResult.data,
     });
 
+    // 名前またはisActiveが変更された場合、Notion配信先オプションを同期
+    if (validationResult.data.name !== undefined || validationResult.data.isActive !== undefined) {
+      syncNewsletterOptionsBackground();
+    }
+
     return NextResponse.json(category);
   } catch (error) {
     console.error("Update category error:", error);
@@ -161,6 +186,9 @@ export async function DELETE(
     await prisma.category.delete({
       where: { id },
     });
+
+    // Notion配信先オプションを同期（削除されたカテゴリのオプションを削除）
+    syncNewsletterOptionsBackground();
 
     return NextResponse.json({ message: "カテゴリを削除しました" });
   } catch (error) {

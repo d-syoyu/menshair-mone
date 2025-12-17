@@ -5,6 +5,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { syncNewsletterTargetOptions } from "@/lib/notion";
+
+// Notion配信先オプション同期（バックグラウンド実行）
+async function syncNewsletterOptionsBackground() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { displayOrder: "asc" },
+    });
+    const result = await syncNewsletterTargetOptions(categories);
+    if (result.success) {
+      console.log(`[Category API] Notion同期完了: 追加${result.added.length}件, 削除${result.removed.length}件`);
+    } else {
+      console.warn(`[Category API] Notion同期失敗: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("[Category API] Notion同期エラー:", error);
+  }
+}
 
 // カテゴリ作成スキーマ
 const createCategorySchema = z.object({
@@ -94,6 +114,9 @@ export async function POST(request: NextRequest) {
         isActive,
       },
     });
+
+    // Notion配信先オプションを自動同期（バックグラウンドで実行）
+    syncNewsletterOptionsBackground();
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
