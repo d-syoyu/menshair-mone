@@ -2,10 +2,12 @@
 // MONË - Single Category Admin API
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { syncNewsletterTargetOptions } from "@/lib/notion";
+import { MENU_CACHE_TAG } from "@/lib/menu-cache";
 
 // Notion配信先オプション同期（バックグラウンド実行）
 async function syncNewsletterOptionsBackground() {
@@ -128,6 +130,9 @@ export async function PUT(
       data: validationResult.data,
     });
 
+    // メニューキャッシュを無効化
+    revalidateTag(MENU_CACHE_TAG, "max");
+
     // 名前またはisActiveが変更された場合、Notion配信先オプションを同期
     if (validationResult.data.name !== undefined || validationResult.data.isActive !== undefined) {
       syncNewsletterOptionsBackground();
@@ -186,6 +191,9 @@ export async function DELETE(
     await prisma.category.delete({
       where: { id },
     });
+
+    // メニューキャッシュを無効化
+    revalidateTag(MENU_CACHE_TAG, "max");
 
     // Notion配信先オプションを同期（削除されたカテゴリのオプションを削除）
     syncNewsletterOptionsBackground();

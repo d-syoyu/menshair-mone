@@ -2,10 +2,12 @@
 // MONË - Categories Admin API
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { syncNewsletterTargetOptions } from "@/lib/notion";
+import { MENU_CACHE_TAG } from "@/lib/menu-cache";
 
 // Notion配信先オプション同期（バックグラウンド実行）
 async function syncNewsletterOptionsBackground() {
@@ -114,6 +116,9 @@ export async function POST(request: NextRequest) {
         isActive,
       },
     });
+
+    // メニューキャッシュを無効化（カテゴリ一覧もキャッシュに含まれるため）
+    revalidateTag(MENU_CACHE_TAG, "max");
 
     // Notion配信先オプションを自動同期（バックグラウンドで実行）
     syncNewsletterOptionsBackground();

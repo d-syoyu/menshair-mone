@@ -2,9 +2,11 @@
 // MONË - Menus Admin API
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { MENU_CACHE_TAG } from "@/lib/menu-cache";
 
 // メニュー作成スキーマ
 const createMenuSchema = z.object({
@@ -124,6 +126,9 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // メニューキャッシュを無効化
+    revalidateTag(MENU_CACHE_TAG, "max");
 
     return NextResponse.json(menu, { status: 201 });
   } catch (error) {

@@ -2,9 +2,11 @@
 // MONË - Single Menu Admin API
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { MENU_CACHE_TAG } from "@/lib/menu-cache";
 
 // メニュー更新スキーマ
 const updateMenuSchema = z.object({
@@ -126,6 +128,9 @@ export async function PUT(
       },
     });
 
+    // メニューキャッシュを無効化
+    revalidateTag(MENU_CACHE_TAG, "max");
+
     return NextResponse.json(menu);
   } catch (error) {
     console.error("Update menu error:", error);
@@ -165,6 +170,9 @@ export async function DELETE(
     await prisma.menu.delete({
       where: { id },
     });
+
+    // メニューキャッシュを無効化
+    revalidateTag(MENU_CACHE_TAG, "max");
 
     return NextResponse.json({ message: "メニューを削除しました" });
   } catch (error) {
