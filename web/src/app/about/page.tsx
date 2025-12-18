@@ -289,7 +289,7 @@ export default function AboutPage() {
 
               <div className="space-y-5">
                 <div className="flex items-start gap-4">
-                  <MapPin className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <MapPin className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Address</p>
                     <p className="text-lg text-text-secondary">
@@ -300,7 +300,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Phone className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <Phone className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Tel</p>
                     <a href="tel:06-6908-4859" className="text-lg text-text-secondary hover:text-white transition-colors">
@@ -310,7 +310,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Clock className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <Clock className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Hours</p>
                     <div className="text-text-secondary space-y-2">
@@ -327,7 +327,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <Calendar className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                  <Calendar className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Closed</p>
                     <p className="text-lg text-text-secondary">毎週月曜日（不定休あり）</p>
@@ -345,7 +345,7 @@ export default function AboutPage() {
                 {/* 支払方法 */}
                 {paymentMethods.length > 0 && (
                   <div className="flex items-start gap-4">
-                    <CreditCard className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
+                    <CreditCard className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Payment</p>
                       <p className="text-text-secondary">
