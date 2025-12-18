@@ -20,7 +20,7 @@ export class MypagePage extends BasePage {
     this.pageTitle = page.locator('h1, h2').filter({ hasText: /マイページ/ });
     this.userName = page.locator('[data-user-name], .user-name');
     this.userEmail = page.locator('[data-user-email], .user-email');
-    this.newReservationButton = page.locator('a[href="/booking"], button:has-text("新規予約")');
+    this.newReservationButton = page.locator('a.bg-accent[href="/booking"]:has-text("新規予約")');
     this.reservationHistoryLink = page.locator('a[href*="reservations"], a:has-text("予約履歴")');
     this.upcomingReservations = page.locator('[data-upcoming-reservations], .upcoming-reservations');
     this.logoutButton = page.locator('button:has-text("ログアウト")');

@@ -1,7 +1,14 @@
 // prisma/seed.ts
 // Database seeding script for MONË
 
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+
+// .env.local を優先して読み込む（ローカル開発用）
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+// .env.local がない場合のフォールバック
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -169,6 +176,32 @@ async function main() {
     });
 
     console.log(`✓ Admin user created: ${adminEmail}`);
+  }
+
+  // E2Eテスト用顧客アカウント作成
+  const testCustomerEmail = "test-customer@example.com";
+  const testCustomerPassword = "test-password-12345";
+
+  const existingTestCustomer = await prisma.user.findUnique({
+    where: { email: testCustomerEmail },
+  });
+
+  if (existingTestCustomer) {
+    console.log(`✓ Test customer already exists: ${testCustomerEmail}`);
+  } else {
+    const hashedTestPassword = await bcrypt.hash(testCustomerPassword, 12);
+
+    await prisma.user.create({
+      data: {
+        email: testCustomerEmail,
+        name: "テスト顧客",
+        phone: "090-1234-5678",
+        password: hashedTestPassword,
+        role: "CUSTOMER",
+      },
+    });
+
+    console.log(`✓ Test customer created: ${testCustomerEmail}`);
   }
 
   // カテゴリ作成

@@ -1,28 +1,43 @@
-import { test as setup } from '@playwright/test';
+import { test as setup, expect } from '@playwright/test';
+import { customerUser } from '../../fixtures/test-data';
 
 /**
  * 顧客認証セットアップ
- *
- * 注意: 本プロジェクトではMagic Link / LINE認証を使用しているため、
- * E2Eテストでの自動ログインは困難です。
- *
- * 以下のいずれかの方法で対応可能:
- * 1. テスト環境用のバイパス認証APIを実装
- * 2. テストではセッションなしで実行（保護されたページのテストはスキップ）
- * 3. 手動でセッションファイルを作成
+ * テスト環境用のバイパスAPIを使用して顧客セッションを作成
  */
-setup('顧客ログインセッション作成', async ({ page }) => {
-  // 空のセッションファイルを作成（プレースホルダー）
-  // 実際の顧客認証が必要な場合は、テスト環境用のバイパスを実装してください
+setup('顧客ログインセッション作成', async ({ page, request }) => {
+  // テスト用ログインAPIを使用して認証
+  const response = await request.post('/api/auth/test-login', {
+    data: {
+      email: customerUser.email,
+      password: customerUser.password,
+    },
+  });
 
-  const emptyState = {
-    cookies: [],
-    origins: [],
-  };
+  if (response.ok()) {
+    const result = await response.json();
+    console.log(`✅ 顧客セッション作成成功: ${result.user?.email}`);
 
-  // セッション状態を保存（空の状態）
-  await page.context().storageState({ path: 'e2e/.auth/customer.json' });
+    // Cookieを取得してページに設定
+    const cookies = await request.storageState();
 
-  console.log('⚠️ 顧客セッションはプレースホルダーとして作成されました');
-  console.log('   顧客認証が必要なテストは、テスト環境用バイパスの実装後に有効化してください');
+    // ページを開いてセッション状態を確認
+    await page.goto('/');
+    await page.context().addCookies(cookies.cookies);
+
+    // セッション状態を保存
+    await page.context().storageState({ path: 'e2e/.auth/customer.json' });
+
+    console.log('✅ 顧客セッションファイルを保存しました');
+  } else {
+    // フォールバック: テスト用顧客がDBに存在しない場合
+    console.log('⚠️ テスト用顧客ユーザーが見つかりません');
+    console.log('   テスト用顧客をDBに追加するか、seedを実行してください');
+
+    // 空のセッションファイルを作成（顧客認証テストはスキップされる）
+    await page.goto('/');
+    await page.context().storageState({ path: 'e2e/.auth/customer.json' });
+
+    console.log('⚠️ 空のセッションファイルを作成しました（顧客認証テストはスキップされます）');
+  }
 });

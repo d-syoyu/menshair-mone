@@ -11,7 +11,8 @@ export const adminUser = {
 
 // 顧客テストデータ
 export const customerUser = {
-  email: 'test-customer@example.com',
+  email: process.env.TEST_CUSTOMER_EMAIL || 'test-customer@example.com',
+  password: process.env.TEST_CUSTOMER_PASSWORD || 'test-password-12345',
   name: 'テスト顧客',
   phone: '090-1234-5678',
 };

@@ -30,7 +30,7 @@ test.describe('ログアウト', () => {
 
   // 顧客ログアウトは認証セッションが確立されている場合のみテスト可能
   test.describe('顧客ログアウト', () => {
-    test.skip('顧客がログアウトできる', async ({ authenticatedPage }) => {
+    test('顧客がログアウトできる', async ({ authenticatedPage }) => {
       // 顧客セッションが確立されている場合のみ実行
       await authenticatedPage.goto('/mypage');
 

@@ -2,18 +2,15 @@ import { test, expect } from '../../fixtures/auth.fixture';
 import { MypagePage, ReservationHistoryPage } from '../../pages/mypage.page';
 
 test.describe('マイページ', () => {
-  // 注意: これらのテストは顧客認証セッションが必要です
-  // 現在の実装では顧客セッションはプレースホルダーのため、
-  // 実際にテストを実行するにはテスト環境用のバイパス認証が必要です
 
   test.describe('マイページダッシュボード', () => {
-    test.skip('マイページが表示される', async ({ authenticatedPage }) => {
+    test('マイページが表示される', async ({ authenticatedPage }) => {
       const mypage = new MypagePage(authenticatedPage);
       await mypage.goto();
       await mypage.expectMypageVisible();
     });
 
-    test.skip('新規予約ボタンが機能する', async ({ authenticatedPage }) => {
+    test('新規予約ボタンが機能する', async ({ authenticatedPage }) => {
       const mypage = new MypagePage(authenticatedPage);
       await mypage.goto();
       await mypage.goToNewReservation();
@@ -21,7 +18,7 @@ test.describe('マイページ', () => {
       await expect(authenticatedPage).toHaveURL(/\/booking/);
     });
 
-    test.skip('予約履歴リンクが機能する', async ({ authenticatedPage }) => {
+    test('予約履歴リンクが機能する', async ({ authenticatedPage }) => {
       const mypage = new MypagePage(authenticatedPage);
       await mypage.goto();
       await mypage.goToReservationHistory();
@@ -31,13 +28,13 @@ test.describe('マイページ', () => {
   });
 
   test.describe('予約履歴', () => {
-    test.skip('予約履歴ページが表示される', async ({ authenticatedPage }) => {
+    test('予約履歴ページが表示される', async ({ authenticatedPage }) => {
       const historyPage = new ReservationHistoryPage(authenticatedPage);
       await historyPage.goto();
       await historyPage.expectHistoryVisible();
     });
 
-    test.skip('予約をキャンセルできる', async ({ authenticatedPage }) => {
+    test('予約をキャンセルできる', async ({ authenticatedPage }) => {
       const historyPage = new ReservationHistoryPage(authenticatedPage);
       await historyPage.goto();
 

@@ -191,7 +191,7 @@ export class BookingConfirmPage extends BasePage {
     this.dateSummary = page.locator('[data-date-summary], .date-summary');
     this.timeSummary = page.locator('[data-time-summary], .time-summary');
     this.totalPrice = page.locator('[data-total-price], .total-price');
-    this.noteInput = page.locator('textarea[name="note"], textarea[placeholder*="ご要望"]');
+    this.noteInput = page.locator('textarea#note, textarea[placeholder*="施術に関する"]');
     this.couponInput = page.locator('input[name="couponCode"], input[placeholder*="クーポン"]');
     this.couponApplyButton = page.locator('button:has-text("適用")');
     this.couponDiscount = page.locator('[data-coupon-discount], .coupon-discount');

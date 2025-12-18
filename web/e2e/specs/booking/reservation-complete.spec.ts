@@ -2,46 +2,44 @@ import { test, expect } from '../../fixtures/auth.fixture';
 import { BookingConfirmPage, BookingCompletePage } from '../../pages/booking.page';
 
 test.describe('予約フロー - 予約確認・完了', () => {
-  // 注意: このテストは認証済みセッションが必要
+  // 注意: これらのテストは完全な予約フローを経由する必要がある
+  // /booking/confirm は URLパラメータ(menuIds, date, time)がないと「予約情報が見つかりません」と表示される
 
   test.describe('予約確認画面', () => {
-    test.skip('予約内容が正しく表示される', async ({ adminPage }) => {
-      // 予約フロー経由で確認画面に到達する必要がある
-      // このテストは統合テストとして実行
-      const confirmPage = new BookingConfirmPage(adminPage);
-
+    test('予約情報がない場合はエラーメッセージが表示される', async ({ adminPage }) => {
+      // 直接アクセス（URLパラメータなし）
       await adminPage.goto('/booking/confirm');
-      // 実際のフローでは、メニュー選択→日時選択を経由する必要がある
+
+      // 「予約情報が見つかりません」メッセージが表示される
+      await expect(adminPage.getByText('予約情報が見つかりません')).toBeVisible();
     });
 
+    // 備考入力テスト - 完全な予約フローが必要なためスキップ
     test.skip('備考を入力できる', async ({ adminPage }) => {
+      // 注: このテストは完全な予約フロー（メニュー選択→日時選択→確認画面）を経由する必要がある
       const confirmPage = new BookingConfirmPage(adminPage);
-      await adminPage.goto('/booking/confirm');
-
       await confirmPage.enterNote('テスト備考メッセージ');
     });
 
+    // クーポン機能は未実装のためスキップ
     test.skip('クーポンコードを適用できる', async ({ adminPage }) => {
+      // 注: クーポン機能は現在未実装
       const confirmPage = new BookingConfirmPage(adminPage);
-      await adminPage.goto('/booking/confirm');
-
       await confirmPage.applyCoupon('TEST2024');
-      // クーポン適用結果を確認
     });
   });
 
   test.describe('予約完了画面', () => {
-    test.skip('予約完了メッセージが表示される', async ({ adminPage }) => {
-      const completePage = new BookingCompletePage(adminPage);
+    test('予約完了ページにアクセスできる', async ({ adminPage }) => {
       await adminPage.goto('/booking/complete');
-
-      await completePage.expectCompletionMessage();
+      // 完了ページが表示される（IDがない場合でもページ自体は表示される）
+      await expect(adminPage).toHaveURL(/\/booking\/complete/);
     });
 
+    // マイページ移動テスト - 完了画面の構造によっては動作しない場合あり
     test.skip('マイページへ移動できる', async ({ adminPage }) => {
       const completePage = new BookingCompletePage(adminPage);
       await adminPage.goto('/booking/complete');
-
       await completePage.goToMypage();
       await expect(adminPage).toHaveURL(/\/mypage/);
     });
