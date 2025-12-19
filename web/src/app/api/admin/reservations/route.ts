@@ -268,6 +268,34 @@ export async function POST(request: NextRequest) {
     const reservationDate = parseLocalDate(date);
     const weekday = reservationDate.getDay();
 
+    // 不定休チェック
+    const holidays = await prisma.holiday.findMany({
+      where: { date: reservationDate },
+    });
+
+    for (const holiday of holidays) {
+      // 終日休業
+      if (!holiday.startTime || !holiday.endTime) {
+        return NextResponse.json(
+          { error: `${date}は終日休業です${holiday.reason ? `（${holiday.reason}）` : ""}` },
+          { status: 400 }
+        );
+      }
+      // 時間帯休業 - 予約時間と重複チェック
+      const holidayStart = timeToMinutes(holiday.startTime);
+      const holidayEnd = timeToMinutes(holiday.endTime);
+      const reservationStart = startMinutes;
+      const reservationEnd = endMinutes;
+
+      // 時間帯が重複しているかチェック
+      if (reservationStart < holidayEnd && reservationEnd > holidayStart) {
+        return NextResponse.json(
+          { error: `${holiday.startTime}〜${holiday.endTime}は休業時間です${holiday.reason ? `（${holiday.reason}）` : ""}` },
+          { status: 400 }
+        );
+      }
+    }
+
     // クーポン検証（任意）
     let appliedCouponId: string | null = null;
     let appliedCouponCode: string | null = null;

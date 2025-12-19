@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/reservations - 予約作成（複数メニュー対応）
+// POST /api/reservations - 予約作成（複数メニュー対応 + 顧客情報更新）
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { menuIds, date: dateStr, startTime, note, couponCode } =
+    const { menuIds, date: dateStr, startTime, note, couponCode, customerName, customerPhone } =
       validationResult.data;
 
     // DBからメニュー取得（UUID配列で検索）
@@ -142,15 +142,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 同カテゴリ重複チェック（1カテゴリ1メニュー）
-    const categoryIds = menus.map((m) => m.categoryId);
-    const hasDuplicateCategories = categoryIds.length !== new Set(categoryIds).size;
-    if (hasDuplicateCategories) {
-      return NextResponse.json(
-        { error: "同じカテゴリのメニューは複数選択できません" },
-        { status: 400 }
-      );
-    }
+    // 同じカテゴリのメニュー複数選択は許可
 
     // 日付パース
     const date = parseLocalDate(dateStr);
@@ -175,6 +167,21 @@ export async function POST(request: NextRequest) {
         { error: "この日付は予約できません" },
         { status: 400 }
       );
+    }
+
+    // 不定休チェック（終日休業のみ - 時間帯休業はavailability APIでブロック済み）
+    const holidays = await prisma.holiday.findMany({
+      where: { date },
+    });
+
+    for (const holiday of holidays) {
+      // 終日休業
+      if (!holiday.startTime || !holiday.endTime) {
+        return NextResponse.json(
+          { error: `申し訳ございません。この日は休業日です${holiday.reason ? `（${holiday.reason}）` : ""}` },
+          { status: 400 }
+        );
+      }
     }
 
     // 合計計算（DBメニューから直接計算）
@@ -214,7 +221,7 @@ export async function POST(request: NextRequest) {
         subtotal: totalPrice,
         customerId: session.user.id,
         menuIds,
-        categories: menus.map((m) => m.category.name),
+        categories: menus.map((m) => m.categoryId),
         weekday,
         time: startTime,
       });
@@ -271,8 +278,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 予約作成（トランザクション）
+    // 予約作成（トランザクション）- 顧客情報も更新
     const reservation = await prisma.$transaction(async (tx) => {
+      // 顧客情報を更新
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          name: customerName,
+          phone: customerPhone,
+        },
+      });
+
       const newReservation = await tx.reservation.create({
         data: {
           userId: session.user.id,

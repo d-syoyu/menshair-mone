@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Scissors, ArrowLeft, Check } from 'lucide-react';
+import { Calendar, Clock, Scissors, ArrowLeft, Check, User, Phone, Ticket, X, Loader2 } from 'lucide-react';
 import { SALON_INFO } from '@/constants/salon';
 
 const fadeInUp = {
@@ -33,6 +33,27 @@ interface DbMenu {
   };
 }
 
+
+// ユーザー情報の型
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+// クーポン検証結果の型
+interface CouponInfo {
+  id: string;
+  code: string;
+  name: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  description: string | null;
+  discountAmount: number;
+  message: string;
+}
+
 // カテゴリの文字色を取得
 const getCategoryTextColor = (categoryName: string): string => {
   const textColors: Record<string, string> = {
@@ -53,6 +74,17 @@ function BookingConfirmContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  
+  // 顧客情報
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // クーポン
+  const [couponCode, setCouponCode] = useState('');
+  const [couponInfo, setCouponInfo] = useState<CouponInfo | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // DBから取得したメニュー
   const [allMenus, setAllMenus] = useState<DbMenu[]>([]);
@@ -81,6 +113,26 @@ function BookingConfirmContent() {
     fetchMenus();
   }, []);
 
+  // ユーザー情報を取得
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const data = await res.json();
+          const user = data.user as UserProfile;
+          setCustomerName(user.name || '');
+          setCustomerPhone(user.phone || '');
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+    fetchUserProfile();
+  }, []);
+
   // 選択されたメニューを取得
   const selectedMenus = menuIds
     .map(id => allMenus.find(m => m.id === id))
@@ -97,7 +149,7 @@ function BookingConfirmContent() {
   } : null;
 
   // ローディング中
-  if (isLoading) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen bg-dark pt-32 pb-20">
         <div className="container-narrow text-center">
@@ -127,7 +179,72 @@ function BookingConfirmContent() {
     );
   }
 
+  // クーポン検証
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('クーポンコードを入力してください');
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+    setCouponInfo(null);
+
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode.trim().toUpperCase(),
+          subtotal: totals.totalPrice,
+          menuIds,
+          categories: selectedMenus.map(m => m.categoryId),
+          weekday: date.getDay(),
+          time: time,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        setCouponInfo({
+          id: data.coupon.id,
+          code: data.coupon.code,
+          name: data.coupon.name,
+          type: data.coupon.type,
+          value: data.coupon.value,
+          description: data.coupon.description,
+          discountAmount: data.discountAmount,
+          message: data.message,
+        });
+      } else {
+        setCouponError(data.error || 'クーポンが無効です');
+      }
+    } catch {
+      setCouponError('クーポンの検証に失敗しました');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  // クーポン解除
+  const removeCoupon = () => {
+    setCouponInfo(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
+
   const handleSubmit = async () => {
+    // バリデーション
+    if (!customerName.trim()) {
+      setError('お名前を入力してください');
+      return;
+    }
+    if (!customerPhone.trim()) {
+      setError('電話番号を入力してください');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -140,6 +257,9 @@ function BookingConfirmContent() {
           date: dateStr,
           startTime: time,
           note: note || undefined,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          couponCode: couponInfo?.code || undefined,
         }),
       });
 
@@ -257,16 +377,37 @@ function BookingConfirmContent() {
                   ))}
                 </div>
                 {/* 合計 */}
-                <div className="mt-4 pt-3 border-t border-dashed border-glass-border flex justify-between items-center">
-                  <span className="font-medium text-white">合計</span>
-                  <div>
-                    <span className="text-gold text-lg font-medium">
-                      ¥{totals.totalPrice.toLocaleString()}
-                    </span>
-                    <span className="text-sm text-text-muted ml-2">
-                      (約{totals.totalDuration}分)
-                    </span>
+                <div className="mt-4 pt-3 border-t border-dashed border-glass-border">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-white">小計</span>
+                    <div>
+                      <span className={`text-lg font-medium ${couponInfo ? 'text-text-muted line-through' : 'text-gold'}`}>
+                        ¥{totals.totalPrice.toLocaleString()}
+                      </span>
+                      <span className="text-sm text-text-muted ml-2">
+                        (約{totals.totalDuration}分)
+                      </span>
+                    </div>
                   </div>
+                  {couponInfo && (
+                    <>
+                      <div className="flex justify-between items-center mt-2 text-green-400">
+                        <span className="text-sm flex items-center gap-1">
+                          <Ticket className="w-4 h-4" />
+                          {couponInfo.name}
+                        </span>
+                        <span className="text-sm font-medium">
+                          -¥{couponInfo.discountAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed border-glass-border">
+                        <span className="font-medium text-white">合計（税込）</span>
+                        <span className="text-gold text-xl font-medium">
+                          ¥{(totals.totalPrice - couponInfo.discountAmount).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -298,6 +439,130 @@ function BookingConfirmContent() {
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Customer Information */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
+        >
+          <h2 className="text-lg font-medium mb-6 text-white">お客様情報</h2>
+          
+          <div className="space-y-4">
+            {/* Name */}
+            <div className="flex items-start gap-4">
+              <User className="w-5 h-5 text-accent mt-3" />
+              <div className="flex-1">
+                <label
+                  htmlFor="customerName"
+                  className="block text-xs tracking-wider text-text-muted uppercase mb-2"
+                >
+                  お名前 <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="山田 太郎"
+                  maxLength={100}
+                  className="w-full p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+            
+            {/* Phone */}
+            <div className="flex items-start gap-4">
+              <Phone className="w-5 h-5 text-accent mt-3" />
+              <div className="flex-1">
+                <label
+                  htmlFor="customerPhone"
+                  className="block text-xs tracking-wider text-text-muted uppercase mb-2"
+                >
+                  電話番号 <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="customerPhone"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="090-1234-5678"
+                  maxLength={20}
+                  className="w-full p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Coupon */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
+        >
+          <h2 className="text-lg font-medium mb-4 text-white flex items-center gap-2">
+            <Ticket className="w-5 h-5 text-accent" />
+            クーポン
+          </h2>
+
+          {couponInfo ? (
+            // クーポン適用済み
+            <div className="bg-green-900/20 border border-green-500/30 rounded p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Check className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400 font-medium text-sm">クーポン適用中</span>
+                  </div>
+                  <p className="text-white font-medium">{couponInfo.name}</p>
+                  <p className="text-xs text-text-muted mt-1">コード: {couponInfo.code}</p>
+                  <p className="text-gold font-medium mt-2">{couponInfo.message}</p>
+                </div>
+                <button
+                  onClick={removeCoupon}
+                  className="text-text-muted hover:text-red-400 transition-colors p-1"
+                  title="クーポンを解除"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            // クーポン入力フォーム
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponError(null);
+                  }}
+                  placeholder="クーポンコードを入力"
+                  maxLength={50}
+                  className="flex-1 p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors uppercase"
+                />
+                <button
+                  onClick={validateCoupon}
+                  disabled={isValidatingCoupon || !couponCode.trim()}
+                  className="px-4 py-3 bg-accent text-white text-sm font-medium hover:bg-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center gap-2"
+                >
+                  {isValidatingCoupon ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '適用'
+                  )}
+                </button>
+              </div>
+              {couponError && (
+                <p className="text-red-400 text-sm mt-2">{couponError}</p>
+              )}
+            </div>
+          )}
         </motion.div>
 
         {/* Note */}

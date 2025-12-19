@@ -77,12 +77,21 @@ interface ConfirmDialog {
   action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED';
 }
 
+interface Holiday {
+  id: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [todayReservations, setTodayReservations] = useState<Reservation[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [todayHolidays, setTodayHolidays] = useState<Holiday[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog>({
     isOpen: false,
     reservationId: '',
@@ -163,6 +172,21 @@ export default function AdminDashboard() {
           weekStartStr: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
           weekEndStr: `${weekEndDate.getMonth() + 1}/${weekEndDate.getDate()}`,
         });
+
+        // 本日の不定休を取得
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const holidayRes = await fetch(`/api/admin/holidays?year=${year}&month=${month}`);
+        const holidayData = await holidayRes.json();
+        // APIは配列を直接返す、日付はISO形式なのでYYYY-MM-DD部分で比較
+        const todayStr = `${year}-${String(month).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const holidaysArray = Array.isArray(holidayData) ? holidayData : (holidayData.holidays || []);
+        const todayHols = holidaysArray.filter((h: Holiday) => {
+          // ISO日付文字列の先頭10文字（YYYY-MM-DD）を比較
+          const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : '';
+          return holidayDateStr === todayStr;
+        });
+        setTodayHolidays(todayHols);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -373,14 +397,31 @@ export default function AdminDashboard() {
 
           {isLoading ? (
             <div className="p-12 md:p-16 text-center text-lg text-gray-500">読み込み中...</div>
-          ) : todayReservations.length === 0 ? (
-            <div className="p-12 md:p-16 text-center text-lg text-gray-500">
-              本日の予約はありません
-            </div>
           ) : (
             <>
               {/* Mobile List View */}
               <div className="md:hidden divide-y divide-gray-100">
+                {/* 不定休表示 */}
+                {todayHolidays.length > 0 && (
+                  <div className="p-4 bg-red-50 border-b border-red-100">
+                    {todayHolidays.map((holiday) => (
+                      <div key={holiday.id} className="flex items-center gap-2 text-red-600">
+                        <Clock className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-medium">
+                          {!holiday.startTime || !holiday.endTime
+                            ? `終日休業${holiday.reason ? `（${holiday.reason}）` : ''}`
+                            : `${holiday.startTime}〜${holiday.endTime} 休業${holiday.reason ? `（${holiday.reason}）` : ''}`
+                          }
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {todayReservations.length === 0 && (
+                  <div className="p-8 text-center text-gray-500">
+                    本日の予約はありません
+                  </div>
+                )}
                 {todayReservations.map((reservation) => (
                   <div
                     key={reservation.id}
@@ -502,6 +543,42 @@ export default function AdminDashboard() {
                       })}
                     </div>
 
+                    {/* Holidays - 不定休表示 */}
+                    {todayHolidays.map((holiday) => {
+                      // 全日休業
+                      if (!holiday.startTime || !holiday.endTime) {
+                        return (
+                          <div
+                            key={holiday.id}
+                            className="absolute inset-0 bg-red-500/20 flex items-center justify-center"
+                            title={holiday.reason || '終日休業'}
+                          >
+                            <span className="text-red-500 text-sm font-medium">
+                              {holiday.reason || '終日休業'}
+                            </span>
+                          </div>
+                        );
+                      }
+                      // 時間帯休業
+                      const startMin = timeToMinutes(holiday.startTime) - 600;
+                      const endMin = timeToMinutes(holiday.endTime) - 600;
+                      const totalMin = 660;
+                      const left = Math.max(0, (startMin / totalMin) * 100);
+                      const width = Math.min(100 - left, ((endMin - startMin) / totalMin) * 100);
+                      return (
+                        <div
+                          key={holiday.id}
+                          className="absolute top-0 bottom-0 bg-red-500/30 flex items-center justify-center"
+                          style={{ left: `${left}%`, width: `${width}%` }}
+                          title={`${holiday.startTime}〜${holiday.endTime} ${holiday.reason || '休業'}`}
+                        >
+                          <span className="text-red-600 text-xs font-medium truncate px-1">
+                            {holiday.reason || '休業'}
+                          </span>
+                        </div>
+                      );
+                    })}
+
                     {/* Reservations with color segments */}
                     {todayReservations.map((reservation) => {
                       const startMin = timeToMinutes(reservation.startTime) - 600;
@@ -564,6 +641,11 @@ export default function AdminDashboard() {
 
                 {/* Reservation List */}
                 <div className="divide-y divide-gray-100">
+                  {todayReservations.length === 0 && (
+                    <div className="py-8 text-center text-gray-500">
+                      本日の予約はありません
+                    </div>
+                  )}
                   {todayReservations.map((reservation) => (
                     <div
                       key={reservation.id}

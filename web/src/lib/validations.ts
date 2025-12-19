@@ -3,13 +3,16 @@
 
 import { z } from "zod";
 
-// 予約作成スキーマ（複数メニュー対応）
+// 予約作成スキーマ（複数メニュー対応 + 顧客情報）
 export const createReservationSchema = z.object({
   menuIds: z.array(z.string()).min(1, "メニューを選択してください"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません"),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません"),
   note: z.string().max(500, "備考は500文字以内で入力してください").optional(),
   couponCode: z.string().max(50, "クーポンコードは50文字以内で入力してください").optional(),
+  // 顧客情報
+  customerName: z.string().min(1, "お名前を入力してください").max(100, "お名前は100文字以内で入力してください"),
+  customerPhone: z.string().min(1, "電話番号を入力してください").max(20, "電話番号は20文字以内で入力してください"),
 });
 
 // 予約キャンセルスキーマ

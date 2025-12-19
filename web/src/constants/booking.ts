@@ -7,7 +7,7 @@ export const BOOKING_CONFIG = {
   closeTime: "21:00", // 平日の閉店時間（土日祝は20:30）
 
   // 予約枠
-  slotInterval: 30, // 30分刻み
+  slotInterval: 10, // 10分刻み
   maxConcurrentBookings: 1, // 同時予約上限（1人営業）
 
   // キャンセルポリシー

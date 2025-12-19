@@ -358,7 +358,7 @@ export default function BookingPage() {
           <h1 className="text-2xl md:text-display text-white mb-4 md:mb-6">ご予約</h1>
           <div className="divider-line mx-auto mb-4 md:mb-8" />
           <p className="text-sm md:text-base text-text-secondary max-w-lg mx-auto px-4">
-            各カテゴリから1つずつ、複数のメニューを組み合わせてご予約いただけます。
+            複数のメニューを組み合わせてご予約いただけます。
           </p>
         </motion.div>
       </section>
@@ -801,23 +801,42 @@ export default function BookingPage() {
                   予約可能な時間がありません
                 </div>
               ) : (
-                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1.5 sm:gap-2">
-                  {availability?.slots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      onClick={() => slot.available && handleTimeSelect(slot.time)}
-                      disabled={!slot.available}
-                      className={`py-2.5 sm:py-3 text-xs sm:text-sm font-medium border transition-all rounded ${
-                        selectedTime === slot.time
-                          ? 'bg-accent text-white border-accent'
-                          : slot.available
-                            ? 'border-glass-border text-white hover:border-accent'
-                            : 'border-glass-border bg-glass-light/30 text-text-muted/50 cursor-not-allowed'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
+                <div className="space-y-3 sm:space-y-4">
+                  {(() => {
+                    // 時間帯ごとにグループ化
+                    const slotsByHour: Record<string, TimeSlot[]> = {};
+                    availability?.slots.forEach((slot) => {
+                      const hour = slot.time.split(':')[0];
+                      if (!slotsByHour[hour]) {
+                        slotsByHour[hour] = [];
+                      }
+                      slotsByHour[hour].push(slot);
+                    });
+
+                    return Object.entries(slotsByHour).map(([hour, slots]) => (
+                      <div key={hour} className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className="w-12 sm:w-14 text-xs sm:text-sm text-text-muted font-medium">
+                          {hour}時
+                        </span>
+                        {slots.map((slot) => (
+                          <button
+                            key={slot.time}
+                            onClick={() => slot.available && handleTimeSelect(slot.time)}
+                            disabled={!slot.available}
+                            className={`w-14 sm:w-16 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border transition-all rounded ${
+                              selectedTime === slot.time
+                                ? 'bg-accent text-white border-accent'
+                                : slot.available
+                                  ? 'border-glass-border text-white hover:border-accent'
+                                  : 'border-glass-border bg-glass-light/30 text-text-muted/50 cursor-not-allowed'
+                            }`}
+                          >
+                            {slot.time}
+                          </button>
+                        ))}
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
             </motion.div>
