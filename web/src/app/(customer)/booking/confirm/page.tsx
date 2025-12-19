@@ -505,7 +505,7 @@ function BookingConfirmContent() {
           className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
         >
           <h2 className="text-lg font-medium mb-4 text-white flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-accent" />
+            <Ticket className="w-5 h-5 text-accent-light" />
             クーポン
           </h2>
 

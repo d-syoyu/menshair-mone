@@ -685,7 +685,7 @@ export default function BookingPage() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <div className="text-sm sm:text-lg font-medium flex items-center gap-1.5 sm:gap-2 text-white">
-                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-light" />
                 {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
               </div>
               <button
@@ -773,7 +773,7 @@ export default function BookingPage() {
               className="bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 md:p-8"
             >
               <div className="text-sm sm:text-lg font-medium mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 text-white">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-accent-light" />
                 <span>
                   {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（
                   {WEEKDAYS[selectedDate.getDay()]}）の空き状況
