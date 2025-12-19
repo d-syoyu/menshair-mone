@@ -236,25 +236,28 @@ export default function AboutPage() {
                 <div className="flex-1 text-center md:text-left">
                   <p className="text-xs tracking-[0.2em] text-accent-light uppercase mb-2">Owner / Stylist</p>
                   <h3 className="text-3xl font-serif mb-2">原崎 裕二</h3>
-                  <p className="text-text-muted text-sm mb-6">Harasaki Yuji</p>
+                  <p className="text-text-muted text-sm mb-1">Harasaki Yuji</p>
+                  <p className="text-text-muted text-sm mb-1">歴18年</p>
+                  <p className="text-text-muted text-sm mb-6">生年月日 1989.08.16</p>
 
                   <div className="divider-line mb-6 mx-auto md:mx-0" />
 
                   <div className="text-body space-y-4">
                     <p>
-                      理容師歴14年。
+                      東大阪の理容室、難波のメンズサロンを経て2019年6月に地元守口で独立。
                     </p>
                     <p>
-                      ベリーショート～ショートスタイルは特に自信あり。<br />
-                      目を引くスタイルならおまかせください！
+                      フェード・刈り上げなどのショート〜ベリーショートスタイルを得意としておりますが<br />
+                      現代的なメンズスタイルもお任せください。
                     </p>
                     <p>
-                      お客様それぞれがお持ちの「悩み」お尋ねいただけると幸いです。<br />
-                      全力で期待に応えさせていただきます！
+                      ヘッドスパ・フェイシャルエステなど手で行うマッサージ技術に自信があり、お客様それぞれに合った絶妙な力加減や圧で日々の疲れを取っていただけるよう施術させていただきます。
+                    </p>
+                    <p>
+                      是非、ご来店の際にご体感ください。
                     </p>
                     <div className="pt-2">
-                      <p className="text-sm text-text-muted">趣味：バスフィッシング（琵琶湖）</p>
-                      <p className="text-sm text-text-muted ml-12">海釣り、野球、料理</p>
+                      <p className="text-sm text-text-muted">趣味：野球、ソフトボール、釣り、登山、料理</p>
                     </div>
                   </div>
                 </div>
