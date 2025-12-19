@@ -151,8 +151,8 @@ const Header = () => {
               <div className="absolute bottom-1/4 left-0 w-[200px] h-[200px] rounded-full bg-gold opacity-5 blur-3xl -translate-x-1/2" />
             </div>
 
-            <nav className="relative h-full flex flex-col items-center justify-center">
-              <ul className="flex flex-col items-center gap-8">
+            <nav className="relative h-full flex flex-col items-center justify-between pt-24 pb-8">
+              <ul className="flex flex-col items-center gap-6">
                 {navItems.map((item, index) => (
                   <motion.li
                     key={item.name}
@@ -166,10 +166,10 @@ const Header = () => {
                       className="group flex flex-col items-center"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span className="text-3xl font-serif text-white transition-colors duration-300 group-hover:text-accent-light">
+                      <span className="text-2xl font-serif text-white transition-colors duration-300 group-hover:text-accent-light">
                         {item.nameJa}
                       </span>
-                      <span className="text-xs tracking-[0.3em] uppercase text-text-muted mt-1">
+                      <span className="text-[10px] tracking-[0.3em] uppercase text-text-muted mt-1">
                         {item.name}
                       </span>
                     </Link>
@@ -183,7 +183,7 @@ const Header = () => {
                 >
                   <Link
                     href="/booking"
-                    className="mt-4 px-8 py-4 bg-accent text-white text-sm tracking-[0.15em] uppercase"
+                    className="mt-2 px-8 py-4 bg-accent text-white text-sm tracking-[0.15em] uppercase"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     ご予約はこちら
@@ -197,7 +197,7 @@ const Header = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ delay: 0.6 }}
-                className="absolute bottom-12 text-center"
+                className="text-center"
               >
                 <p className="text-xs tracking-[0.2em] text-text-muted mb-2">
                   RESERVATION
