@@ -269,29 +269,20 @@ export default function BookingPage() {
     return true;
   };
 
-  // メニューの選択/解除を切り替え
+  // メニューの選択/解除を切り替え（同一カテゴリ複数選択可）
   const toggleMenuSelect = (menuId: string) => {
     const menu = menus.find(m => m.id === menuId);
     if (!menu) return;
 
     if (selectedMenuIds.includes(menuId)) {
+      // 既に選択されていたら解除
       setSelectedMenuIds(prev => prev.filter(id => id !== menuId));
     } else {
-      // 同じカテゴリが既に選択されていたら、まず解除
-      const existingMenuInCategory = selectedMenuIds.find(id => {
-        const m = menus.find(item => item.id === id);
-        return m?.categoryId === menu.categoryId;
-      });
-      if (existingMenuInCategory) {
-        setSelectedMenuIds(prev => [...prev.filter(id => id !== existingMenuInCategory), menuId]);
-      } else {
-        setSelectedMenuIds(prev => [...prev, menuId]);
-      }
+      // 新規追加（同一カテゴリでも複数選択可能）
+      setSelectedMenuIds(prev => [...prev, menuId]);
     }
     setSelectedDate(null);
     setSelectedTime(null);
-    // 選択後にプルダウンを閉じる
-    setExpandedCategory(null);
   };
 
   const handleProceedToDateTime = () => {
