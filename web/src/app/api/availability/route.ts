@@ -130,23 +130,9 @@ export async function GET(request: NextRequest) {
       totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
       totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
 
-      // メニューの最終受付時間を考慮
-      const menuEarliestLastBookingTime = menus.reduce(
-        (earliest, menu) => (menu.lastBookingTime < earliest ? menu.lastBookingTime : earliest),
-        "23:59"
-      );
-
-      // 閉店時間から施術時間を引いて、計算上の最終受付時間を算出
-      const closeTimeMinutes = businessHours.close.split(':').map(Number);
-      const closeMinutes = closeTimeMinutes[0] * 60 + closeTimeMinutes[1];
-      const calculatedLastBookingMinutes = closeMinutes - totalDuration;
-      const calculatedLastBookingHours = Math.floor(calculatedLastBookingMinutes / 60);
-      const calculatedLastBookingMins = calculatedLastBookingMinutes % 60;
-      const calculatedLastBookingTime = `${calculatedLastBookingHours.toString().padStart(2, '0')}:${calculatedLastBookingMins.toString().padStart(2, '0')}`;
-
-      // 計算上の最終受付時間、営業時間の最終受付時間、メニューの最終受付時間のうち、最も早い方を使用
-      earliestLastBookingTime = [calculatedLastBookingTime, businessHours.lastBooking, menuEarliestLastBookingTime]
-        .reduce((earliest, time) => (time < earliest ? time : earliest));
+      // 最終受付時間 = 営業時間の最終受付時間のみ使用
+      // ※メニューの lastBookingTime は使用しない（施術終了が閉店時間を超えるかは別途チェック）
+      earliestLastBookingTime = businessHours.lastBooking;
     }
 
     // その日の予約を取得
@@ -178,12 +164,13 @@ export async function GET(request: NextRequest) {
     const isToday = date.toDateString() === now.toDateString();
 
     const slots: TimeSlot[] = allSlots.map((slotTime) => {
-        // 最終受付時間を超えている場合は利用不可（最終受付時間ちょうどは予約可能）
+        // 1. 最終受付時間チェック（最優先）
+        //    営業時間の最終受付時間（平日20:00、土日祝19:30）を超えていたら予約不可
         if (slotTime > earliestLastBookingTime) {
           return { time: slotTime, available: false };
         }
 
-        // 今日の場合、過去の時間は除外
+        // 2. 今日の場合、過去の時間は除外
         if (isToday) {
           const [hours, minutes] = slotTime.split(":").map(Number);
           const slotDate = new Date(date);
@@ -193,14 +180,15 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // 予約時間の終了時刻を計算
+        // 3. 施術終了時間を計算
         const [startHours, startMinutes] = slotTime.split(":").map(Number);
         const endMinutes = startHours * 60 + startMinutes + totalDuration;
         const endHours = Math.floor(endMinutes / 60);
         const endMins = endMinutes % 60;
         const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
 
-        // 営業時間外チェック（曜日に応じた閉店時間）
+        // 4. 施術終了が閉店時間を超える場合は予約不可
+        //    最終受付時間内でも、施術が閉店までに終わらない場合は選択不可
         if (endTime > businessHours.close) {
           return { time: slotTime, available: false };
         }

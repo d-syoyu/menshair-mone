@@ -283,6 +283,8 @@ export default function BookingPage() {
     }
     setSelectedDate(null);
     setSelectedTime(null);
+    // メニュー選択後にアコーディオンを閉じる
+    setExpandedCategory(null);
   };
 
   const handleProceedToDateTime = () => {
@@ -805,26 +807,28 @@ export default function BookingPage() {
                     });
 
                     return Object.entries(slotsByHour).map(([hour, slots]) => (
-                      <div key={hour} className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className="w-12 sm:w-14 text-xs sm:text-sm text-text-muted font-medium">
+                      <div key={hour} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                        <span className="text-xs sm:text-sm text-text-muted font-medium sm:w-14 sm:flex-shrink-0">
                           {hour}時
                         </span>
-                        {slots.map((slot) => (
-                          <button
-                            key={slot.time}
-                            onClick={() => slot.available && handleTimeSelect(slot.time)}
-                            disabled={!slot.available}
-                            className={`w-14 sm:w-16 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border transition-all rounded ${
-                              selectedTime === slot.time
-                                ? 'bg-accent text-white border-accent'
-                                : slot.available
-                                  ? 'border-glass-border text-white hover:border-accent'
-                                  : 'border-glass-border bg-glass-light/30 text-text-muted/50 cursor-not-allowed'
-                            }`}
-                          >
-                            {slot.time}
-                          </button>
-                        ))}
+                        <div className="grid grid-cols-6 gap-1.5 sm:gap-2 flex-1">
+                          {slots.map((slot) => (
+                            <button
+                              key={slot.time}
+                              onClick={() => slot.available && handleTimeSelect(slot.time)}
+                              disabled={!slot.available}
+                              className={`py-2 sm:py-2.5 text-xs sm:text-sm font-medium border transition-all rounded ${
+                                selectedTime === slot.time
+                                  ? 'bg-accent text-white border-accent'
+                                  : slot.available
+                                    ? 'border-glass-border text-white hover:border-accent'
+                                    : 'border-glass-border bg-glass-light/30 text-text-muted/50 cursor-not-allowed'
+                              }`}
+                            >
+                              {slot.time}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     ));
                   })()}
