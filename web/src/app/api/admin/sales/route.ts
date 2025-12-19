@@ -148,8 +148,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(sales);
   } catch (error) {
     console.error("Get sales error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "会計履歴の取得に失敗しました" },
+      { error: "会計履歴の取得に失敗しました", details: errorMessage },
       { status: 500 }
     );
   }
