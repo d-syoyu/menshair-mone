@@ -14,7 +14,7 @@ const updateMenuSchema = z.object({
   categoryId: z.string().min(1, "カテゴリは必須です").optional(),
   price: z.number().int().positive("価格は正の整数で入力してください").optional(),
   priceVariable: z.boolean().optional(), // 価格変動あり
-  duration: z.number().int().positive("所要時間は正の整数で入力してください").optional(),
+  duration: z.number().int().nonnegative("所要時間は0以上の整数で入力してください").optional(),
   lastBookingTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません（例: 19:00）").optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
