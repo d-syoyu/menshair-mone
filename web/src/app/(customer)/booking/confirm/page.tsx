@@ -544,7 +544,7 @@ function BookingConfirmContent() {
                   }}
                   placeholder="クーポンコードを入力"
                   maxLength={50}
-                  className="flex-1 p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors uppercase"
+                  className="flex-1 min-w-0 p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors uppercase"
                 />
                 <button
                   onClick={validateCoupon}
