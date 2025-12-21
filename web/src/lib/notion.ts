@@ -378,11 +378,87 @@ export async function getBlogPostBySlug(
       return null;
     }
 
-    const post = extractPageProperties(matchedPage);
+    // 直接リンクでのアクセスではweb公開チェックをスキップ
+    // （extractPagePropertiesはweb公開=falseでnullを返すため、ここで直接抽出）
+    const properties = matchedPage.properties;
 
-    if (!post) {
+    // タイトル（必須）
+    const titleProp = properties["タイトル"] || properties["Title"];
+    if (titleProp?.type !== "title") {
       return null;
     }
+    const title = extractRichText(titleProp.title);
+    if (!title) {
+      return null;
+    }
+
+    // ページURL (Slug)
+    const slugProp = properties["ページURL"] || properties["Slug"];
+    let postSlug = "";
+    if (slugProp?.type === "rich_text") {
+      postSlug = extractRichText(slugProp.rich_text);
+    }
+    if (!postSlug) {
+      postSlug = matchedPage.id.replace(/-/g, "");
+    }
+
+    // 公開日
+    const publishedAtProp = properties["公開日"] || properties["PublishedAt"];
+    const publishedAt =
+      publishedAtProp?.type === "date" && publishedAtProp.date
+        ? formatDate(publishedAtProp.date.start)
+        : "";
+
+    // 本文
+    const excerptProp = properties["本文"] || properties["Excerpt"];
+    const excerpt =
+      excerptProp?.type === "rich_text"
+        ? extractRichText(excerptProp.rich_text)
+        : "";
+
+    // カテゴリ
+    const categoryProp = properties["カテゴリ"] || properties["Category"];
+    const category =
+      categoryProp?.type === "select" && categoryProp.select
+        ? categoryProp.select.name
+        : "";
+
+    // サブタイトル
+    const subtitleProp = properties["サブタイトル"] || properties["Subtitle"];
+    const subtitle =
+      subtitleProp?.type === "rich_text"
+        ? extractRichText(subtitleProp.rich_text)
+        : undefined;
+
+    // サムネイル
+    let coverImage: string | null = null;
+    const thumbnailProp = properties["サムネイル"];
+    if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
+      const file = thumbnailProp.files[0];
+      if (file.type === "external") {
+        coverImage = file.external.url;
+      } else if (file.type === "file") {
+        coverImage = file.file.url;
+      }
+    } else if (matchedPage.cover) {
+      if (matchedPage.cover.type === "external") {
+        coverImage = matchedPage.cover.external.url;
+      } else if (matchedPage.cover.type === "file") {
+        coverImage = matchedPage.cover.file.url;
+      }
+    }
+    coverImage = getProxiedImageUrl(coverImage);
+
+    const post: BlogPost = {
+      id: matchedPage.id,
+      slug: postSlug,
+      title,
+      subtitle,
+      excerpt,
+      coverImage,
+      publishedAt,
+      category,
+    };
 
     // Get page blocks (content)
     const blocks = await getPageBlocks(matchedPage.id);
