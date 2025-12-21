@@ -459,28 +459,29 @@ export default function AdminBusinessPage() {
             毎週の定休日を選択してください。
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
-            {WEEKDAYS.map((day, i) => (
-              <button
-                key={day}
-                onClick={() => toggleClosedDay(i)}
-                className={`
-                  px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all
-                  ${closedDays.includes(i)
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }
-                  ${i === 0 ? 'text-red-500' : ''}
-                  ${i === 6 ? 'text-blue-500' : ''}
-                `}
-              >
-                {day}曜日
-              </button>
-            ))}
+            {WEEKDAYS.map((day, i) => {
+              const isSelected = closedDays.includes(i);
+              return (
+                <button
+                  key={day}
+                  onClick={() => toggleClosedDay(i)}
+                  className={`
+                    px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    ${isSelected
+                      ? 'bg-gray-800 !text-white'
+                      : `bg-gray-100 hover:bg-gray-200 ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-600'}`
+                    }
+                  `}
+                >
+                  {day}曜日
+                </button>
+              );
+            })}
           </div>
           <button
             onClick={handleSaveClosedDays}
             disabled={isSavingClosedDays}
-            className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+            className="px-4 py-2 bg-[var(--color-accent)] !text-white rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
           >
             {isSavingClosedDays ? '保存中...' : '定休日を保存'}
           </button>
@@ -878,7 +879,7 @@ export default function AdminBusinessPage() {
                     </button>
                     <button
                       type="submit"
-                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-white rounded-lg transition-colors ${
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm !text-white rounded-lg transition-colors ${
                         modalMode === 'holiday'
                           ? 'bg-red-500 hover:bg-red-600 active:bg-red-700'
                           : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
