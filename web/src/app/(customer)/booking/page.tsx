@@ -12,7 +12,6 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
-import { CLOSED_DAY } from '@/constants/salon';
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -131,6 +130,8 @@ export default function BookingPage() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [holidays, setHolidays] = useState<Array<{ date: string; startTime: string | null; endTime: string | null }>>([]);
+  const [closedDays, setClosedDays] = useState<number[]>([1]); // デフォルトは月曜日
+  const [specialOpenDays, setSpecialOpenDays] = useState<string[]>([]);
 
   // DBから取得したメニューとカテゴリ
   const [menus, setMenus] = useState<DbMenu[]>([]);
@@ -168,7 +169,7 @@ export default function BookingPage() {
     }, '20:00'),
   } : null;
 
-  // 月が変わったら不定休を取得
+  // 月が変わったら不定休・定休日・特別営業日を取得
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
@@ -176,7 +177,9 @@ export default function BookingPage() {
         const month = currentMonth.getMonth() + 1;
         const res = await fetch(`/api/holidays?year=${year}&month=${month}`);
         const data = await res.json();
-        setHolidays(Array.isArray(data) ? data : []);
+        setHolidays(data.holidays || []);
+        setClosedDays(data.closedDays || [1]);
+        setSpecialOpenDays(data.specialOpenDays || []);
       } catch (error) {
         console.error('Failed to fetch holidays:', error);
       }
@@ -254,12 +257,26 @@ export default function BookingPage() {
     return holidays.some(h => h.date === dateStr && h.startTime && h.endTime);
   };
 
+  // 特別営業日かどうかを確認
+  const isSpecialOpenDay = (date: Date) => {
+    const dateStr = formatDateLocal(date);
+    return specialOpenDays.includes(dateStr);
+  };
+
+  // 定休日かどうかを確認（曜日ベース）
+  const isClosedDay = (date: Date) => {
+    return closedDays.includes(date.getDay());
+  };
+
   const isDateSelectable = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (date < today) return false;
-    if (date.getDay() === CLOSED_DAY) return false;
+
+    // 定休日かつ特別営業日でなければ選択不可
+    if (isClosedDay(date) && !isSpecialOpenDay(date)) return false;
+
     if (isHoliday(date)) return false; // 全日休業のみ選択不可
 
     const maxDate = new Date();
@@ -724,7 +741,7 @@ export default function BookingPage() {
                 }
                 const isSelectable = isDateSelectable(date);
                 const isSelected = selectedDate?.toDateString() === date.toDateString();
-                const isClosed = date.getDay() === CLOSED_DAY;
+                const isClosed = isClosedDay(date) && !isSpecialOpenDay(date);
                 const holiday = isHoliday(date);
                 const hasTimeHoliday = hasTimeRangeHoliday(date);
 
@@ -760,9 +777,11 @@ export default function BookingPage() {
               })}
             </div>
 
-            <p className="text-[9px] sm:text-[10px] text-text-muted mt-2 text-center">
-              ※ 月曜日は定休日です
-            </p>
+            {closedDays.length > 0 && (
+              <p className="text-[9px] sm:text-[10px] text-text-muted mt-2 text-center">
+                ※ {closedDays.map(d => WEEKDAYS[d]).join('・')}曜日は定休日です
+              </p>
+            )}
           </motion.div>
 
           {/* Time Slots */}

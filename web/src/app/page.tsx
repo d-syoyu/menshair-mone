@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Clock, MapPin, Calendar } from 'lucide-react';
 
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
 // Animation variants
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -82,6 +84,28 @@ export default function Home() {
 
   const heroTextY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
+
+  // 定休日をAPIから取得
+  const [closedDaysText, setClosedDaysText] = useState('毎週月曜日（不定休あり）');
+  useEffect(() => {
+    const fetchClosedDays = async () => {
+      try {
+        const now = new Date();
+        const res = await fetch(`/api/holidays?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
+        const data = await res.json();
+        const closedDays: number[] = data.closedDays || [1];
+        if (closedDays.length === 0) {
+          setClosedDaysText('不定休');
+        } else {
+          const dayNames = closedDays.map(d => WEEKDAYS[d]).join('・');
+          setClosedDaysText(`毎週${dayNames}曜日（不定休あり）`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch closed days:', error);
+      }
+    };
+    fetchClosedDays();
+  }, []);
 
   // ニュースデータをAPIから取得
   const [newsItems, setNewsItems] = useState<BlogPost[]>([]);
@@ -413,7 +437,7 @@ export default function Home() {
                         </div>
                         <p className="text-xs text-text-muted mt-1">（受付19:30まで）</p>
                       </div>
-                      <p className="text-sm text-text-muted mt-2">定休日: 毎週月曜日（不定休あり）</p>
+                      <p className="text-sm text-text-muted mt-2">定休日: {closedDaysText}</p>
                     </div>
                   </div>
                 </div>

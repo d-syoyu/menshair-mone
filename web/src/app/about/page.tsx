@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, Clock, Calendar, Sparkles, CreditCard } from 'lucide-react';
 
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } }
@@ -43,6 +45,27 @@ interface PaymentMethod {
 
 export default function AboutPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [closedDaysText, setClosedDaysText] = useState('毎週月曜日（不定休あり）');
+
+  useEffect(() => {
+    const fetchClosedDays = async () => {
+      try {
+        const now = new Date();
+        const res = await fetch(`/api/holidays?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
+        const data = await res.json();
+        const closedDays: number[] = data.closedDays || [1];
+        if (closedDays.length === 0) {
+          setClosedDaysText('不定休');
+        } else {
+          const dayNames = closedDays.map(d => WEEKDAYS[d]).join('・');
+          setClosedDaysText(`毎週${dayNames}曜日（不定休あり）`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch closed days:', error);
+      }
+    };
+    fetchClosedDays();
+  }, []);
 
   useEffect(() => {
     const fetchPaymentMethods = async () => {
@@ -333,7 +356,7 @@ export default function AboutPage() {
                   <Calendar className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Closed</p>
-                    <p className="text-lg text-text-secondary">毎週月曜日（不定休あり）</p>
+                    <p className="text-lg text-text-secondary">{closedDaysText}</p>
                   </div>
                 </div>
               </div>

@@ -1,11 +1,35 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Instagram, MapPin, Phone, Clock } from 'lucide-react';
 
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
 const Footer = () => {
   const pathname = usePathname();
+  const [closedDaysText, setClosedDaysText] = useState('毎週月曜日（不定休あり）');
+
+  useEffect(() => {
+    const fetchClosedDays = async () => {
+      try {
+        const now = new Date();
+        const res = await fetch(`/api/holidays?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
+        const data = await res.json();
+        const closedDays: number[] = data.closedDays || [1];
+        if (closedDays.length === 0) {
+          setClosedDaysText('不定休');
+        } else {
+          const dayNames = closedDays.map(d => WEEKDAYS[d]).join('・');
+          setClosedDaysText(`毎週${dayNames}曜日（不定休あり）`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch closed days:', error);
+      }
+    };
+    fetchClosedDays();
+  }, []);
 
   // 管理画面では表示しない
   if (pathname?.startsWith('/admin')) {
@@ -147,7 +171,7 @@ const Footer = () => {
                   <p>土日祝 10:00 - 20:30</p>
                   <p className="text-xs text-text-muted">（受付19:30まで）</p>
                 </div>
-                <p className="text-text-muted">定休日: 毎週月曜日（不定休あり）</p>
+                <p className="text-text-muted">定休日: {closedDaysText}</p>
               </div>
             </div>
           </div>

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// GET /api/holidays?year=2025&month=12 - 公開用不定休一覧
+// GET /api/holidays?year=2025&month=12 - 公開用不定休・定休日・特別営業日一覧
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // 不定休を取得
     const holidays = await prisma.holiday.findMany({
       where,
       select: {
@@ -56,8 +57,25 @@ export async function GET(request: NextRequest) {
       orderBy: { date: "asc" },
     });
 
+    // 定休日設定を取得
+    const closedDaysSetting = await prisma.settings.findUnique({
+      where: { key: "closed_days" },
+    });
+    const closedDays: number[] = closedDaysSetting
+      ? JSON.parse(closedDaysSetting.value)
+      : [1]; // デフォルトは月曜日
+
+    // 特別営業日を取得
+    const specialOpenDays = await prisma.specialOpenDay.findMany({
+      where,
+      select: {
+        date: true,
+      },
+      orderBy: { date: "asc" },
+    });
+
     // 日付と時間帯情報を返す
-    const result = holidays.map((h) => {
+    const holidayResult = holidays.map((h) => {
       const d = new Date(h.date);
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -69,7 +87,19 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(result);
+    const specialOpenDaysResult = specialOpenDays.map((s) => {
+      const d = new Date(s.date);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    });
+
+    return NextResponse.json({
+      holidays: holidayResult,
+      closedDays,
+      specialOpenDays: specialOpenDaysResult,
+    });
   } catch (error) {
     console.error("Get holidays error:", error);
     return NextResponse.json(
