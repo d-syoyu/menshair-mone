@@ -40,6 +40,23 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   }
 }
 
+// 画像URLを絶対URLに変換（メール用）
+function getAbsoluteImageUrl(imageUrl: string | undefined, siteUrl: string): string | null {
+  if (!imageUrl) return null;
+
+  // すでに絶対URLの場合はそのまま返す
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+
+  // 相対URLの場合は絶対URLに変換
+  if (imageUrl.startsWith('/')) {
+    return `${siteUrl}${imageUrl}`;
+  }
+
+  return imageUrl;
+}
+
 // ニュースレター用のHTMLテンプレート（画像対応）
 export function createNewsletterHtml(news: {
   title: string;
@@ -51,6 +68,7 @@ export function createNewsletterHtml(news: {
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
+  const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
   return `
 <!DOCTYPE html>
@@ -75,11 +93,11 @@ export function createNewsletterHtml(news: {
             </td>
           </tr>
 
-          ${news.coverImage ? `
+          ${coverImageUrl ? `
           <!-- Cover Image -->
           <tr>
             <td style="padding: 0; background-color: #242424;">
-              <img src="${news.coverImage}" alt="${news.title}" style="width: 100%; max-width: 600px; height: auto; display: block;">
+              <img src="${coverImageUrl}" alt="${news.title}" style="width: 100%; max-width: 600px; height: auto; display: block;">
             </td>
           </tr>
           ` : ''}
@@ -153,12 +171,13 @@ export function createNewsletterText(news: {
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
+  const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
   let text = `${SALON_NAME} からのお知らせ\n\n`;
   text += `${news.title}\n`;
   if (news.subtitle) text += `${news.subtitle}\n`;
   text += '\n';
-  if (news.coverImage) text += `[画像] ${news.coverImage}\n\n`;
+  if (coverImageUrl) text += `[画像] ${coverImageUrl}\n\n`;
   if (news.excerpt) text += `${news.excerpt}\n\n`;
   if (news.publishedAt) text += `${news.publishedAt}\n\n`;
   text += `詳細はこちら: ${newsUrl}\n\n`;
