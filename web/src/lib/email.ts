@@ -3,7 +3,6 @@
 
 import { Resend } from 'resend';
 import { SALON_INFO } from '@/constants/salon';
-import { generateUnsubscribeUrl } from './newsletter';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -49,11 +48,9 @@ export function createNewsletterHtml(news: {
   slug: string;
   publishedAt?: string;
   coverImage?: string;
-  recipientEmail?: string; // 配信停止リンク用
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mone0601.com';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
-  const unsubscribeUrl = news.recipientEmail ? generateUnsubscribeUrl(news.recipientEmail) : null;
 
   return `
 <!DOCTYPE html>
@@ -133,13 +130,6 @@ export function createNewsletterHtml(news: {
               <p style="margin: 0; color: #666666; font-size: 11px;">
                 このメールはサロンからのお知らせです。
               </p>
-              ${unsubscribeUrl ? `
-              <p style="margin: 15px 0 0; padding-top: 15px; border-top: 1px solid #333333;">
-                <a href="${unsubscribeUrl}" style="color: #666666; font-size: 11px; text-decoration: underline;">
-                  配信停止はこちら
-                </a>
-              </p>
-              ` : ''}
             </td>
           </tr>
 
@@ -160,11 +150,9 @@ export function createNewsletterText(news: {
   slug: string;
   publishedAt?: string;
   coverImage?: string;
-  recipientEmail?: string; // 配信停止リンク用
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mone0601.com';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
-  const unsubscribeUrl = news.recipientEmail ? generateUnsubscribeUrl(news.recipientEmail) : null;
 
   let text = `${SALON_NAME} からのお知らせ\n\n`;
   text += `${news.title}\n`;
@@ -178,9 +166,6 @@ export function createNewsletterText(news: {
   text += `${SALON_NAME}\n`;
   text += `${SALON_ADDRESS}\n`;
   text += `Tel: ${SALON_PHONE}\n`;
-  if (unsubscribeUrl) {
-    text += `\n配信停止: ${unsubscribeUrl}\n`;
-  }
 
   return text;
 }
