@@ -72,11 +72,12 @@ export async function filterCustomersByTargets(
     return [];
   }
 
-  // 顧客情報を取得
+  // 顧客情報を取得（配信停止顧客を除外）
   const customers = await prisma.user.findMany({
     where: {
       id: { in: Array.from(allCustomerIds) },
       email: { not: null },
+      newsletterOptOut: false,
     },
     select: {
       email: true,
@@ -90,13 +91,14 @@ export async function filterCustomersByTargets(
 }
 
 /**
- * 全顧客を取得
+ * 全顧客を取得（配信停止顧客を除外）
  */
 async function getAllCustomers(): Promise<FilteredCustomer[]> {
   const users = await prisma.user.findMany({
     where: {
       role: "CUSTOMER",
       email: { not: null },
+      newsletterOptOut: false,
     },
     select: {
       email: true,

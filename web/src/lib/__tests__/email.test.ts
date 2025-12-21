@@ -305,7 +305,8 @@ describe('createMagicLinkHtml', () => {
   it('サロン情報がフッターに含まれる', () => {
     const html = createMagicLinkHtml(baseParams);
 
-    expect(html).toContain('〒570-0028');
+    expect(html).toContain('〒570-0036');
+    expect(html).toContain('八雲中町1-24-1');
     expect(html).toContain('06-6908-4859');
   });
 });

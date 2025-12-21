@@ -47,7 +47,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: "/register",
-    error: "/register",
+    error: "/auth-error",
+    verifyRequest: "/verify-request",
   },
   providers: [
     // LINE Login (顧客向け)
