@@ -72,12 +72,11 @@ export async function filterCustomersByTargets(
     return [];
   }
 
-  // 顧客情報を取得（配信停止顧客を除外）
+  // 顧客情報を取得
   const customers = await prisma.user.findMany({
     where: {
       id: { in: Array.from(allCustomerIds) },
       email: { not: null },
-      newsletterOptOut: false,
     },
     select: {
       email: true,
@@ -98,7 +97,7 @@ async function getAllCustomers(): Promise<FilteredCustomer[]> {
     where: {
       role: "CUSTOMER",
       email: { not: null },
-      newsletterOptOut: false,
+      // Note: newsletterOptOut filter removed - column not yet in production DB
     },
     select: {
       email: true,

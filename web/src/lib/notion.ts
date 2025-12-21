@@ -148,6 +148,12 @@ export interface BlogPostDetail extends BlogPost {
   fallbackContent?: string;
 }
 
+// ニュースレター送信用（ステータス・配信先付き）
+export interface NewsWithStatus extends BlogPost {
+  status: string;       // 下書き/送信中/送信済み/送信失敗
+  targets: string[];    // 配信先（マルチセレクト）
+}
+
 // Helper: Extract rich text content
 function extractRichText(richText: RichTextItemResponse[]): string {
   return richText.map((text) => text.plain_text).join("");
@@ -464,6 +470,152 @@ export async function getNewsBySlug(slug: string): Promise<BlogPostDetail | null
 
 export async function getAllNewsSlugs(): Promise<string[]> {
   return await getAllBlogSlugs();
+}
+
+/**
+ * ニュースレター送信用: ステータスと配信先付きでニュース一覧を取得
+ * web公開チェックに関係なく全件取得（管理画面用）
+ */
+export async function getNewsWithStatus(): Promise<NewsWithStatus[]> {
+  if (!notion || !newsDatabaseId) {
+    console.warn("Notion API not configured");
+    return [];
+  }
+
+  try {
+    let response;
+    const dataSourceId = await getNewsDataSourceId();
+
+    if (dataSourceId) {
+      try {
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getNewsWithStatus:dataSources"
+        );
+      } catch (dsError) {
+        console.warn("dataSources.query failed, falling back:", dsError);
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: newsDatabaseId }),
+          "getNewsWithStatus:databases"
+        );
+      }
+    } else {
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return [];
+      response = await withRetry(
+        () => queryDb({ database_id: newsDatabaseId }),
+        "getNewsWithStatus:fallback"
+      );
+    }
+
+    const newsItems: NewsWithStatus[] = [];
+    for (const page of response.results) {
+      if ("properties" in page) {
+        const pageObj = page as PageObjectResponse;
+        const properties = pageObj.properties;
+
+        // タイトル
+        const titleProp = properties["タイトル"] || properties["Title"];
+        if (titleProp?.type !== "title") continue;
+        const title = extractRichText(titleProp.title);
+        if (!title) continue;
+
+        // ページURL (Slug)
+        const slugProp = properties["ページURL"] || properties["Slug"];
+        let slug = "";
+        if (slugProp?.type === "rich_text") {
+          slug = extractRichText(slugProp.rich_text);
+        }
+        if (!slug) {
+          slug = pageObj.id.replace(/-/g, "");
+        }
+
+        // 公開日
+        const publishedAtProp = properties["公開日"] || properties["PublishedAt"];
+        const publishedAt =
+          publishedAtProp?.type === "date" && publishedAtProp.date
+            ? formatDate(publishedAtProp.date.start)
+            : "";
+
+        // 本文
+        const excerptProp = properties["本文"] || properties["Excerpt"];
+        const excerpt =
+          excerptProp?.type === "rich_text"
+            ? extractRichText(excerptProp.rich_text)
+            : "";
+
+        // カテゴリ
+        const categoryProp = properties["カテゴリ"] || properties["Category"];
+        const category =
+          categoryProp?.type === "select" && categoryProp.select
+            ? categoryProp.select.name
+            : "";
+
+        // サブタイトル
+        const subtitleProp = properties["サブタイトル"] || properties["Subtitle"];
+        const subtitle =
+          subtitleProp?.type === "rich_text"
+            ? extractRichText(subtitleProp.rich_text)
+            : "";
+
+        // サムネイル
+        let coverImage: string | null = null;
+        const thumbnailProp = properties["サムネイル"];
+        if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
+          const file = thumbnailProp.files[0];
+          if (file.type === "external") {
+            coverImage = file.external.url;
+          } else if (file.type === "file") {
+            coverImage = file.file.url;
+          }
+        } else if (pageObj.cover) {
+          if (pageObj.cover.type === "external") {
+            coverImage = pageObj.cover.external.url;
+          } else if (pageObj.cover.type === "file") {
+            coverImage = pageObj.cover.file.url;
+          }
+        }
+        coverImage = getProxiedImageUrl(coverImage);
+
+        // ステータス（select型）
+        const statusProp = properties["ステータス"];
+        let status = "下書き";
+        if (statusProp?.type === "select" && statusProp.select) {
+          status = statusProp.select.name;
+        } else if (statusProp?.type === "status" && statusProp.status) {
+          status = statusProp.status.name;
+        }
+
+        // 配信先（multi_select型）
+        const targetProp = properties["配信先"];
+        let targets: string[] = [];
+        if (targetProp?.type === "multi_select") {
+          targets = targetProp.multi_select.map((opt) => opt.name);
+        }
+
+        newsItems.push({
+          id: pageObj.id,
+          slug,
+          title,
+          subtitle,
+          excerpt,
+          coverImage,
+          publishedAt,
+          category,
+          status,
+          targets,
+        });
+      }
+    }
+
+    console.log(`Fetched ${newsItems.length} news items with status`);
+    return newsItems;
+  } catch (error) {
+    console.error("Error fetching news with status:", error);
+    return [];
+  }
 }
 
 // ============================================
@@ -1042,6 +1194,190 @@ export async function getNewsletterTargets(pageId: string): Promise<string[]> {
   } catch (error) {
     console.error("[Newsletter] Error fetching targets:", error);
     return [];
+  }
+}
+
+// ============================================
+// Cron Job用: メール送信待ちニュース取得
+// ============================================
+
+/**
+ * メール送信待ちのニュースを取得
+ * 条件: メール送信=ON かつ ステータス≠送信済み
+ */
+export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
+  if (!notion || !newsDatabaseId) {
+    console.warn("Notion API not configured");
+    return [];
+  }
+
+  try {
+    let response;
+    const dataSourceId = await getNewsDataSourceId();
+
+    if (dataSourceId) {
+      try {
+        response = await withRetry(
+          () => notion.dataSources.query({ data_source_id: dataSourceId }),
+          "getPendingNewsletters:dataSources"
+        );
+      } catch (dsError) {
+        console.warn("dataSources.query failed, falling back:", dsError);
+        const queryDb = getQueryDatabase();
+        if (!queryDb) throw dsError;
+        response = await withRetry(
+          () => queryDb({ database_id: newsDatabaseId }),
+          "getPendingNewsletters:databases"
+        );
+      }
+    } else {
+      const queryDb = getQueryDatabase();
+      if (!queryDb) return [];
+      response = await withRetry(
+        () => queryDb({ database_id: newsDatabaseId }),
+        "getPendingNewsletters:fallback"
+      );
+    }
+
+    const pendingItems: NewsWithStatus[] = [];
+    for (const page of response.results) {
+      if ("properties" in page) {
+        const pageObj = page as PageObjectResponse;
+        const properties = pageObj.properties;
+
+        // メール送信チェックボックスを確認
+        const sendMailProp = properties["メール送信"];
+        const shouldSend = sendMailProp?.type === "checkbox" && sendMailProp.checkbox === true;
+        if (!shouldSend) continue;
+
+        // ステータスを確認（送信済みはスキップ）
+        const statusProp = properties["ステータス"];
+        let status = "下書き";
+        if (statusProp?.type === "select" && statusProp.select) {
+          status = statusProp.select.name;
+        } else if (statusProp?.type === "status" && statusProp.status) {
+          status = statusProp.status.name;
+        }
+        if (status === "送信済み") continue;
+
+        // タイトル
+        const titleProp = properties["タイトル"] || properties["Title"];
+        if (titleProp?.type !== "title") continue;
+        const title = extractRichText(titleProp.title);
+        if (!title) continue;
+
+        // ページURL (Slug)
+        const slugProp = properties["ページURL"] || properties["Slug"];
+        let slug = "";
+        if (slugProp?.type === "rich_text") {
+          slug = extractRichText(slugProp.rich_text);
+        }
+        if (!slug) {
+          slug = pageObj.id.replace(/-/g, "");
+        }
+
+        // 公開日
+        const publishedAtProp = properties["公開日"] || properties["PublishedAt"];
+        const publishedAt =
+          publishedAtProp?.type === "date" && publishedAtProp.date
+            ? formatDate(publishedAtProp.date.start)
+            : "";
+
+        // 本文
+        const excerptProp = properties["本文"] || properties["Excerpt"];
+        const excerpt =
+          excerptProp?.type === "rich_text"
+            ? extractRichText(excerptProp.rich_text)
+            : "";
+
+        // カテゴリ
+        const categoryProp = properties["カテゴリ"] || properties["Category"];
+        const category =
+          categoryProp?.type === "select" && categoryProp.select
+            ? categoryProp.select.name
+            : "";
+
+        // サブタイトル
+        const subtitleProp = properties["サブタイトル"] || properties["Subtitle"];
+        const subtitle =
+          subtitleProp?.type === "rich_text"
+            ? extractRichText(subtitleProp.rich_text)
+            : "";
+
+        // サムネイル
+        let coverImage: string | null = null;
+        const thumbnailProp = properties["サムネイル"];
+        if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
+          const file = thumbnailProp.files[0];
+          if (file.type === "external") {
+            coverImage = file.external.url;
+          } else if (file.type === "file") {
+            coverImage = file.file.url;
+          }
+        } else if (pageObj.cover) {
+          if (pageObj.cover.type === "external") {
+            coverImage = pageObj.cover.external.url;
+          } else if (pageObj.cover.type === "file") {
+            coverImage = pageObj.cover.file.url;
+          }
+        }
+        coverImage = getProxiedImageUrl(coverImage);
+
+        // 配信先
+        const targetProp = properties["配信先"];
+        let targets: string[] = [];
+        if (targetProp?.type === "multi_select") {
+          targets = targetProp.multi_select.map((opt) => opt.name);
+        }
+
+        pendingItems.push({
+          id: pageObj.id,
+          slug,
+          title,
+          subtitle,
+          excerpt,
+          coverImage,
+          publishedAt,
+          category,
+          status,
+          targets,
+        });
+      }
+    }
+
+    console.log(`[Newsletter Cron] Found ${pendingItems.length} pending newsletters`);
+    return pendingItems;
+  } catch (error) {
+    console.error("Error fetching pending newsletters:", error);
+    return [];
+  }
+}
+
+/**
+ * メール送信フラグをOFFに戻す（重複送信防止）
+ */
+export async function clearSendFlag(pageId: string): Promise<{ success: boolean; error?: string }> {
+  if (!notion) {
+    return { success: false, error: "Notion API not configured" };
+  }
+
+  try {
+    await withRetry(
+      () =>
+        notion.pages.update({
+          page_id: pageId,
+          properties: {
+            "メール送信": {
+              checkbox: false,
+            },
+          },
+        }),
+      `clearSendFlag:${pageId.slice(0, 8)}`
+    );
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to clear send flag:", error);
+    return { success: false, error: String(error) };
   }
 }
 
