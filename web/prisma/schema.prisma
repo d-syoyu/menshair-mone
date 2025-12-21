@@ -225,6 +225,19 @@ model Holiday {
 }
 
 // ============================================
+// 特別営業日（定休日でも営業する日）
+// ============================================
+
+model SpecialOpenDay {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date @unique
+  reason    String?  // 営業理由（任意）例: "祝日振替営業"
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+// ============================================
 // 売上・会計関連（POS）
 // ============================================
 

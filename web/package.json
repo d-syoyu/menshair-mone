@@ -11,6 +11,8 @@
     "lint": "eslint",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:migrate-category-id": "npx tsx prisma/migrate-sale-item-category-id.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -49,12 +51,15 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.2",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
+    "jsdom": "^27.3.0",
     "prisma": "^7.1.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.16"
   }
 }

@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       excerpt: news.excerpt || undefined,
       slug: news.slug,
       publishedAt: news.publishedAt || undefined,
+      coverImage: news.coverImage || undefined,
     });
 
     const text = createNewsletterText({
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
       excerpt: news.excerpt || undefined,
       slug: news.slug,
       publishedAt: news.publishedAt || undefined,
+      coverImage: news.coverImage || undefined,
     });
 
     // 一括送信（BCCで送信）

@@ -9,6 +9,7 @@ import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
 import { parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
+import { sendReservationConfirmationEmail } from "@/lib/email";
 
 // DB Menuの型定義
 interface DbMenu {
@@ -343,6 +344,23 @@ export async function POST(request: NextRequest) {
         },
       });
     });
+
+    // 予約完了メール送信（非同期・エラー時もAPIは成功扱い）
+    if (reservation?.user?.email) {
+      sendReservationConfirmationEmail(reservation.user.email, {
+        reservationId: reservation.id,
+        customerName: reservation.user.name || 'お客様',
+        date: new Date(reservation.date),
+        startTime: reservation.startTime,
+        endTime: reservation.endTime,
+        menuSummary: reservation.menuSummary,
+        totalPrice: reservation.totalPrice,
+        couponDiscount: reservation.couponDiscount,
+        note: reservation.note || undefined,
+      }).catch((err) => {
+        console.error('Failed to send reservation confirmation email:', err);
+      });
+    }
 
     return NextResponse.json(
       {

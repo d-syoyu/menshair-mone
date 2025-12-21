@@ -365,8 +365,8 @@ export default function AdminDashboard() {
               <CalendarOff className="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <p className="font-medium text-sm">不定休設定</p>
-              <p className="text-xs text-gray-500 hidden sm:block">臨時休業日</p>
+              <p className="font-medium text-sm">営業管理</p>
+              <p className="text-xs text-gray-500 hidden sm:block">定休日・不定休</p>
             </div>
           </Link>
 

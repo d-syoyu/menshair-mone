@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { canCancelReservation } from "@/constants/booking";
+import { sendReservationCancellationEmail } from "@/lib/email";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -135,6 +136,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!reservation) {
@@ -187,7 +197,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       data: { status: "CANCELLED" },
     });
 
-    // TODO: キャンセル確認メール送信
+    // キャンセル確認メール送信（非同期・エラー時もAPIは成功扱い）
+    if (reservation.user?.email) {
+      sendReservationCancellationEmail(reservation.user.email, {
+        reservationId: reservation.id,
+        customerName: reservation.user.name || 'お客様',
+        date: new Date(reservation.date),
+        startTime: reservation.startTime,
+        menuSummary: reservation.menuSummary,
+      }).catch((err) => {
+        console.error('Failed to send cancellation confirmation email:', err);
+      });
+    }
 
     return NextResponse.json({
       message: "予約をキャンセルしました",

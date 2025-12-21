@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
+import { getBusinessHours } from "@/constants/salon";
 import {
   generateTimeSlots,
   isWithinBookingWindow,
@@ -21,6 +21,27 @@ interface AvailabilityResponse {
   slots: TimeSlot[];
   totalDuration?: number;
   totalPrice?: number;
+}
+
+// 定休日をデータベースから取得するヘルパー関数
+async function getClosedDays(): Promise<number[]> {
+  const setting = await prisma.settings.findUnique({
+    where: { key: "closed_days" },
+  });
+  // デフォルトは月曜日
+  return setting ? JSON.parse(setting.value) : [1];
+}
+
+// 特別営業日かどうかをチェックするヘルパー関数
+async function isSpecialOpenDay(date: Date): Promise<boolean> {
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const specialOpenDay = await prisma.specialOpenDay.findUnique({
+    where: { date: targetDate },
+  });
+
+  return !!specialOpenDay;
 }
 
 // GET /api/availability?date=2024-01-15&menuIds=cut,color-short
@@ -48,14 +69,21 @@ export async function GET(request: NextRequest) {
 
     const dayOfWeek = date.getDay();
 
-    // 定休日チェック（月曜日）
-    if (dayOfWeek === CLOSED_DAY) {
-      return NextResponse.json<AvailabilityResponse>({
-        date: dateStr,
-        dayOfWeek,
-        isClosed: true,
-        slots: [],
-      });
+    // 定休日チェック（データベースから取得）
+    const closedDays = await getClosedDays();
+    const isClosedDay = closedDays.includes(dayOfWeek);
+
+    // 定休日の場合でも、特別営業日なら営業
+    if (isClosedDay) {
+      const isSpecialOpen = await isSpecialOpenDay(date);
+      if (!isSpecialOpen) {
+        return NextResponse.json<AvailabilityResponse>({
+          date: dateStr,
+          dayOfWeek,
+          isClosed: true,
+          slots: [],
+        });
+      }
     }
 
     // 不定休チェック（全日休業と時間帯休業を区別）

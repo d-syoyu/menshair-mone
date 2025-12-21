@@ -8,10 +8,12 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarOff,
+  CalendarCheck,
   Check,
   AlertTriangle,
   Trash2,
   X,
+  Settings,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -20,7 +22,6 @@ const fadeInUp = {
 };
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-const CLOSED_DAY = 1; // 月曜日
 
 interface Holiday {
   id: string;
@@ -31,25 +32,52 @@ interface Holiday {
   createdAt: string;
 }
 
-export default function AdminHolidaysPage() {
+interface SpecialOpenDay {
+  id: string;
+  date: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+type ModalMode = 'holiday' | 'specialOpen';
+
+export default function AdminBusinessPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [specialOpenDays, setSpecialOpenDays] = useState<SpecialOpenDay[]>([]);
+  const [closedDays, setClosedDays] = useState<number[]>([1]); // デフォルトは月曜
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingClosedDays, setIsSavingClosedDays] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>('holiday');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [deletingHoliday, setDeletingHoliday] = useState<Holiday | null>(null);
+  const [deletingSpecialOpenDay, setDeletingSpecialOpenDay] = useState<SpecialOpenDay | null>(null);
   const [reason, setReason] = useState('');
   const [holidayType, setHolidayType] = useState<'allDay' | 'timeRange'>('allDay');
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('18:00');
 
+  // 営業設定を取得
+  const fetchBusinessSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/business-settings');
+      if (res.ok) {
+        const data = await res.json();
+        setClosedDays(data.closedDays || [1]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch business settings:', err);
+    }
+  }, []);
+
+  // 不定休を取得
   const fetchHolidays = useCallback(async () => {
-    setIsLoading(true);
     try {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth() + 1;
@@ -63,14 +91,37 @@ export default function AdminHolidaysPage() {
       setHolidays(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
-    } finally {
-      setIsLoading(false);
     }
   }, [currentMonth]);
 
+  // 特別営業日を取得
+  const fetchSpecialOpenDays = useCallback(async () => {
+    try {
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      const res = await fetch(`/api/admin/special-open-days?year=${year}&month=${month}`);
+
+      if (!res.ok) {
+        throw new Error('データの取得に失敗しました');
+      }
+
+      const data = await res.json();
+      setSpecialOpenDays(data);
+    } catch (err) {
+      console.error('Failed to fetch special open days:', err);
+    }
+  }, [currentMonth]);
+
+  // 全データを取得
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([fetchBusinessSettings(), fetchHolidays(), fetchSpecialOpenDays()]);
+    setIsLoading(false);
+  }, [fetchBusinessSettings, fetchHolidays, fetchSpecialOpenDays]);
+
   useEffect(() => {
-    fetchHolidays();
-  }, [fetchHolidays]);
+    fetchAllData();
+  }, [fetchAllData]);
 
   const showSuccess = (message: string) => {
     setSuccess(message);
@@ -80,6 +131,40 @@ export default function AdminHolidaysPage() {
   const showError = (message: string) => {
     setError(message);
     setTimeout(() => setError(null), 5000);
+  };
+
+  // 定休日設定を保存
+  const handleSaveClosedDays = async () => {
+    setIsSavingClosedDays(true);
+    try {
+      const res = await fetch('/api/admin/business-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closedDays }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || '保存に失敗しました');
+      }
+
+      showSuccess('定休日を保存しました');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setIsSavingClosedDays(false);
+    }
+  };
+
+  // 定休日曜日をトグル
+  const toggleClosedDay = (dayIndex: number) => {
+    setClosedDays(prev => {
+      if (prev.includes(dayIndex)) {
+        return prev.filter(d => d !== dayIndex);
+      } else {
+        return [...prev, dayIndex].sort((a, b) => a - b);
+      }
+    });
   };
 
   // カレンダー日付を生成
@@ -107,15 +192,15 @@ export default function AdminHolidaysPage() {
     return holidays.filter(h => h.date.startsWith(dateStr));
   };
 
-  // 不定休があるか（後方互換性のため）
-  const isHoliday = (date: Date): Holiday | undefined => {
+  // 特別営業日かどうかをチェック
+  const getSpecialOpenDay = (date: Date): SpecialOpenDay | undefined => {
     const dateStr = formatDateForApi(date);
-    return holidays.find(h => h.date.startsWith(dateStr));
+    return specialOpenDays.find(s => s.date.startsWith(dateStr));
   };
 
-  // 定休日（月曜日）かどうか
+  // 定休日（設定された曜日）かどうか
   const isClosedDay = (date: Date): boolean => {
-    return date.getDay() === CLOSED_DAY;
+    return closedDays.includes(date.getDay());
   };
 
   // 過去の日付かどうか
@@ -141,21 +226,39 @@ export default function AdminHolidaysPage() {
 
   // 日付クリック
   const handleDateClick = (date: Date) => {
-    if (isClosedDay(date)) return; // 定休日はクリック不可
+    const isClosed = isClosedDay(date);
+    const dayHolidays = getHolidays(date);
+    const specialOpen = getSpecialOpenDay(date);
 
-    const holiday = isHoliday(date);
-    if (holiday) {
-      // 既に不定休の場合は削除確認
-      setDeletingHoliday(holiday);
-      setIsDeleteModalOpen(true);
+    if (isClosed) {
+      // 定休日の場合
+      if (specialOpen) {
+        // 既に特別営業日の場合は削除確認
+        setDeletingSpecialOpenDay(specialOpen);
+        setIsDeleteModalOpen(true);
+      } else {
+        // 特別営業日を追加
+        setSelectedDate(date);
+        setModalMode('specialOpen');
+        setReason('');
+        setIsAddModalOpen(true);
+      }
     } else {
-      // 不定休を追加
-      setSelectedDate(date);
-      setReason('');
-      setHolidayType('allDay');
-      setStartTime('10:00');
-      setEndTime('18:00');
-      setIsAddModalOpen(true);
+      // 通常の日の場合
+      if (dayHolidays.length > 0) {
+        // 既に不定休の場合は削除確認（最初の1件）
+        setDeletingHoliday(dayHolidays[0]);
+        setIsDeleteModalOpen(true);
+      } else {
+        // 不定休を追加
+        setSelectedDate(date);
+        setModalMode('holiday');
+        setReason('');
+        setHolidayType('allDay');
+        setStartTime('10:00');
+        setEndTime('18:00');
+        setIsAddModalOpen(true);
+      }
     }
   };
 
@@ -202,6 +305,39 @@ export default function AdminHolidaysPage() {
     }
   };
 
+  // 特別営業日追加
+  const handleAddSpecialOpenDay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate) return;
+
+    try {
+      const body: { date: string; reason?: string } = {
+        date: formatDateForApi(selectedDate),
+      };
+
+      if (reason) {
+        body.reason = reason;
+      }
+
+      const res = await fetch('/api/admin/special-open-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'エラーが発生しました');
+      }
+
+      setIsAddModalOpen(false);
+      fetchSpecialOpenDays();
+      showSuccess('特別営業日を追加しました');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'エラーが発生しました');
+    }
+  };
+
   // 不定休削除
   const handleDeleteHoliday = async () => {
     if (!deletingHoliday) return;
@@ -225,6 +361,29 @@ export default function AdminHolidaysPage() {
     }
   };
 
+  // 特別営業日削除
+  const handleDeleteSpecialOpenDay = async () => {
+    if (!deletingSpecialOpenDay) return;
+
+    try {
+      const res = await fetch(`/api/admin/special-open-days/${deletingSpecialOpenDay.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'エラーが発生しました');
+      }
+
+      setIsDeleteModalOpen(false);
+      setDeletingSpecialOpenDay(null);
+      fetchSpecialOpenDays();
+      showSuccess('特別営業日を削除しました');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'エラーが発生しました');
+    }
+  };
+
   // 月を変更
   const changeMonth = (delta: number) => {
     setCurrentMonth(prev => {
@@ -236,7 +395,7 @@ export default function AdminHolidaysPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-20 sm:pt-24 pb-16 sm:pb-20">
-      <div className="container-wide max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="container-wide max-w-5xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial="hidden"
@@ -252,10 +411,10 @@ export default function AdminHolidaysPage() {
             ダッシュボードに戻る
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-medium">不定休設定</h1>
+            <h1 className="text-xl sm:text-2xl font-medium">営業管理</h1>
           </div>
           <p className="mt-2 text-gray-500 text-xs sm:text-sm">
-            カレンダーをタップして不定休を設定できます。月曜日は定休日です。
+            定休日、不定休、特別営業日を設定できます。
           </p>
         </motion.div>
 
@@ -284,6 +443,48 @@ export default function AdminHolidaysPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* 定休日設定 */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+          className="mb-6 bg-white rounded-lg shadow-sm p-4 sm:p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Settings className="w-5 h-5 text-gray-600" />
+            <h2 className="text-base sm:text-lg font-medium">定休日設定</h2>
+          </div>
+          <p className="text-gray-500 text-xs sm:text-sm mb-4">
+            毎週の定休日を選択してください。
+          </p>
+          <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
+            {WEEKDAYS.map((day, i) => (
+              <button
+                key={day}
+                onClick={() => toggleClosedDay(i)}
+                className={`
+                  px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all
+                  ${closedDays.includes(i)
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }
+                  ${i === 0 ? 'text-red-500' : ''}
+                  ${i === 6 ? 'text-blue-500' : ''}
+                `}
+              >
+                {day}曜日
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleSaveClosedDays}
+            disabled={isSavingClosedDays}
+            className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+          >
+            {isSavingClosedDays ? '保存中...' : '定休日を保存'}
+          </button>
+        </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Calendar */}
@@ -322,13 +523,13 @@ export default function AdminHolidaysPage() {
                       ? 'text-red-400'
                       : i === 6
                         ? 'text-blue-400'
-                        : i === CLOSED_DAY
+                        : closedDays.includes(i)
                           ? 'text-gray-400'
                           : 'text-gray-500'
                   }`}
                 >
                   {day}
-                  {i === CLOSED_DAY && <span className="text-[9px] sm:text-[10px] block">定休</span>}
+                  {closedDays.includes(i) && <span className="text-[9px] sm:text-[10px] block">定休</span>}
                 </div>
               ))}
             </div>
@@ -346,38 +547,55 @@ export default function AdminHolidaysPage() {
                   const isClosed = isClosedDay(date);
                   const dayHolidays = getHolidays(date);
                   const hasHoliday = dayHolidays.length > 0;
+                  const specialOpen = getSpecialOpenDay(date);
                   const isPast = isPastDate(date);
                   const isToday = date.toDateString() === new Date().toDateString();
 
                   // ツールチップ用テキスト
                   const getTooltip = () => {
-                    if (isClosed) return '定休日';
-                    if (dayHolidays.length === 0) return undefined;
-                    return dayHolidays.map(h => {
-                      const timeInfo = h.startTime && h.endTime
-                        ? `${h.startTime}〜${h.endTime}`
-                        : '終日';
-                      return `${timeInfo}${h.reason ? `: ${h.reason}` : ''}`;
-                    }).join('\n');
+                    const tips: string[] = [];
+                    if (isClosed && !specialOpen) tips.push('定休日');
+                    if (isClosed && specialOpen) tips.push(`特別営業日${specialOpen.reason ? `: ${specialOpen.reason}` : ''}`);
+                    if (dayHolidays.length > 0) {
+                      tips.push(...dayHolidays.map(h => {
+                        const timeInfo = h.startTime && h.endTime
+                          ? `${h.startTime}〜${h.endTime}`
+                          : '終日';
+                        return `不定休: ${timeInfo}${h.reason ? ` (${h.reason})` : ''}`;
+                      }));
+                    }
+                    return tips.length > 0 ? tips.join('\n') : undefined;
+                  };
+
+                  // 背景色を決定
+                  const getDateStyle = () => {
+                    if (isClosed && specialOpen) {
+                      // 定休日だが特別営業
+                      return 'bg-green-100 text-green-700 hover:bg-green-200 active:bg-green-300';
+                    }
+                    if (isClosed) {
+                      // 定休日
+                      return 'bg-gray-100 text-gray-400 hover:bg-gray-200';
+                    }
+                    if (hasHoliday) {
+                      // 不定休
+                      return 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300';
+                    }
+                    if (isPast) {
+                      return 'bg-gray-50 text-gray-400 hover:bg-gray-100';
+                    }
+                    return 'bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 border border-gray-200';
                   };
 
                   return (
                     <button
                       key={i}
-                      onClick={() => !isClosed && handleDateClick(date)}
-                      disabled={isClosed}
+                      onClick={() => handleDateClick(date)}
                       className={`
                         aspect-square flex flex-col items-center justify-center text-xs sm:text-sm font-medium
                         rounded-md sm:rounded-lg transition-all relative
                         ${isToday ? 'ring-1 sm:ring-2 ring-[var(--color-charcoal)] ring-offset-1 sm:ring-offset-2' : ''}
-                        ${isClosed
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : hasHoliday
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300'
-                            : isPast
-                              ? 'bg-gray-50 text-gray-400 hover:bg-gray-100'
-                              : 'bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 border border-gray-200'
-                        }
+                        ${getDateStyle()}
                         ${date.getDay() === 0 && !isClosed && !hasHoliday ? 'text-red-500' : ''}
                         ${date.getDay() === 6 && !isClosed && !hasHoliday ? 'text-blue-500' : ''}
                       `}
@@ -392,6 +610,9 @@ export default function AdminHolidaysPage() {
                           )}
                         </div>
                       )}
+                      {isClosed && specialOpen && (
+                        <CalendarCheck className="w-2 h-2 sm:w-3 sm:h-3 mt-0.5" />
+                      )}
                     </button>
                   );
                 })}
@@ -402,7 +623,7 @@ export default function AdminHolidaysPage() {
             <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-gray-500">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-100 rounded" />
-                <span>定休日（月曜）</span>
+                <span>定休日</span>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-100 rounded flex items-center justify-center">
@@ -410,71 +631,129 @@ export default function AdminHolidaysPage() {
                 </div>
                 <span>不定休</span>
               </div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-100 rounded flex items-center justify-center">
+                  <CalendarCheck className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-green-700" />
+                </div>
+                <span>特別営業日</span>
+              </div>
             </div>
+
+            <p className="mt-4 text-gray-500 text-xs">
+              定休日をタップ → 特別営業日として設定<br />
+              通常日をタップ → 不定休として設定
+            </p>
           </motion.div>
 
-          {/* Holiday List */}
+          {/* Right Panel: Lists */}
           <motion.div
             initial="hidden"
             animate="visible"
             variants={fadeInUp}
-            className="bg-white rounded-lg shadow-sm p-4 sm:p-6"
+            className="space-y-4 lg:space-y-6"
           >
-            <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center gap-2">
-              <CalendarOff className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
-              {currentMonth.getMonth() + 1}月の不定休
-            </h3>
+            {/* Holiday List */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center gap-2">
+                <CalendarOff className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+                {currentMonth.getMonth() + 1}月の不定休
+              </h3>
 
-            {holidays.length === 0 ? (
-              <p className="text-gray-500 text-xs sm:text-sm py-6 sm:py-8 text-center">
-                不定休はありません
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {holidays.map((holiday) => (
-                  <div
-                    key={holiday.id}
-                    className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-xs sm:text-sm">
-                        {formatDisplayDate(holiday.date)}
-                      </p>
-                      {(holiday.startTime && holiday.endTime) && (
-                        <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
-                          {holiday.startTime}〜{holiday.endTime}
-                        </p>
-                      )}
-                      {!holiday.startTime && !holiday.endTime && (
-                        <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
-                          終日休業
-                        </p>
-                      )}
-                      {holiday.reason && (
-                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
-                          {holiday.reason}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setDeletingHoliday(holiday);
-                        setIsDeleteModalOpen(true);
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded transition-colors flex-shrink-0 ml-2"
-                      title="削除"
+              {holidays.length === 0 ? (
+                <p className="text-gray-500 text-xs sm:text-sm py-4 text-center">
+                  不定休はありません
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {holidays.map((holiday) => (
+                    <div
+                      key={holiday.id}
+                      className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg"
                     >
-                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-xs sm:text-sm">
+                          {formatDisplayDate(holiday.date)}
+                        </p>
+                        {(holiday.startTime && holiday.endTime) && (
+                          <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
+                            {holiday.startTime}〜{holiday.endTime}
+                          </p>
+                        )}
+                        {!holiday.startTime && !holiday.endTime && (
+                          <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
+                            終日休業
+                          </p>
+                        )}
+                        {holiday.reason && (
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
+                            {holiday.reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setDeletingHoliday(holiday);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded transition-colors flex-shrink-0 ml-2"
+                        title="削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Special Open Day List */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                {currentMonth.getMonth() + 1}月の特別営業日
+              </h3>
+
+              {specialOpenDays.length === 0 ? (
+                <p className="text-gray-500 text-xs sm:text-sm py-4 text-center">
+                  特別営業日はありません
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {specialOpenDays.map((day) => (
+                    <div
+                      key={day.id}
+                      className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-xs sm:text-sm">
+                          {formatDisplayDate(day.date)}
+                        </p>
+                        {day.reason && (
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
+                            {day.reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setDeletingSpecialOpenDay(day);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded transition-colors flex-shrink-0 ml-2"
+                        title="削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Add Holiday Modal */}
+      {/* Add Modal */}
       <AnimatePresence>
         {isAddModalOpen && selectedDate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -493,7 +772,9 @@ export default function AdminHolidaysPage() {
             >
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h2 className="text-base sm:text-lg font-medium">不定休を追加</h2>
+                  <h2 className="text-base sm:text-lg font-medium">
+                    {modalMode === 'holiday' ? '不定休を追加' : '特別営業日を追加'}
+                  </h2>
                   <button
                     onClick={() => setIsAddModalOpen(false)}
                     className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 active:text-gray-700 rounded-lg transition-colors"
@@ -502,7 +783,7 @@ export default function AdminHolidaysPage() {
                   </button>
                 </div>
 
-                <form onSubmit={handleAddHoliday} className="space-y-3 sm:space-y-4">
+                <form onSubmit={modalMode === 'holiday' ? handleAddHoliday : handleAddSpecialOpenDay} className="space-y-3 sm:space-y-4">
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       日付
@@ -515,35 +796,37 @@ export default function AdminHolidaysPage() {
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                      休業タイプ
-                    </label>
-                    <div className="flex gap-3 sm:gap-4">
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          value="allDay"
-                          checked={holidayType === 'allDay'}
-                          onChange={(e) => setHolidayType(e.target.value as 'allDay' | 'timeRange')}
-                          className="mr-1.5 sm:mr-2"
-                        />
-                        <span className="text-xs sm:text-sm">終日休業</span>
+                  {modalMode === 'holiday' && (
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        休業タイプ
                       </label>
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          value="timeRange"
-                          checked={holidayType === 'timeRange'}
-                          onChange={(e) => setHolidayType(e.target.value as 'allDay' | 'timeRange')}
-                          className="mr-1.5 sm:mr-2"
-                        />
-                        <span className="text-xs sm:text-sm">時間帯休業</span>
-                      </label>
+                      <div className="flex gap-3 sm:gap-4">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            value="allDay"
+                            checked={holidayType === 'allDay'}
+                            onChange={(e) => setHolidayType(e.target.value as 'allDay' | 'timeRange')}
+                            className="mr-1.5 sm:mr-2"
+                          />
+                          <span className="text-xs sm:text-sm">終日休業</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            value="timeRange"
+                            checked={holidayType === 'timeRange'}
+                            onChange={(e) => setHolidayType(e.target.value as 'allDay' | 'timeRange')}
+                            className="mr-1.5 sm:mr-2"
+                          />
+                          <span className="text-xs sm:text-sm">時間帯休業</span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {holidayType === 'timeRange' && (
+                  {modalMode === 'holiday' && holidayType === 'timeRange' && (
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div>
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
@@ -581,7 +864,7 @@ export default function AdminHolidaysPage() {
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
-                      placeholder="例: 臨時休業、研修"
+                      placeholder={modalMode === 'holiday' ? '例: 臨時休業、研修' : '例: 祝日振替営業'}
                     />
                   </div>
 
@@ -595,9 +878,13 @@ export default function AdminHolidaysPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-500 !text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors"
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-white rounded-lg transition-colors ${
+                        modalMode === 'holiday'
+                          ? 'bg-red-500 hover:bg-red-600 active:bg-red-700'
+                          : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
+                      }`}
                     >
-                      不定休を追加
+                      {modalMode === 'holiday' ? '不定休を追加' : '特別営業日を追加'}
                     </button>
                   </div>
                 </form>
@@ -656,6 +943,61 @@ export default function AdminHolidaysPage() {
                   </button>
                   <button
                     onClick={handleDeleteHoliday}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors"
+                  >
+                    削除する
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Special Open Day Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && deletingSpecialOpenDay && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsDeleteModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
+            >
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 bg-green-100 rounded-full">
+                  <CalendarCheck className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+                </div>
+                <h3 className="text-base sm:text-lg font-medium text-center mb-2">特別営業日を削除</h3>
+                <p className="text-gray-500 text-xs sm:text-sm text-center mb-4 sm:mb-6">
+                  {formatDisplayDate(deletingSpecialOpenDay.date)}の特別営業日を削除しますか？
+                  <br />
+                  削除すると、この日は通常の定休日に戻ります。
+                  {deletingSpecialOpenDay.reason && (
+                    <span className="block mt-1 text-xs sm:text-sm">
+                      理由: {deletingSpecialOpenDay.reason}
+                    </span>
+                  )}
+                </p>
+                <div className="flex justify-center gap-2 sm:gap-3">
+                  <button
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setDeletingSpecialOpenDay(null);
+                    }}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleDeleteSpecialOpenDay}
                     className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors"
                   >
                     削除する

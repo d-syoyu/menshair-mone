@@ -10,6 +10,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import type { UserRole } from "@prisma/client";
 import type { Adapter } from "next-auth/adapters";
+import { createMagicLinkHtml, createMagicLinkText } from "./email";
+import { Resend as ResendClient } from "resend";
 
 declare module "next-auth" {
   interface Session {
@@ -58,6 +60,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Resend({
       apiKey: process.env.RESEND_API_KEY!,
       from: "Men's hair MONE <noreply@mone0601.com>",
+      async sendVerificationRequest({ identifier: email, url, provider }) {
+        const resend = new ResendClient(process.env.RESEND_API_KEY!);
+        const host = new URL(url).host;
+        const from = provider.from || "Men's hair MONE <noreply@mone0601.com>";
+
+        await resend.emails.send({
+          from,
+          to: email,
+          subject: "【MONË】ログイン認証",
+          html: createMagicLinkHtml({ url, host }),
+          text: createMagicLinkText({ url, host }),
+        });
+      },
     }),
 
     // Credentials (管理者向け)
