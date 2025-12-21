@@ -958,9 +958,9 @@ export async function updateNewsPageStatus(
         notion.pages.update({
           page_id: pageId,
           properties: {
-            // ステータスプロパティ（SelectまたはStatus型）
+            // ステータスプロパティ（Status型）
             "ステータス": {
-              select: { name: status },
+              status: { name: status },
             },
           },
         }),
