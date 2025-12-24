@@ -23,8 +23,8 @@ export default function VerifyRequestPage() {
 
           {/* Content */}
           <div className="glass-card p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6">
-              <Mail className="w-8 h-8 text-accent" />
+            <div className="w-16 h-16 rounded-full bg-light/20 flex items-center justify-center mx-auto mb-6">
+              <Mail className="w-8 h-8 text-light" />
             </div>
 
             <div className="space-y-4 mb-8">
@@ -40,7 +40,7 @@ export default function VerifyRequestPage() {
             {/* Tips */}
             <div className="bg-dark-lighter rounded-lg p-4 mb-8">
               <div className="flex items-start gap-3 text-left">
-                <CheckCircle className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-light mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-text-secondary space-y-2">
                   <p>メールが届かない場合：</p>
                   <ul className="list-disc list-inside space-y-1 text-text-muted">
