@@ -129,10 +129,11 @@ interface CustomerOption {
   email: string | null;
 }
 
-// 時間選択肢を生成（10:00〜20:00、30分刻み）
-const TIME_OPTIONS = Array.from({ length: 21 }, (_, i) => {
-  const hours = Math.floor(i / 2) + 10;
-  const minutes = (i % 2) * 30;
+// 時間選択肢を生成（9:00〜20:00、10分刻み）
+const TIME_OPTIONS = Array.from({ length: 67 }, (_, i) => {
+  const totalMinutes = 9 * 60 + i * 10; // 9:00から10分刻み
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 });
 

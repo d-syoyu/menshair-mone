@@ -433,7 +433,7 @@ export default function Home() {
                       <div className="text-text-secondary">
                         <div className="flex justify-between max-w-xs">
                           <span>土日祝</span>
-                          <span>10:00 - 20:30</span>
+                          <span>9:00 - 20:30</span>
                         </div>
                         <p className="text-xs text-text-muted mt-1">（受付19:30まで）</p>
                       </div>

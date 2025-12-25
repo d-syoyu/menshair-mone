@@ -345,7 +345,7 @@ export default function AboutPage() {
                         <p className="text-xs text-text-muted">（受付20:00まで）</p>
                       </div>
                       <div>
-                        <p className="text-lg">土日祝 10:00 - 20:30</p>
+                        <p className="text-lg">土日祝 9:00 - 20:30</p>
                         <p className="text-xs text-text-muted">（受付19:30まで）</p>
                       </div>
                     </div>

@@ -8,14 +8,15 @@ export const SALON_INFO = {
   address: "〒570-0036 大阪府守口市八雲中町1-24-1",
   phone: "06-6908-4859",
   hours: {
-    open: "10:00",
-    // 平日（火〜金） 最終受付20:00 / クローズ21:00
+    // 平日（火〜金） 10:00開店 / 最終受付20:00 / クローズ21:00
     weekday: {
+      open: "10:00",
       lastBooking: "20:00",
       close: "21:00",
     },
-    // 土日祝 最終受付19:30 / クローズ20:30
+    // 土日祝 9:00開店 / 最終受付19:30 / クローズ20:30
     weekend: {
+      open: "09:00",
       lastBooking: "19:30",
       close: "20:30",
     },
@@ -45,9 +46,9 @@ export const isWeekend = (dayOfWeek: number): boolean => {
   return dayOfWeek === 0 || dayOfWeek === 6;
 };
 
-// 後方互換性のため
+// 後方互換性のため（平日の営業時間）
 export const BUSINESS_HOURS = {
-  open: SALON_INFO.hours.open,
+  open: SALON_INFO.hours.weekday.open,
   close: SALON_INFO.hours.weekday.close,
 };
 export const CLOSED_DAY = SALON_INFO.closedDay;

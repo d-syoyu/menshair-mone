@@ -239,8 +239,14 @@ export async function POST(request: NextRequest) {
       appliedCouponDiscount = couponResult.discountAmount;
     }
 
-    // 営業時間チェック（曜日別クローズ時間）
+    // 営業時間チェック（曜日別開店・閉店時間）
     const businessHours = getBusinessHours(date);
+    if (startTime < businessHours.open) {
+      return NextResponse.json(
+        { error: "営業時間外のため予約できません" },
+        { status: 400 }
+      );
+    }
     if (endTime > businessHours.close) {
       return NextResponse.json(
         { error: "営業時間外のため予約できません" },

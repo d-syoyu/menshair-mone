@@ -168,7 +168,7 @@ const Footer = () => {
                   <p className="text-xs text-text-muted">（受付20:00まで）</p>
                 </div>
                 <div>
-                  <p>土日祝 10:00 - 20:30</p>
+                  <p>土日祝 9:00 - 20:30</p>
                   <p className="text-xs text-text-muted">（受付19:30まで）</p>
                 </div>
                 <p className="text-text-muted">定休日: {closedDaysText}</p>
