@@ -14,6 +14,7 @@ import {
   Trash2,
   X,
   Settings,
+  Plus,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -41,6 +42,12 @@ interface SpecialOpenDay {
 
 type ModalMode = 'holiday' | 'specialOpen';
 
+interface TimeRange {
+  id: string;
+  startTime: string;
+  endTime: string;
+}
+
 export default function AdminBusinessPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -60,8 +67,11 @@ export default function AdminBusinessPage() {
   const [deletingSpecialOpenDay, setDeletingSpecialOpenDay] = useState<SpecialOpenDay | null>(null);
   const [reason, setReason] = useState('');
   const [holidayType, setHolidayType] = useState<'allDay' | 'timeRange'>('allDay');
-  const [startTime, setStartTime] = useState('10:00');
-  const [endTime, setEndTime] = useState('18:00');
+  const [timeRanges, setTimeRanges] = useState<TimeRange[]>([
+    { id: '1', startTime: '10:00', endTime: '12:00' }
+  ]);
+  const [existingHolidays, setExistingHolidays] = useState<Holiday[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 営業設定を取得
   const fetchBusinessSettings = useCallback(async () => {
@@ -224,6 +234,24 @@ export default function AdminBusinessPage() {
     return `${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAYS[date.getDay()]}）`;
   };
 
+  // 時間帯を追加
+  const addTimeRange = () => {
+    const newId = Date.now().toString();
+    setTimeRanges(prev => [...prev, { id: newId, startTime: '10:00', endTime: '12:00' }]);
+  };
+
+  // 時間帯を削除
+  const removeTimeRange = (id: string) => {
+    setTimeRanges(prev => prev.filter(tr => tr.id !== id));
+  };
+
+  // 時間帯を更新
+  const updateTimeRange = (id: string, field: 'startTime' | 'endTime', value: string) => {
+    setTimeRanges(prev => prev.map(tr =>
+      tr.id === id ? { ...tr, [field]: value } : tr
+    ));
+  };
+
   // 日付クリック
   const handleDateClick = (date: Date) => {
     const isClosed = isClosedDay(date);
@@ -244,21 +272,14 @@ export default function AdminBusinessPage() {
         setIsAddModalOpen(true);
       }
     } else {
-      // 通常の日の場合
-      if (dayHolidays.length > 0) {
-        // 既に不定休の場合は削除確認（最初の1件）
-        setDeletingHoliday(dayHolidays[0]);
-        setIsDeleteModalOpen(true);
-      } else {
-        // 不定休を追加
-        setSelectedDate(date);
-        setModalMode('holiday');
-        setReason('');
-        setHolidayType('allDay');
-        setStartTime('10:00');
-        setEndTime('18:00');
-        setIsAddModalOpen(true);
-      }
+      // 通常の日の場合 - 不定休を追加（既存があっても追加可能）
+      setSelectedDate(date);
+      setModalMode('holiday');
+      setReason('');
+      setHolidayType('allDay');
+      setTimeRanges([{ id: '1', startTime: '10:00', endTime: '12:00' }]);
+      setExistingHolidays(dayHolidays);
+      setIsAddModalOpen(true);
     }
   };
 
@@ -267,41 +288,56 @@ export default function AdminBusinessPage() {
     e.preventDefault();
     if (!selectedDate) return;
 
+    setIsSubmitting(true);
+
     try {
-      const body: {
-        date: string;
-        startTime?: string;
-        endTime?: string;
-        reason?: string;
-      } = {
-        date: formatDateForApi(selectedDate),
-      };
+      const dateStr = formatDateForApi(selectedDate);
 
-      if (holidayType === 'timeRange') {
-        body.startTime = startTime;
-        body.endTime = endTime;
-      }
+      if (holidayType === 'allDay') {
+        // 終日休業の場合
+        const body: { date: string; reason?: string } = { date: dateStr };
+        if (reason) body.reason = reason;
 
-      if (reason) {
-        body.reason = reason;
-      }
+        const res = await fetch('/api/admin/holidays', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
 
-      const res = await fetch('/api/admin/holidays', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'エラーが発生しました');
+        }
+      } else {
+        // 時間帯休業の場合 - 複数の時間帯を順番に登録
+        for (const tr of timeRanges) {
+          const body: { date: string; startTime: string; endTime: string; reason?: string } = {
+            date: dateStr,
+            startTime: tr.startTime,
+            endTime: tr.endTime,
+          };
+          if (reason) body.reason = reason;
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'エラーが発生しました');
+          const res = await fetch('/api/admin/holidays', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'エラーが発生しました');
+          }
+        }
       }
 
       setIsAddModalOpen(false);
       fetchHolidays();
-      showSuccess('不定休を追加しました');
+      showSuccess(holidayType === 'allDay' ? '終日休業を追加しました' : `${timeRanges.length}件の時間帯休業を追加しました`);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -797,6 +833,39 @@ export default function AdminBusinessPage() {
                     </p>
                   </div>
 
+                  {/* 既存の不定休を表示 */}
+                  {modalMode === 'holiday' && existingHolidays.length > 0 && (
+                    <div className="bg-red-50 rounded-lg p-3">
+                      <p className="text-xs sm:text-sm font-medium text-red-700 mb-2">
+                        この日の既存の不定休:
+                      </p>
+                      <div className="space-y-1">
+                        {existingHolidays.map((h) => (
+                          <div key={h.id} className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="text-red-600">
+                              {h.startTime && h.endTime
+                                ? `${h.startTime}〜${h.endTime}`
+                                : '終日休業'}
+                              {h.reason && ` (${h.reason})`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddModalOpen(false);
+                                setDeletingHoliday(h);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-1 text-red-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
+                              title="削除"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {modalMode === 'holiday' && (
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
@@ -828,31 +897,54 @@ export default function AdminBusinessPage() {
                   )}
 
                   {modalMode === 'holiday' && holidayType === 'timeRange' && (
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                          開始時間
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700">
+                          休業時間帯
                         </label>
-                        <input
-                          type="time"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
-                          required
-                        />
+                        <button
+                          type="button"
+                          onClick={addTimeRange}
+                          className="flex items-center gap-1 text-xs sm:text-sm text-[var(--color-accent)] hover:underline"
+                        >
+                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                          時間帯を追加
+                        </button>
                       </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                          終了時間
-                        </label>
-                        <input
-                          type="time"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
-                          required
-                        />
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {timeRanges.map((tr) => (
+                          <div key={tr.id} className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={tr.startTime}
+                              onChange={(e) => updateTimeRange(tr.id, 'startTime', e.target.value)}
+                              className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
+                              required
+                            />
+                            <span className="text-gray-400 text-xs">〜</span>
+                            <input
+                              type="time"
+                              value={tr.endTime}
+                              onChange={(e) => updateTimeRange(tr.id, 'endTime', e.target.value)}
+                              className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
+                              required
+                            />
+                            {timeRanges.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTimeRange(tr.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                title="削除"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
                       </div>
+                      <p className="text-[10px] sm:text-xs text-gray-500">
+                        複数の時間帯を設定できます（例: 午前と夕方に休業）
+                      </p>
                     </div>
                   )}
 
@@ -873,19 +965,27 @@ export default function AdminBusinessPage() {
                     <button
                       type="button"
                       onClick={() => setIsAddModalOpen(false)}
-                      className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors"
+                      disabled={isSubmitting}
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
                     >
                       キャンセル
                     </button>
                     <button
                       type="submit"
-                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm !text-white rounded-lg transition-colors ${
+                      disabled={isSubmitting || (modalMode === 'holiday' && holidayType === 'timeRange' && timeRanges.length === 0)}
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm !text-white rounded-lg transition-colors disabled:opacity-50 ${
                         modalMode === 'holiday'
                           ? 'bg-red-500 hover:bg-red-600 active:bg-red-700'
                           : 'bg-green-500 hover:bg-green-600 active:bg-green-700'
                       }`}
                     >
-                      {modalMode === 'holiday' ? '不定休を追加' : '特別営業日を追加'}
+                      {isSubmitting
+                        ? '追加中...'
+                        : modalMode === 'holiday'
+                          ? holidayType === 'timeRange' && timeRanges.length > 1
+                            ? `${timeRanges.length}件の時間帯休業を追加`
+                            : '不定休を追加'
+                          : '特別営業日を追加'}
                     </button>
                   </div>
                 </form>
