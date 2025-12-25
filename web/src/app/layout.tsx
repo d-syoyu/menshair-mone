@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mone0601.com"),
+  metadataBase: new URL("https://www.mone0601.com"),
   title: {
     default: "Men's hair MONE | 守口市メンズ専用サロン",
     template: "%s | Men's hair MONE",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ja_JP",
-    url: "https://mone0601.com",
+    url: "https://www.mone0601.com",
     siteName: "Men's hair MONE",
     title: "Men's hair MONE | 守口市メンズ専用サロン",
     description:
@@ -85,6 +85,14 @@ export const metadata: Metadata = {
   verification: {
     // Google Search Console verification (add when available)
     // google: "verification-code",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    shortcut: "/favicon-32x32.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
