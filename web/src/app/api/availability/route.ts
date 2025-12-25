@@ -191,12 +191,10 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
 
-    const slots: TimeSlot[] = allSlots.map((slotTime) => {
-        // 0. 開店時間前チェック（平日10:00、土日祝9:00）
-        if (slotTime < businessHours.open) {
-          return { time: slotTime, available: false };
-        }
+    // 開店時間以降のスロットのみをフィルタリング
+    const filteredSlots = allSlots.filter((slotTime) => slotTime >= businessHours.open);
 
+    const slots: TimeSlot[] = filteredSlots.map((slotTime) => {
         // 1. 最終受付時間チェック（最優先）
         //    営業時間の最終受付時間（平日20:00、土日祝19:30）を超えていたら予約不可
         if (slotTime > earliestLastBookingTime) {
