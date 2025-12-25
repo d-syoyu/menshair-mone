@@ -7,11 +7,34 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { parseLocalDate } from "@/lib/date-utils";
 
+// 時間形式のバリデーション
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 // 特別営業日作成スキーマ
 const createSpecialOpenDaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません（例: 2024-01-15）"),
+  startTime: z.string().regex(timeRegex, "開始時間の形式が正しくありません（例: 10:00）").optional(),
+  endTime: z.string().regex(timeRegex, "終了時間の形式が正しくありません（例: 18:00）").optional(),
   reason: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // 両方指定されているか、両方未指定
+    if ((data.startTime && !data.endTime) || (!data.startTime && data.endTime)) {
+      return false;
+    }
+    return true;
+  },
+  { message: "開始時間と終了時間は両方指定するか、両方未指定にしてください" }
+).refine(
+  (data) => {
+    // 時間が指定されている場合、開始時間 < 終了時間
+    if (data.startTime && data.endTime) {
+      return data.startTime < data.endTime;
+    }
+    return true;
+  },
+  { message: "終了時間は開始時間より後にしてください" }
+);
 
 // GET /api/admin/special-open-days - 特別営業日一覧取得
 export async function GET(request: NextRequest) {
@@ -88,18 +111,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { date, reason } = validationResult.data;
+    const { date, startTime, endTime, reason } = validationResult.data;
     // タイムゾーン問題を避けるため、共通ユーティリティを使用
     const specialDate = parseLocalDate(date);
 
-    // 既存チェック
-    const existingSpecialOpenDay = await prisma.specialOpenDay.findUnique({
-      where: { date: specialDate },
+    // 既存チェック（同じ日付・時間帯の組み合わせ）
+    const existingSpecialOpenDay = await prisma.specialOpenDay.findFirst({
+      where: {
+        date: specialDate,
+        startTime: startTime || null,
+        endTime: endTime || null,
+      },
     });
 
     if (existingSpecialOpenDay) {
       return NextResponse.json(
-        { error: "この日付は既に特別営業日として登録されています" },
+        { error: "この日付・時間帯は既に特別営業日として登録されています" },
         { status: 409 }
       );
     }
@@ -107,6 +134,8 @@ export async function POST(request: NextRequest) {
     const specialOpenDay = await prisma.specialOpenDay.create({
       data: {
         date: specialDate,
+        startTime: startTime || null,
+        endTime: endTime || null,
         reason: reason || null,
       },
     });

@@ -231,10 +231,13 @@ model Holiday {
 
 model SpecialOpenDay {
   id        String   @id @default(cuid())
-  date      DateTime @db.Date @unique
+  date      DateTime @db.Date
+  startTime String?  // "10:00" 形式（nullなら終日営業）
+  endTime   String?  // "18:00" 形式（nullなら終日営業）
   reason    String?  // 営業理由（任意）例: "祝日振替営業"
   createdAt DateTime @default(now())
 
+  @@unique([date, startTime, endTime])
   @@index([date])
 }
 

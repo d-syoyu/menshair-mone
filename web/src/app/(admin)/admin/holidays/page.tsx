@@ -36,6 +36,8 @@ interface Holiday {
 interface SpecialOpenDay {
   id: string;
   date: string;
+  startTime: string | null;
+  endTime: string | null;
   reason: string | null;
   createdAt: string;
 }
@@ -72,6 +74,12 @@ export default function AdminBusinessPage() {
   ]);
   const [existingHolidays, setExistingHolidays] = useState<Holiday[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 特別営業日用のstate
+  const [specialOpenType, setSpecialOpenType] = useState<'allDay' | 'timeRange'>('allDay');
+  const [specialOpenTimeRanges, setSpecialOpenTimeRanges] = useState<TimeRange[]>([
+    { id: '1', startTime: '10:00', endTime: '18:00' }
+  ]);
+  const [existingSpecialOpenDays, setExistingSpecialOpenDays] = useState<SpecialOpenDay[]>([]);
 
   // 営業設定を取得
   const fetchBusinessSettings = useCallback(async () => {
@@ -252,25 +260,45 @@ export default function AdminBusinessPage() {
     ));
   };
 
+  // 特別営業日用の時間帯を追加
+  const addSpecialOpenTimeRange = () => {
+    const newId = Date.now().toString();
+    setSpecialOpenTimeRanges(prev => [...prev, { id: newId, startTime: '10:00', endTime: '18:00' }]);
+  };
+
+  // 特別営業日用の時間帯を削除
+  const removeSpecialOpenTimeRange = (id: string) => {
+    setSpecialOpenTimeRanges(prev => prev.filter(tr => tr.id !== id));
+  };
+
+  // 特別営業日用の時間帯を更新
+  const updateSpecialOpenTimeRange = (id: string, field: 'startTime' | 'endTime', value: string) => {
+    setSpecialOpenTimeRanges(prev => prev.map(tr =>
+      tr.id === id ? { ...tr, [field]: value } : tr
+    ));
+  };
+
+  // 特別営業日を取得（複数ある場合は配列で返す）
+  const getSpecialOpenDays = (date: Date): SpecialOpenDay[] => {
+    const dateStr = formatDateForApi(date);
+    return specialOpenDays.filter(s => s.date.startsWith(dateStr));
+  };
+
   // 日付クリック
   const handleDateClick = (date: Date) => {
     const isClosed = isClosedDay(date);
     const dayHolidays = getHolidays(date);
-    const specialOpen = getSpecialOpenDay(date);
+    const daySpecialOpenDays = getSpecialOpenDays(date);
 
     if (isClosed) {
-      // 定休日の場合
-      if (specialOpen) {
-        // 既に特別営業日の場合は削除確認
-        setDeletingSpecialOpenDay(specialOpen);
-        setIsDeleteModalOpen(true);
-      } else {
-        // 特別営業日を追加
-        setSelectedDate(date);
-        setModalMode('specialOpen');
-        setReason('');
-        setIsAddModalOpen(true);
-      }
+      // 定休日の場合 - 特別営業日を追加（既存があっても追加可能）
+      setSelectedDate(date);
+      setModalMode('specialOpen');
+      setReason('');
+      setSpecialOpenType('allDay');
+      setSpecialOpenTimeRanges([{ id: '1', startTime: '10:00', endTime: '18:00' }]);
+      setExistingSpecialOpenDays(daySpecialOpenDays);
+      setIsAddModalOpen(true);
     } else {
       // 通常の日の場合 - 不定休を追加（既存があっても追加可能）
       setSelectedDate(date);
@@ -346,31 +374,56 @@ export default function AdminBusinessPage() {
     e.preventDefault();
     if (!selectedDate) return;
 
+    setIsSubmitting(true);
+
     try {
-      const body: { date: string; reason?: string } = {
-        date: formatDateForApi(selectedDate),
-      };
+      const dateStr = formatDateForApi(selectedDate);
 
-      if (reason) {
-        body.reason = reason;
-      }
+      if (specialOpenType === 'allDay') {
+        // 終日営業の場合
+        const body: { date: string; reason?: string } = { date: dateStr };
+        if (reason) body.reason = reason;
 
-      const res = await fetch('/api/admin/special-open-days', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        const res = await fetch('/api/admin/special-open-days', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'エラーが発生しました');
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'エラーが発生しました');
+        }
+      } else {
+        // 時間帯営業の場合 - 複数の時間帯を順番に登録
+        for (const tr of specialOpenTimeRanges) {
+          const body: { date: string; startTime: string; endTime: string; reason?: string } = {
+            date: dateStr,
+            startTime: tr.startTime,
+            endTime: tr.endTime,
+          };
+          if (reason) body.reason = reason;
+
+          const res = await fetch('/api/admin/special-open-days', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'エラーが発生しました');
+          }
+        }
       }
 
       setIsAddModalOpen(false);
       fetchSpecialOpenDays();
-      showSuccess('特別営業日を追加しました');
+      showSuccess(specialOpenType === 'allDay' ? '終日営業を追加しました' : `${specialOpenTimeRanges.length}件の時間帯営業を追加しました`);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'エラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -765,6 +818,16 @@ export default function AdminBusinessPage() {
                         <p className="font-medium text-xs sm:text-sm">
                           {formatDisplayDate(day.date)}
                         </p>
+                        {(day.startTime && day.endTime) && (
+                          <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
+                            {day.startTime}〜{day.endTime}
+                          </p>
+                        )}
+                        {!day.startTime && !day.endTime && (
+                          <p className="text-[10px] sm:text-xs text-gray-600 mt-0.5">
+                            終日営業
+                          </p>
+                        )}
                         {day.reason && (
                           <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
                             {day.reason}
@@ -948,6 +1011,121 @@ export default function AdminBusinessPage() {
                     </div>
                   )}
 
+                  {/* 既存の特別営業日を表示 */}
+                  {modalMode === 'specialOpen' && existingSpecialOpenDays.length > 0 && (
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-xs sm:text-sm font-medium text-green-700 mb-2">
+                        この日の既存の特別営業日:
+                      </p>
+                      <div className="space-y-1">
+                        {existingSpecialOpenDays.map((s) => (
+                          <div key={s.id} className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="text-green-600">
+                              {s.startTime && s.endTime
+                                ? `${s.startTime}〜${s.endTime}`
+                                : '終日営業'}
+                              {s.reason && ` (${s.reason})`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddModalOpen(false);
+                                setDeletingSpecialOpenDay(s);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-1 text-green-400 hover:text-green-600 hover:bg-green-100 rounded transition-colors"
+                              title="削除"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {modalMode === 'specialOpen' && (
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        営業タイプ
+                      </label>
+                      <div className="flex gap-3 sm:gap-4">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            value="allDay"
+                            checked={specialOpenType === 'allDay'}
+                            onChange={(e) => setSpecialOpenType(e.target.value as 'allDay' | 'timeRange')}
+                            className="mr-1.5 sm:mr-2"
+                          />
+                          <span className="text-xs sm:text-sm">終日営業</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            value="timeRange"
+                            checked={specialOpenType === 'timeRange'}
+                            onChange={(e) => setSpecialOpenType(e.target.value as 'allDay' | 'timeRange')}
+                            className="mr-1.5 sm:mr-2"
+                          />
+                          <span className="text-xs sm:text-sm">時間帯営業</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalMode === 'specialOpen' && specialOpenType === 'timeRange' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700">
+                          営業時間帯
+                        </label>
+                        <button
+                          type="button"
+                          onClick={addSpecialOpenTimeRange}
+                          className="flex items-center gap-1 text-xs sm:text-sm text-[var(--color-accent)] hover:underline"
+                        >
+                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                          時間帯を追加
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {specialOpenTimeRanges.map((tr) => (
+                          <div key={tr.id} className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={tr.startTime}
+                              onChange={(e) => updateSpecialOpenTimeRange(tr.id, 'startTime', e.target.value)}
+                              className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
+                              required
+                            />
+                            <span className="text-gray-400 text-xs">〜</span>
+                            <input
+                              type="time"
+                              value={tr.endTime}
+                              onChange={(e) => updateSpecialOpenTimeRange(tr.id, 'endTime', e.target.value)}
+                              className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)]"
+                              required
+                            />
+                            {specialOpenTimeRanges.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeSpecialOpenTimeRange(tr.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                title="削除"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-gray-500">
+                        複数の時間帯を設定できます（例: 午前と夕方に営業）
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       理由（任意）
@@ -972,7 +1150,11 @@ export default function AdminBusinessPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={isSubmitting || (modalMode === 'holiday' && holidayType === 'timeRange' && timeRanges.length === 0)}
+                      disabled={
+                        isSubmitting ||
+                        (modalMode === 'holiday' && holidayType === 'timeRange' && timeRanges.length === 0) ||
+                        (modalMode === 'specialOpen' && specialOpenType === 'timeRange' && specialOpenTimeRanges.length === 0)
+                      }
                       className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm !text-white rounded-lg transition-colors disabled:opacity-50 ${
                         modalMode === 'holiday'
                           ? 'bg-red-500 hover:bg-red-600 active:bg-red-700'
@@ -985,7 +1167,9 @@ export default function AdminBusinessPage() {
                           ? holidayType === 'timeRange' && timeRanges.length > 1
                             ? `${timeRanges.length}件の時間帯休業を追加`
                             : '不定休を追加'
-                          : '特別営業日を追加'}
+                          : specialOpenType === 'timeRange' && specialOpenTimeRanges.length > 1
+                            ? `${specialOpenTimeRanges.length}件の時間帯営業を追加`
+                            : '特別営業日を追加'}
                     </button>
                   </div>
                 </form>
@@ -1079,6 +1263,16 @@ export default function AdminBusinessPage() {
                 <h3 className="text-base sm:text-lg font-medium text-center mb-2">特別営業日を削除</h3>
                 <p className="text-gray-500 text-xs sm:text-sm text-center mb-4 sm:mb-6">
                   {formatDisplayDate(deletingSpecialOpenDay.date)}の特別営業日を削除しますか？
+                  {(deletingSpecialOpenDay.startTime && deletingSpecialOpenDay.endTime) && (
+                    <span className="block mt-1 text-xs sm:text-sm font-medium">
+                      時間帯: {deletingSpecialOpenDay.startTime}〜{deletingSpecialOpenDay.endTime}
+                    </span>
+                  )}
+                  {!deletingSpecialOpenDay.startTime && !deletingSpecialOpenDay.endTime && (
+                    <span className="block mt-1 text-xs sm:text-sm font-medium">
+                      終日営業
+                    </span>
+                  )}
                   <br />
                   削除すると、この日は通常の定休日に戻ります。
                   {deletingSpecialOpenDay.reason && (

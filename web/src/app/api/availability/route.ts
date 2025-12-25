@@ -37,7 +37,7 @@ async function isSpecialOpenDay(date: Date): Promise<boolean> {
   const targetDate = new Date(date);
   targetDate.setHours(0, 0, 0, 0);
 
-  const specialOpenDay = await prisma.specialOpenDay.findUnique({
+  const specialOpenDay = await prisma.specialOpenDay.findFirst({
     where: { date: targetDate },
   });
 
