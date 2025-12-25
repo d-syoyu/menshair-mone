@@ -66,7 +66,7 @@ export function createNewsletterHtml(news: {
   publishedAt?: string;
   coverImage?: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
   const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
@@ -169,7 +169,7 @@ export function createNewsletterText(news: {
   publishedAt?: string;
   coverImage?: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
   const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
@@ -223,7 +223,7 @@ export interface ReservationConfirmationData {
 
 // 予約完了メールHTML
 export function createReservationConfirmationHtml(data: ReservationConfirmationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
   const finalPrice = data.totalPrice - data.couponDiscount;
@@ -345,7 +345,7 @@ export function createReservationConfirmationHtml(data: ReservationConfirmationD
 
 // 予約完了メール プレーンテキスト版
 export function createReservationConfirmationText(data: ReservationConfirmationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
   const finalPrice = data.totalPrice - data.couponDiscount;
@@ -402,7 +402,7 @@ export interface ReservationCancellationData {
 
 // キャンセル確認メールHTML
 export function createReservationCancellationHtml(data: ReservationCancellationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const bookingUrl = `${siteUrl}/booking`;
   const dateStr = formatReservationDate(data.date);
 
@@ -496,7 +496,7 @@ export function createReservationCancellationHtml(data: ReservationCancellationD
 
 // キャンセル確認メール プレーンテキスト版
 export function createReservationCancellationText(data: ReservationCancellationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://menshair-mone-id5o.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
   const bookingUrl = `${siteUrl}/booking`;
   const dateStr = formatReservationDate(data.date);
 
