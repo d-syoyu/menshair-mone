@@ -30,6 +30,7 @@ const updateReservationSchema = z.object({
   menuIds: z.array(z.string()).min(1, "メニューを1つ以上選択してください").optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません").optional(),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません").optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "時間の形式が正しくありません").optional(),
   note: z.string().optional().nullable(),
   status: z.enum(["CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"]).optional(),
   couponCode: z.string().max(50, "クーポンコードは50文字以内で入力してください").optional().nullable(),
@@ -190,6 +191,52 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+// DELETE /api/admin/reservations/[id] - 予約削除
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    // 予約が存在するか確認
+    const existingReservation = await prisma.reservation.findUnique({
+      where: { id },
+    });
+
+    if (!existingReservation) {
+      return NextResponse.json(
+        { error: "予約が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    // トランザクションで予約とアイテムを削除
+    await prisma.$transaction(async (tx) => {
+      // 予約アイテムを削除
+      await tx.reservationItem.deleteMany({
+        where: { reservationId: id },
+      });
+
+      // 予約を削除
+      await tx.reservation.delete({
+        where: { id },
+      });
+    });
+
+    return NextResponse.json({ success: true, message: "予約を削除しました" });
+  } catch (error) {
+    console.error("Delete reservation error:", error);
+    return NextResponse.json(
+      { error: "予約の削除に失敗しました" },
+      { status: 500 }
+    );
+  }
+}
+
 // PATCH /api/admin/reservations/[id] - 予約更新
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -210,7 +257,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { menuIds, date, startTime, note, status, couponCode } = validationResult.data;
+    const { menuIds, date, startTime, endTime, note, status, couponCode } = validationResult.data;
 
     // 予約が存在するか確認
     const existingReservation = await prisma.reservation.findUnique({
@@ -286,8 +333,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updateData.startTime = startTime;
     }
 
-    // 終了時間を再計算（日時またはメニューが変更された場合）
-    if (startTime || menuIds) {
+    // 終了時間の更新
+    // 手動で終了時間が指定された場合は優先、それ以外はメニューから自動計算
+    if (endTime) {
+      // 手動で終了時間を指定（施術時間の調整用）
+      updateData.endTime = endTime;
+      // totalDurationを再計算
+      const startMinutes = timeToMinutes(newStartTime);
+      const endMinutes = timeToMinutes(endTime);
+      updateData.totalDuration = endMinutes - startMinutes;
+      totalDuration = updateData.totalDuration;
+    } else if (startTime || menuIds) {
+      // 自動計算（開始時間またはメニューが変更された場合）
       const startMinutes = timeToMinutes(newStartTime);
       const endMinutes = startMinutes + totalDuration;
       updateData.endTime = minutesToTime(endMinutes);
@@ -304,7 +361,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 日時が変更された場合、重複チェック
-    if (date || startTime || menuIds) {
+    if (date || startTime || endTime || menuIds) {
       const checkDate = updateData.date || existingReservation.date;
       const checkStartTime = updateData.startTime || existingReservation.startTime;
       const checkEndTime = updateData.endTime || existingReservation.endTime;

@@ -119,7 +119,7 @@ interface ConfirmDialog {
   reservationId: string;
   reservationName: string;
   customerName: string;
-  action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED';
+  action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED' | 'DELETE';
 }
 
 interface CustomerOption {
@@ -200,6 +200,7 @@ function AdminReservationsContent() {
   const [expandedEditCategories, setExpandedEditCategories] = useState<string[]>([]);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
   const [editNote, setEditNote] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
@@ -261,7 +262,7 @@ function AdminReservationsContent() {
   // 確認ダイアログを開く
   const openConfirmDialog = (
     reservation: Reservation,
-    action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED'
+    action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED' | 'DELETE'
   ) => {
     setConfirmDialog({
       isOpen: true,
@@ -277,24 +278,36 @@ function AdminReservationsContent() {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // ステータス変更を実行
+  // ステータス変更または削除を実行
   const handleStatusChange = async () => {
     const { reservationId, action } = confirmDialog;
     try {
-      const res = await fetch(`/api/reservations/${reservationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action }),
-      });
+      if (action === 'DELETE') {
+        // 削除処理
+        const res = await fetch(`/api/admin/reservations/${reservationId}`, {
+          method: 'DELETE',
+        });
 
-      if (res.ok) {
-        setReservations((prev) =>
-          prev.map((r) =>
-            r.id === reservationId
-              ? { ...r, status: action as Reservation['status'] }
-              : r
-          )
-        );
+        if (res.ok) {
+          setReservations((prev) => prev.filter((r) => r.id !== reservationId));
+        }
+      } else {
+        // ステータス変更処理
+        const res = await fetch(`/api/reservations/${reservationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: action }),
+        });
+
+        if (res.ok) {
+          setReservations((prev) =>
+            prev.map((r) =>
+              r.id === reservationId
+                ? { ...r, status: action as Reservation['status'] }
+                : r
+            )
+          );
+        }
       }
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -437,6 +450,7 @@ function AdminReservationsContent() {
     setEditMenuIds(reservation.items.map(item => item.menuId));
     setEditDate(formatDateForInput(new Date(reservation.date)));
     setEditTime(reservation.startTime);
+    setEditEndTime(reservation.endTime);
     setEditNote(reservation.note || '');
     setEditError(null);
     setIsEditModalOpen(true);
@@ -520,6 +534,7 @@ function AdminReservationsContent() {
           menuIds: editMenuIds,
           date: editDate,
           startTime: editTime,
+          endTime: editEndTime,
           note: editNote || null,
         }),
       });
@@ -857,8 +872,8 @@ function AdminReservationsContent() {
                             : 'hover:bg-gray-50'
                         }`}
                       >
-                        {/* Mobile Layout */}
-                        <div className="md:hidden">
+                        {/* Mobile & Tablet Layout */}
+                        <div className="lg:hidden">
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div>
                               <p className="text-sm text-gray-500">
@@ -884,11 +899,11 @@ function AdminReservationsContent() {
                                     className="w-1 h-10 rounded-full flex-shrink-0"
                                     style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#888' }}
                                   />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm">{item.menuName}</p>
+                                  <div className="flex-1 min-w-[120px]">
+                                    <p className="font-medium text-sm break-words">{item.menuName}</p>
                                     <p className="text-xs text-gray-500">{item.category}</p>
                                   </div>
-                                  <div className="text-right flex-shrink-0">
+                                  <div className="text-right flex-shrink-0 whitespace-nowrap">
                                     <p className="text-sm font-medium text-gray-900">¥{item.price.toLocaleString()}</p>
                                     <p className="text-xs text-gray-500">{item.duration}分</p>
                                   </div>
@@ -959,8 +974,8 @@ function AdminReservationsContent() {
                           </div>
                         </div>
 
-                        {/* Desktop/Tablet Layout */}
-                        <div className="hidden md:block">
+                        {/* Desktop Layout */}
+                        <div className="hidden lg:block">
                           <div className="flex items-start gap-4 md:gap-6">
                             {/* Date & Time */}
                             <div className="w-28 md:w-36 text-center flex-shrink-0">
@@ -998,11 +1013,11 @@ function AdminReservationsContent() {
                                         className="w-1 h-12 rounded-full flex-shrink-0"
                                         style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#888' }}
                                       />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-base">{item.menuName}</p>
+                                      <div className="flex-1 min-w-[150px]">
+                                        <p className="font-medium text-base break-words">{item.menuName}</p>
                                         <p className="text-sm text-gray-500">{item.category}</p>
                                       </div>
-                                      <div className="flex items-center gap-4 flex-shrink-0">
+                                      <div className="flex items-center gap-4 flex-shrink-0 whitespace-nowrap">
                                         <span className="text-sm text-gray-500">{item.duration}分</span>
                                         <span className="text-base font-medium text-gray-900 min-w-[80px] text-right">
                                           ¥{item.price.toLocaleString()}
@@ -1134,18 +1149,22 @@ function AdminReservationsContent() {
               <div className={`p-3 rounded-full ${
                 confirmDialog.action === 'CONFIRMED'
                   ? 'bg-green-100 text-green-600'
-                  : confirmDialog.action === 'CANCELLED'
-                    ? 'bg-gray-100 text-gray-600'
-                    : 'bg-red-100 text-red-600'
+                  : confirmDialog.action === 'DELETE'
+                    ? 'bg-red-100 text-red-600'
+                    : confirmDialog.action === 'CANCELLED'
+                      ? 'bg-gray-100 text-gray-600'
+                      : 'bg-red-100 text-red-600'
               }`}>
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-medium">
                 {confirmDialog.action === 'CONFIRMED'
                   ? '予約を復元'
-                  : confirmDialog.action === 'CANCELLED'
-                    ? 'キャンセル確認'
-                    : '無断キャンセル確認'}
+                  : confirmDialog.action === 'DELETE'
+                    ? '予約を削除'
+                    : confirmDialog.action === 'CANCELLED'
+                      ? 'キャンセル確認'
+                      : '無断キャンセル確認'}
               </h3>
             </div>
 
@@ -1153,7 +1172,9 @@ function AdminReservationsContent() {
               <p className="text-gray-600 mb-2">
                 {confirmDialog.action === 'CONFIRMED'
                   ? '以下の予約を元に戻しますか？'
-                  : `以下の予約を${confirmDialog.action === 'CANCELLED' ? 'キャンセル' : '無断キャンセル'}にしますか？`}
+                  : confirmDialog.action === 'DELETE'
+                    ? '以下の予約を完全に削除しますか？この操作は取り消せません。'
+                    : `以下の予約を${confirmDialog.action === 'CANCELLED' ? 'キャンセル' : '無断キャンセル'}にしますか？`}
               </p>
               <p className="font-medium text-lg">{confirmDialog.reservationName}</p>
               <p className="text-gray-500">{confirmDialog.customerName} 様</p>
@@ -1171,16 +1192,20 @@ function AdminReservationsContent() {
                 className={`flex-1 py-3 px-4 text-white rounded-lg transition-colors min-h-[48px] ${
                   confirmDialog.action === 'CONFIRMED'
                     ? 'bg-green-600 hover:bg-green-700'
-                    : confirmDialog.action === 'CANCELLED'
-                      ? 'bg-gray-600 hover:bg-gray-700'
-                      : 'bg-red-600 hover:bg-red-700'
+                    : confirmDialog.action === 'DELETE'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : confirmDialog.action === 'CANCELLED'
+                        ? 'bg-gray-600 hover:bg-gray-700'
+                        : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
                 {confirmDialog.action === 'CONFIRMED'
                   ? '予約を復元する'
-                  : confirmDialog.action === 'CANCELLED'
-                    ? 'キャンセルする'
-                    : '無断キャンセルにする'}
+                  : confirmDialog.action === 'DELETE'
+                    ? '削除する'
+                    : confirmDialog.action === 'CANCELLED'
+                      ? 'キャンセルする'
+                      : '無断キャンセルにする'}
               </button>
             </div>
           </motion.div>
@@ -1607,7 +1632,7 @@ function AdminReservationsContent() {
                 {editTab === 'reservation' && (
                   <div className="space-y-4">
                     {/* 日時 */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">日付</label>
                         <input
@@ -1617,18 +1642,35 @@ function AdminReservationsContent() {
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
-                        <select
-                          value={editTime}
-                          onChange={(e) => setEditTime(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
-                        >
-                          {TIME_OPTIONS.map(time => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
+                          <select
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          >
+                            {TIME_OPTIONS.map(time => (
+                              <option key={time} value={time}>{time}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
+                          <select
+                            value={editEndTime}
+                            onChange={(e) => setEditEndTime(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          >
+                            {TIME_OPTIONS.map(time => (
+                              <option key={time} value={time}>{time}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-500">
+                        ※ 終了時間を手動で変更すると、施術時間が調整されます
+                      </p>
                     </div>
 
                     {/* メニュー選択 */}
@@ -1793,12 +1835,25 @@ function AdminReservationsContent() {
                     onClick={() => setIsEditModalOpen(false)}
                     className="px-4 py-3 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    キャンセル
+                    閉じる
                   </button>
+                  {editTab === 'reservation' && (
+                    <button
+                      onClick={() => {
+                        if (editingReservation) {
+                          setIsEditModalOpen(false);
+                          openConfirmDialog(editingReservation, 'DELETE');
+                        }
+                      }}
+                      className="px-4 py-3 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      削除
+                    </button>
+                  )}
                   {editTab === 'reservation' ? (
                     <button
                       onClick={updateReservation}
-                      disabled={isEditSubmitting || editMenuIds.length === 0 || !editDate || !editTime}
+                      disabled={isEditSubmitting || editMenuIds.length === 0 || !editDate || !editTime || !editEndTime}
                       className="flex-1 py-3 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isEditSubmitting ? '更新中...' : '予約を更新'}
