@@ -73,11 +73,19 @@ function BookingCompleteContent() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-accent">•</span>
-              キャンセルは前日19:00までマイページから可能です。
+              オンラインでのキャンセル・変更は前日19:00までにお願いいたします。
             </li>
             <li className="flex items-start gap-2">
               <span className="text-accent">•</span>
-              ご不明な点がございましたらお電話でお問い合わせください。
+              遅れられる場合は、事前にご連絡をお願いします。
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-accent">•</span>
+              ご連絡無く10分経過致しましたら無断キャンセル扱いとさせていただきます。
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-accent">•</span>
+              無断キャンセル及び当日キャンセルに対しキャンセル料をお支払いいただく事もございますのでご注意ください。
             </li>
           </ul>
         </motion.div>

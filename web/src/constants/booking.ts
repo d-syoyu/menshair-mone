@@ -20,7 +20,7 @@ export const BOOKING_CONFIG = {
   closedDayOfWeek: 1, // 月曜日 (0=日, 1=月, ...)
 
   // 予約可能期間
-  bookingAdvanceDays: 60, // 60日先まで予約可能
+  bookingAdvanceDays: 90, // 90日先まで予約可能
 } as const;
 
 // 時間スロットを生成

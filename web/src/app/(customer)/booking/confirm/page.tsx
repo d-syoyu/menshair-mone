@@ -619,10 +619,12 @@ function BookingConfirmContent() {
           className="text-sm text-text-muted mb-8"
         >
           <p className="mb-2">【キャンセルポリシー】</p>
-          <p>
-            キャンセルはご予約前日の19:00まで可能です。
-            それ以降のキャンセルはお電話にてお問い合わせください。
-          </p>
+          <ul className="space-y-1 list-disc list-inside">
+            <li>オンラインでのキャンセル・変更は前日19:00までにお願いいたします。</li>
+            <li>遅れられる場合は、事前にご連絡をお願いします。</li>
+            <li>ご連絡無く10分経過致しましたら無断キャンセル扱いとさせていただきます。</li>
+            <li>無断キャンセル及び当日キャンセルに対しキャンセル料をお支払いいただく事もございますのでご注意ください。</li>
+          </ul>
         </motion.div>
 
         {/* Action Buttons */}

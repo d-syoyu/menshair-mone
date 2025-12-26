@@ -351,41 +351,52 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // 予約完了メール送信（非同期・エラー時もAPIは成功扱い）
+    // 予約完了メール送信（並列で実行し、完了を待つ）
+    const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
+
     if (reservation?.user?.email) {
-      sendReservationConfirmationEmail(reservation.user.email, {
-        reservationId: reservation.id,
-        customerName: reservation.user.name || 'お客様',
-        date: new Date(reservation.date),
-        startTime: reservation.startTime,
-        endTime: reservation.endTime,
-        menuSummary: reservation.menuSummary,
-        totalPrice: reservation.totalPrice,
-        couponDiscount: reservation.couponDiscount,
-        note: reservation.note || undefined,
-      }).catch((err) => {
-        console.error('Failed to send reservation confirmation email:', err);
-      });
+      emailPromises.push(
+        sendReservationConfirmationEmail(reservation.user.email, {
+          reservationId: reservation.id,
+          customerName: reservation.user.name || 'お客様',
+          date: new Date(reservation.date),
+          startTime: reservation.startTime,
+          endTime: reservation.endTime,
+          menuSummary: reservation.menuSummary,
+          totalPrice: reservation.totalPrice,
+          couponDiscount: reservation.couponDiscount,
+          note: reservation.note || undefined,
+        }).catch((err) => {
+          console.error('Failed to send reservation confirmation email:', err);
+          return { success: false, error: String(err) };
+        })
+      );
     }
 
-    // 管理者への新規予約通知メール（非同期・エラー時もAPIは成功扱い）
+    // 管理者への新規予約通知メール
     if (reservation) {
-      sendAdminNewReservationEmail({
-        reservationId: reservation.id,
-        customerName: reservation.user?.name || 'お客様',
-        customerEmail: reservation.user?.email,
-        customerPhone: customerPhone || null,
-        date: new Date(reservation.date),
-        startTime: reservation.startTime,
-        endTime: reservation.endTime,
-        menuSummary: reservation.menuSummary,
-        totalPrice: reservation.totalPrice,
-        note: reservation.note,
-        isPhoneReservation: false,
-      }).catch((err) => {
-        console.error('Failed to send admin notification email:', err);
-      });
+      emailPromises.push(
+        sendAdminNewReservationEmail({
+          reservationId: reservation.id,
+          customerName: reservation.user?.name || 'お客様',
+          customerEmail: reservation.user?.email,
+          customerPhone: customerPhone || null,
+          date: new Date(reservation.date),
+          startTime: reservation.startTime,
+          endTime: reservation.endTime,
+          menuSummary: reservation.menuSummary,
+          totalPrice: reservation.totalPrice,
+          note: reservation.note,
+          isPhoneReservation: false,
+        }).catch((err) => {
+          console.error('Failed to send admin notification email:', err);
+          return { success: false, error: String(err) };
+        })
+      );
     }
+
+    // すべてのメール送信を待つ（エラー時もAPIは成功扱い）
+    await Promise.all(emailPromises);
 
     return NextResponse.json(
       {

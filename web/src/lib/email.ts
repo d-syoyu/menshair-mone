@@ -37,8 +37,14 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       text,
     });
 
-    console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, result:`, result);
-    return { success: true, data: result };
+    // Resend APIのエラーレスポンスをチェック
+    if (result.error) {
+      console.error(`[Email] Failed to send email to: ${toAddresses.join(', ')}, error:`, result.error);
+      return { success: false, error: result.error.message || 'Unknown error' };
+    }
+
+    console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, id: ${result.data?.id}`);
+    return { success: true, data: result.data };
   } catch (error) {
     console.error('[Email] Failed to send email:', error);
     return { success: false, error: String(error) };
@@ -313,10 +319,12 @@ export function createReservationConfirmationHtml(data: ReservationConfirmationD
                 <p style="margin: 0 0 10px; color: #c4a77d; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">
                   キャンセルポリシー
                 </p>
-                <p style="margin: 0; color: #888888; font-size: 13px; line-height: 1.6;">
-                  キャンセル・変更は前日19:00までにお願いいたします。<br>
-                  それ以降のキャンセルはご遠慮ください。
-                </p>
+                <ul style="margin: 0; padding: 0 0 0 16px; color: #888888; font-size: 13px; line-height: 1.8;">
+                  <li>オンラインでのキャンセル・変更は前日19:00までにお願いいたします。</li>
+                  <li>遅れられる場合は、事前にご連絡をお願いします。</li>
+                  <li>ご連絡無く10分経過致しましたら無断キャンセル扱いとさせていただきます。</li>
+                  <li>無断キャンセル及び当日キャンセルに対しキャンセル料をお支払いいただく事もございますのでご注意ください。</li>
+                </ul>
               </div>
 
               <a href="${mypageUrl}" style="display: inline-block; padding: 14px 32px; background-color: #4a7c59; color: #ffffff; text-decoration: none; font-size: 14px; letter-spacing: 1px; border-radius: 0;">
@@ -369,8 +377,10 @@ export function createReservationConfirmationText(data: ReservationConfirmationD
   text += `料金: ${formatPrice(finalPrice)}\n`;
   if (data.note) text += `備考: ${data.note}\n`;
   text += `\n--- キャンセルポリシー ---\n`;
-  text += `キャンセル・変更は前日19:00までにお願いいたします。\n`;
-  text += `それ以降のキャンセルはご遠慮ください。\n\n`;
+  text += `・オンラインでのキャンセル・変更は前日19:00までにお願いいたします。\n`;
+  text += `・遅れられる場合は、事前にご連絡をお願いします。\n`;
+  text += `・ご連絡無く10分経過致しましたら無断キャンセル扱いとさせていただきます。\n`;
+  text += `・無断キャンセル及び当日キャンセルに対しキャンセル料をお支払いいただく事もございますのでご注意ください。\n\n`;
   text += `マイページで確認: ${mypageUrl}\n\n`;
   text += `---\n`;
   text += `${SALON_NAME}\n`;
