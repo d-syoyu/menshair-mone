@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { parseLocalDate } from "@/lib/date-utils";
+import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
 
 // DB Menuの型定義
 interface DbMenu {
@@ -404,6 +405,40 @@ export async function POST(request: NextRequest) {
         },
         items: true,
       },
+    });
+
+    // 電話予約確認メール送信（顧客にメールアドレスがある場合のみ）
+    if (reservation.user?.email) {
+      sendReservationConfirmationEmail(reservation.user.email, {
+        reservationId: reservation.id,
+        customerName: reservation.user.name || 'お客様',
+        date: new Date(reservation.date),
+        startTime: reservation.startTime,
+        endTime: reservation.endTime,
+        menuSummary: reservation.menuSummary,
+        totalPrice: reservation.totalPrice,
+        couponDiscount: reservation.couponDiscount,
+        note: reservation.note || undefined,
+      }).catch((err) => {
+        console.error('Failed to send reservation confirmation email:', err);
+      });
+    }
+
+    // 管理者への新規予約通知メール（電話予約）
+    sendAdminNewReservationEmail({
+      reservationId: reservation.id,
+      customerName: reservation.user?.name || 'お客様',
+      customerEmail: reservation.user?.email,
+      customerPhone: reservation.user?.phone,
+      date: new Date(reservation.date),
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      menuSummary: reservation.menuSummary,
+      totalPrice: reservation.totalPrice,
+      note: reservation.note,
+      isPhoneReservation: true,
+    }).catch((err) => {
+      console.error('Failed to send admin notification email:', err);
     });
 
     return NextResponse.json(reservation, { status: 201 });

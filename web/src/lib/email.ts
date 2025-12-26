@@ -10,6 +10,7 @@ const FROM_EMAIL = "Men's hair MONE <noreply@mone0601.com>";
 const SALON_NAME = "MONË";
 const SALON_ADDRESS = SALON_INFO.address;
 const SALON_PHONE = SALON_INFO.phone;
+const ADMIN_EMAIL = "mo.0816.ne@gmail.com";
 
 interface SendEmailOptions {
   to: string | string[];
@@ -19,23 +20,27 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+  const toAddresses = Array.isArray(to) ? to : [to];
+  console.log(`[Email] Attempting to send email to: ${toAddresses.join(', ')}, subject: ${subject}`);
+
   if (!resend) {
-    console.error('Resend API key not configured');
+    console.error('[Email] Resend API key not configured - RESEND_API_KEY is missing');
     return { success: false, error: 'Email service not configured' };
   }
 
   try {
     const result = await resend.emails.send({
       from: FROM_EMAIL,
-      to: Array.isArray(to) ? to : [to],
+      to: toAddresses,
       subject,
       html,
       text,
     });
 
+    console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, result:`, result);
     return { success: true, data: result };
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('[Email] Failed to send email:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -634,4 +639,669 @@ export function createMagicLinkText(params: {
   text += `Tel: ${SALON_PHONE}\n`;
 
   return text;
+}
+
+// ==========================================
+// 管理者への通知メール
+// ==========================================
+
+// 管理者への新規予約通知用データ型
+export interface AdminNewReservationData {
+  reservationId: string;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  menuSummary: string;
+  totalPrice: number;
+  note?: string | null;
+  isPhoneReservation?: boolean;
+}
+
+// 管理者への新規予約通知HTML
+export function createAdminNewReservationHtml(data: AdminNewReservationData) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const adminUrl = `${siteUrl}/admin/reservations`;
+  const dateStr = formatReservationDate(data.date);
+  const reservationType = data.isPhoneReservation ? '電話予約' : 'Web予約';
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新規予約のお知らせ</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 20px 30px; background-color: #2d5a27; color: white;">
+              <h1 style="margin: 0; font-size: 18px; font-weight: 500;">
+                📅 新規${reservationType}が入りました
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px; background-color: #ffffff;">
+              <!-- 予約詳細 -->
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px; width: 100px;">予約番号</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px; font-weight: 500;">${data.reservationId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">お客様名</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px; font-weight: 500;">${data.customerName}</td>
+                </tr>
+                ${data.customerPhone ? `
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">電話番号</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.customerPhone}</td>
+                </tr>
+                ` : ''}
+                ${data.customerEmail ? `
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">メール</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.customerEmail}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">日時</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px; font-weight: 500;">${dateStr} ${data.startTime}〜${data.endTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">メニュー</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.menuSummary}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">料金</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #2d5a27; font-size: 16px; font-weight: 600;">${formatPrice(data.totalPrice)}</td>
+                </tr>
+                ${data.note ? `
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">備考</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.note}</td>
+                </tr>
+                ` : ''}
+              </table>
+
+              <!-- CTA -->
+              <table style="width: 100%;">
+                <tr>
+                  <td align="center">
+                    <a href="${adminUrl}" style="display: inline-block; padding: 12px 30px; background-color: #2d5a27; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">
+                      管理画面で確認
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+// 管理者への新規予約通知テキスト
+export function createAdminNewReservationText(data: AdminNewReservationData) {
+  const dateStr = formatReservationDate(data.date);
+  const reservationType = data.isPhoneReservation ? '電話予約' : 'Web予約';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+
+  let text = `【${SALON_NAME}】新規${reservationType}のお知らせ\n\n`;
+  text += `新しい予約が入りました。\n\n`;
+  text += `予約番号: ${data.reservationId}\n`;
+  text += `お客様名: ${data.customerName}\n`;
+  if (data.customerPhone) text += `電話番号: ${data.customerPhone}\n`;
+  if (data.customerEmail) text += `メール: ${data.customerEmail}\n`;
+  text += `日時: ${dateStr} ${data.startTime}〜${data.endTime}\n`;
+  text += `メニュー: ${data.menuSummary}\n`;
+  text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  if (data.note) text += `備考: ${data.note}\n`;
+  text += `\n管理画面: ${siteUrl}/admin/reservations\n`;
+
+  return text;
+}
+
+// 管理者への新規予約通知メール送信
+export async function sendAdminNewReservationEmail(data: AdminNewReservationData) {
+  const reservationType = data.isPhoneReservation ? '電話予約' : 'Web予約';
+  const html = createAdminNewReservationHtml(data);
+  const text = createAdminNewReservationText(data);
+
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `【${SALON_NAME}】新規${reservationType}: ${data.customerName}様 ${formatReservationDate(data.date)} ${data.startTime}`,
+    html,
+    text,
+  });
+}
+
+// 管理者へのキャンセル通知用データ型
+export interface AdminCancellationData {
+  reservationId: string;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  date: Date;
+  startTime: string;
+  menuSummary: string;
+  totalPrice: number;
+  cancelledByAdmin?: boolean;
+}
+
+// 管理者へのキャンセル通知HTML
+export function createAdminCancellationHtml(data: AdminCancellationData) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const adminUrl = `${siteUrl}/admin/reservations`;
+  const dateStr = formatReservationDate(data.date);
+  const cancelType = data.cancelledByAdmin ? '管理者によるキャンセル' : 'お客様によるキャンセル';
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>予約キャンセルのお知らせ</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 20px 30px; background-color: #dc2626; color: white;">
+              <h1 style="margin: 0; font-size: 18px; font-weight: 500;">
+                ❌ 予約がキャンセルされました
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px; background-color: #ffffff;">
+              <p style="margin: 0 0 20px; color: #666; font-size: 14px;">
+                ${cancelType}
+              </p>
+
+              <!-- 予約詳細 -->
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px; width: 100px;">予約番号</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.reservationId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">お客様名</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px; font-weight: 500;">${data.customerName}</td>
+                </tr>
+                ${data.customerPhone ? `
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">電話番号</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.customerPhone}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">日時</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #999; font-size: 14px; text-decoration: line-through;">${dateStr} ${data.startTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">メニュー</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #999; font-size: 14px; text-decoration: line-through;">${data.menuSummary}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">料金</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #999; font-size: 14px; text-decoration: line-through;">${formatPrice(data.totalPrice)}</td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table style="width: 100%;">
+                <tr>
+                  <td align="center">
+                    <a href="${adminUrl}" style="display: inline-block; padding: 12px 30px; background-color: #666; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">
+                      管理画面で確認
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+// 管理者へのキャンセル通知テキスト
+export function createAdminCancellationText(data: AdminCancellationData) {
+  const dateStr = formatReservationDate(data.date);
+  const cancelType = data.cancelledByAdmin ? '管理者によるキャンセル' : 'お客様によるキャンセル';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+
+  let text = `【${SALON_NAME}】予約キャンセルのお知らせ\n\n`;
+  text += `${cancelType}\n\n`;
+  text += `予約番号: ${data.reservationId}\n`;
+  text += `お客様名: ${data.customerName}\n`;
+  if (data.customerPhone) text += `電話番号: ${data.customerPhone}\n`;
+  text += `日時: ${dateStr} ${data.startTime}\n`;
+  text += `メニュー: ${data.menuSummary}\n`;
+  text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  text += `\n管理画面: ${siteUrl}/admin/reservations\n`;
+
+  return text;
+}
+
+// 管理者へのキャンセル通知メール送信
+export async function sendAdminCancellationEmail(data: AdminCancellationData) {
+  const html = createAdminCancellationHtml(data);
+  const text = createAdminCancellationText(data);
+
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `【${SALON_NAME}】キャンセル: ${data.customerName}様 ${formatReservationDate(data.date)} ${data.startTime}`,
+    html,
+    text,
+  });
+}
+
+// ==========================================
+// 顧客への予約変更通知メール
+// ==========================================
+
+// 予約変更通知用データ型
+export interface ReservationChangeData {
+  reservationId: string;
+  customerName: string;
+  oldDate: Date;
+  oldStartTime: string;
+  oldEndTime: string;
+  oldMenuSummary: string;
+  oldTotalPrice: number;
+  newDate: Date;
+  newStartTime: string;
+  newEndTime: string;
+  newMenuSummary: string;
+  newTotalPrice: number;
+  note?: string | null;
+}
+
+// 予約変更通知HTML
+export function createReservationChangeHtml(data: ReservationChangeData) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const mypageUrl = `${siteUrl}/mypage/reservations`;
+  const oldDateStr = formatReservationDate(data.oldDate);
+  const newDateStr = formatReservationDate(data.newDate);
+
+  const dateChanged = oldDateStr !== newDateStr || data.oldStartTime !== data.newStartTime;
+  const menuChanged = data.oldMenuSummary !== data.newMenuSummary;
+  const priceChanged = data.oldTotalPrice !== data.newTotalPrice;
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ご予約内容変更のお知らせ</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #242424; border-bottom: 1px solid #3a3a3a;">
+              <h1 style="margin: 0; color: #c4a77d; font-size: 24px; font-weight: 300; letter-spacing: 4px;">
+                ${SALON_NAME}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #242424;">
+              <p style="margin: 0 0 20px; color: #c4a77d; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">
+                Reservation Changed
+              </p>
+
+              <h2 style="margin: 0 0 24px; color: #ffffff; font-size: 22px; font-weight: 500; line-height: 1.4;">
+                ご予約内容変更のお知らせ
+              </h2>
+
+              <p style="margin: 0 0 30px; color: #b0b0b0; font-size: 15px; line-height: 1.6;">
+                ${data.customerName} 様<br>
+                ご予約内容を変更いたしました。
+              </p>
+
+              <!-- 変更後の予約詳細 -->
+              <p style="margin: 0 0 10px; color: #c4a77d; font-size: 14px; font-weight: 500;">変更後のご予約</p>
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #2a3a2a; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 12px 16px; color: #888888; font-size: 13px; width: 80px;">予約番号</td>
+                  <td style="padding: 12px 16px; color: #ffffff; font-size: 14px; font-weight: 500;">${data.reservationId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #888888; font-size: 13px;">日時</td>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #ffffff; font-size: 14px; font-weight: 500;">
+                    ${newDateStr} ${data.newStartTime}〜${data.newEndTime}
+                    ${dateChanged ? '<span style="color: #c4a77d; font-size: 12px; margin-left: 8px;">変更</span>' : ''}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #888888; font-size: 13px;">メニュー</td>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #ffffff; font-size: 14px;">
+                    ${data.newMenuSummary}
+                    ${menuChanged ? '<span style="color: #c4a77d; font-size: 12px; margin-left: 8px;">変更</span>' : ''}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #888888; font-size: 13px;">料金</td>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #c4a77d; font-size: 16px; font-weight: 600;">
+                    ${formatPrice(data.newTotalPrice)}
+                    ${priceChanged ? '<span style="color: #888888; font-size: 12px; margin-left: 8px;">変更</span>' : ''}
+                  </td>
+                </tr>
+                ${data.note ? `
+                <tr>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #888888; font-size: 13px;">備考</td>
+                  <td style="padding: 12px 16px; border-top: 1px solid #3a4a3a; color: #b0b0b0; font-size: 14px;">${data.note}</td>
+                </tr>
+                ` : ''}
+              </table>
+
+              <!-- 変更前の予約詳細 -->
+              <p style="margin: 0 0 10px; color: #666666; font-size: 12px;">変更前</p>
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px; width: 80px;">日時</td>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px; text-decoration: line-through;">${oldDateStr} ${data.oldStartTime}〜${data.oldEndTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px;">メニュー</td>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px; text-decoration: line-through;">${data.oldMenuSummary}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px;">料金</td>
+                  <td style="padding: 8px 0; color: #666666; font-size: 12px; text-decoration: line-through;">${formatPrice(data.oldTotalPrice)}</td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table style="width: 100%; margin-bottom: 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="${mypageUrl}" style="display: inline-block; padding: 14px 36px; background-color: #c4a77d; color: #1a1a1a; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
+                      マイページで確認
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 20px; color: #888888; font-size: 13px; line-height: 1.6;">
+                ご不明な点がございましたら、お気軽にお問い合わせください。
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #1a1a1a; border-top: 1px solid #3a3a3a;">
+              <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.8;">
+                ${SALON_NAME}<br>
+                ${SALON_ADDRESS}<br>
+                Tel: ${SALON_PHONE}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+// 予約変更通知テキスト
+export function createReservationChangeText(data: ReservationChangeData) {
+  const oldDateStr = formatReservationDate(data.oldDate);
+  const newDateStr = formatReservationDate(data.newDate);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+
+  let text = `${SALON_NAME} - ご予約内容変更のお知らせ\n\n`;
+  text += `${data.customerName} 様\n\n`;
+  text += `ご予約内容を変更いたしました。\n\n`;
+  text += `【変更後のご予約】\n`;
+  text += `予約番号: ${data.reservationId}\n`;
+  text += `日時: ${newDateStr} ${data.newStartTime}〜${data.newEndTime}\n`;
+  text += `メニュー: ${data.newMenuSummary}\n`;
+  text += `料金: ${formatPrice(data.newTotalPrice)}\n`;
+  if (data.note) text += `備考: ${data.note}\n`;
+  text += `\n【変更前】\n`;
+  text += `日時: ${oldDateStr} ${data.oldStartTime}〜${data.oldEndTime}\n`;
+  text += `メニュー: ${data.oldMenuSummary}\n`;
+  text += `料金: ${formatPrice(data.oldTotalPrice)}\n`;
+  text += `\nマイページ: ${siteUrl}/mypage/reservations\n\n`;
+  text += `---\n`;
+  text += `${SALON_NAME}\n`;
+  text += `${SALON_ADDRESS}\n`;
+  text += `Tel: ${SALON_PHONE}\n`;
+
+  return text;
+}
+
+// 予約変更通知メール送信
+export async function sendReservationChangeEmail(
+  toEmail: string,
+  data: ReservationChangeData
+): Promise<{ success: boolean; error?: string }> {
+  const html = createReservationChangeHtml(data);
+  const text = createReservationChangeText(data);
+
+  return sendEmail({
+    to: toEmail,
+    subject: `【${SALON_NAME}】ご予約内容変更のお知らせ`,
+    html,
+    text,
+  });
+}
+
+// ==========================================
+// 前日リマインダーメール
+// ==========================================
+
+// 前日リマインダー用データ型
+export interface ReminderData {
+  reservationId: string;
+  customerName: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  menuSummary: string;
+  totalPrice: number;
+  note?: string | null;
+}
+
+// 前日リマインダーHTML
+export function createReminderHtml(data: ReminderData) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const mypageUrl = `${siteUrl}/mypage/reservations`;
+  const dateStr = formatReservationDate(data.date);
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>明日のご予約のお知らせ</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a1a; font-family: 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #242424; border-bottom: 1px solid #3a3a3a;">
+              <h1 style="margin: 0; color: #c4a77d; font-size: 24px; font-weight: 300; letter-spacing: 4px;">
+                ${SALON_NAME}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #242424;">
+              <p style="margin: 0 0 20px; color: #c4a77d; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">
+                Reservation Reminder
+              </p>
+
+              <h2 style="margin: 0 0 24px; color: #ffffff; font-size: 22px; font-weight: 500; line-height: 1.4;">
+                明日のご予約のお知らせ
+              </h2>
+
+              <p style="margin: 0 0 30px; color: #b0b0b0; font-size: 15px; line-height: 1.6;">
+                ${data.customerName} 様<br>
+                明日のご来店をお待ちしております。
+              </p>
+
+              <!-- 予約詳細 -->
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px; width: 100px;">予約番号</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #ffffff; font-size: 14px; font-weight: 500;">${data.reservationId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">日時</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #ffffff; font-size: 16px; font-weight: 600;">${dateStr} ${data.startTime}〜${data.endTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">メニュー</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #ffffff; font-size: 14px;">${data.menuSummary}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">料金</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #c4a77d; font-size: 16px; font-weight: 600;">${formatPrice(data.totalPrice)}</td>
+                </tr>
+                ${data.note ? `
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">備考</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #b0b0b0; font-size: 14px;">${data.note}</td>
+                </tr>
+                ` : ''}
+              </table>
+
+              <!-- アクセス情報 -->
+              <div style="padding: 20px; background-color: #1a1a1a; border-radius: 8px; margin-bottom: 30px;">
+                <p style="margin: 0 0 12px; color: #c4a77d; font-size: 13px; font-weight: 500;">アクセス</p>
+                <p style="margin: 0; color: #b0b0b0; font-size: 14px; line-height: 1.6;">
+                  ${SALON_ADDRESS}<br>
+                  Tel: ${SALON_PHONE}
+                </p>
+              </div>
+
+              <!-- キャンセルポリシー -->
+              <p style="margin: 0 0 20px; color: #888888; font-size: 13px; line-height: 1.6;">
+                ご予約の変更・キャンセルをご希望の場合は、お電話にてご連絡ください。
+              </p>
+
+              <!-- CTA -->
+              <table style="width: 100%;">
+                <tr>
+                  <td align="center">
+                    <a href="${mypageUrl}" style="display: inline-block; padding: 14px 36px; background-color: #c4a77d; color: #1a1a1a; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
+                      マイページで確認
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #1a1a1a; border-top: 1px solid #3a3a3a;">
+              <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.8;">
+                ${SALON_NAME}<br>
+                ${SALON_ADDRESS}<br>
+                Tel: ${SALON_PHONE}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+// 前日リマインダーテキスト
+export function createReminderText(data: ReminderData) {
+  const dateStr = formatReservationDate(data.date);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+
+  let text = `${SALON_NAME} - 明日のご予約のお知らせ\n\n`;
+  text += `${data.customerName} 様\n\n`;
+  text += `明日のご来店をお待ちしております。\n\n`;
+  text += `【ご予約内容】\n`;
+  text += `予約番号: ${data.reservationId}\n`;
+  text += `日時: ${dateStr} ${data.startTime}〜${data.endTime}\n`;
+  text += `メニュー: ${data.menuSummary}\n`;
+  text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  if (data.note) text += `備考: ${data.note}\n`;
+  text += `\n【アクセス】\n`;
+  text += `${SALON_ADDRESS}\n`;
+  text += `Tel: ${SALON_PHONE}\n\n`;
+  text += `ご予約の変更・キャンセルをご希望の場合は、お電話にてご連絡ください。\n\n`;
+  text += `マイページ: ${siteUrl}/mypage/reservations\n\n`;
+  text += `---\n`;
+  text += `${SALON_NAME}\n`;
+
+  return text;
+}
+
+// 前日リマインダーメール送信
+export async function sendReminderEmail(
+  toEmail: string,
+  data: ReminderData
+): Promise<{ success: boolean; error?: string }> {
+  const html = createReminderHtml(data);
+  const text = createReminderText(data);
+
+  return sendEmail({
+    to: toEmail,
+    subject: `【${SALON_NAME}】明日のご予約のお知らせ`,
+    html,
+    text,
+  });
 }

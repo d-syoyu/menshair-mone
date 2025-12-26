@@ -9,9 +9,71 @@ import Resend from "next-auth/providers/resend";
 import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import type { UserRole } from "@prisma/client";
-import type { Adapter } from "next-auth/adapters";
+import type { Adapter, AdapterAccount } from "next-auth/adapters";
 import { createMagicLinkHtml, createMagicLinkText } from "./email";
 import { Resend as ResendClient } from "resend";
+
+// カスタムPrismaAdapter - useVerificationTokenの問題を修正
+function CustomPrismaAdapter(): Adapter {
+  const baseAdapter = PrismaAdapter(prisma);
+
+  return {
+    ...baseAdapter as object,
+    // useVerificationTokenをオーバーライドして、identifier + tokenで削除
+    async useVerificationToken(params: { identifier: string; token: string }) {
+      try {
+        // まずトークンを検索
+        const verificationToken = await prisma.verificationToken.findUnique({
+          where: {
+            identifier_token: {
+              identifier: params.identifier,
+              token: params.token,
+            },
+          },
+        });
+
+        if (!verificationToken) {
+          return null;
+        }
+
+        // トークンを削除（identifier + tokenの複合キーで削除）
+        await prisma.verificationToken.delete({
+          where: {
+            identifier_token: {
+              identifier: params.identifier,
+              token: params.token,
+            },
+          },
+        });
+
+        return verificationToken;
+      } catch (error) {
+        // トークンが見つからない場合はnullを返す
+        console.error("[Auth] useVerificationToken error:", error);
+        return null;
+      }
+    },
+    // linkAccountも型を修正
+    async linkAccount(account: AdapterAccount) {
+      await prisma.account.create({
+        data: {
+          userId: account.userId,
+          type: account.type,
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+          refresh_token: account.refresh_token,
+          access_token: account.access_token,
+          expires_at: account.expires_at,
+          token_type: account.token_type,
+          scope: account.scope,
+          id_token: account.id_token,
+          session_state: account.session_state as string | undefined,
+        },
+      });
+      return account;
+    },
+  };
+}
 
 declare module "next-auth" {
   interface Session {
@@ -36,7 +98,7 @@ declare module "@auth/core/jwt" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: CustomPrismaAdapter(),
   trustHost: true,
   session: {
     strategy: "jwt",

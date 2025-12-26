@@ -22,7 +22,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
-import { CATEGORY_COLORS } from '@/constants/menu';
+import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
 
 // DBメニューの型定義
 interface DbMenu {
@@ -85,6 +85,20 @@ interface Reservation {
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+// 時間を分に変換
+const timeToMinutes = (time: string) => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+interface Holiday {
+  id: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+}
 
 const STATUS_OPTIONS = [
   { value: '', label: 'すべて' },
@@ -174,6 +188,9 @@ function AdminReservationsContent() {
     action: 'CANCELLED',
   });
 
+  // 選択した日付の不定休
+  const [selectedDateHolidays, setSelectedDateHolidays] = useState<Holiday[]>([]);
+
   // 予約追加モーダル
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addStep, setAddStep] = useState<'customer' | 'menu' | 'datetime'>('customer');
@@ -240,6 +257,37 @@ function AdminReservationsContent() {
       }
     }
   }, [highlightId, isLoading]);
+
+  // 選択した日付の不定休を取得
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      if (!selectedDate) {
+        setSelectedDateHolidays([]);
+        return;
+      }
+
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1;
+      const day = selectedDate.getDate();
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      try {
+        const res = await fetch(`/api/admin/holidays?year=${year}&month=${month}`);
+        const data = await res.json();
+        const holidaysArray = Array.isArray(data) ? data : (data.holidays || []);
+        const dateHolidays = holidaysArray.filter((h: Holiday) => {
+          const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : '';
+          return holidayDateStr === dateStr;
+        });
+        setSelectedDateHolidays(dateHolidays);
+      } catch (error) {
+        console.error('Failed to fetch holidays:', error);
+        setSelectedDateHolidays([]);
+      }
+    };
+
+    fetchHolidays();
+  }, [selectedDate]);
 
   const fetchReservations = async () => {
     setIsLoading(true);
@@ -812,6 +860,243 @@ function AdminReservationsContent() {
             variants={fadeInUp}
             className="md:col-span-2"
           >
+            {/* Timeline View - 選択された日付がある場合のみ表示 */}
+            {selectedDate && (
+              <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100">
+                  <h2 className="text-base md:text-lg font-medium">
+                    {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日（{WEEKDAYS[selectedDate.getDay()]}）のタイムライン
+                  </h2>
+                </div>
+
+                {/* Mobile List View */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {/* 不定休表示 */}
+                  {selectedDateHolidays.length > 0 && (
+                    <div className="p-4 bg-red-50 border-b border-red-100">
+                      {selectedDateHolidays.map((holiday) => (
+                        <div key={holiday.id} className="flex items-center gap-2 text-red-600">
+                          <Clock className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm font-medium">
+                            {!holiday.startTime || !holiday.endTime
+                              ? `終日休業${holiday.reason ? `（${holiday.reason}）` : ''}`
+                              : `${holiday.startTime}〜${holiday.endTime} 休業${holiday.reason ? `（${holiday.reason}）` : ''}`
+                            }
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {filteredReservations.filter(r => r.status === 'CONFIRMED').length === 0 && (
+                    <div className="p-6 text-center text-gray-500 text-sm">
+                      この日の予約はありません
+                    </div>
+                  )}
+                  {filteredReservations.filter(r => r.status === 'CONFIRMED').sort((a, b) => a.startTime.localeCompare(b.startTime)).map((reservation) => (
+                    <div
+                      key={`timeline-${reservation.id}`}
+                      className="p-4 flex items-center gap-3"
+                    >
+                      {/* Time */}
+                      <div className="flex-shrink-0 text-center w-16">
+                        <p className="text-base font-medium">{reservation.startTime}</p>
+                        <p className="text-xs text-gray-400">~{reservation.endTime}</p>
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        {/* カラーセグメント */}
+                        <div className="flex gap-0.5 mb-1">
+                          {reservation.items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="h-1.5 rounded-full"
+                              style={{
+                                backgroundColor: CATEGORY_COLORS[item.category] || '#888',
+                                flex: item.duration,
+                              }}
+                              title={item.menuName}
+                            />
+                          ))}
+                        </div>
+                        <p className="font-medium text-sm truncate">{reservation.menuSummary}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {reservation.user.name || '名前未登録'}
+                        </p>
+                        <p className="text-xs text-[var(--color-gold)]">
+                          ¥{reservation.totalPrice.toLocaleString()}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex-shrink-0 flex items-center gap-1">
+                        <button
+                          onClick={() => openEditModal(reservation)}
+                          className="p-2.5 text-blue-500 hover:bg-blue-50 active:bg-blue-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                          title="編集"
+                        >
+                          <Pencil className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tablet/Desktop Timeline View */}
+                <div className="hidden md:block p-4 md:p-6">
+                  {/* Single Timeline */}
+                  <div className="mb-6 px-6 lg:px-8">
+                    {/* Time labels */}
+                    <div className="relative h-7 mb-2">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const left = (i / 11) * 100;
+                        const translateClass = i === 0
+                          ? 'translate-x-0'
+                          : i === 11
+                            ? '-translate-x-full'
+                            : '-translate-x-1/2';
+                        return (
+                          <div
+                            key={i}
+                            className={`absolute text-xs md:text-sm text-gray-400 ${translateClass}`}
+                            style={{ left: `${left}%` }}
+                          >
+                            {i + 10}:00
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Timeline bar */}
+                    <div className="relative h-14 md:h-16 lg:h-20 bg-gray-50 rounded-lg overflow-hidden">
+                      {/* Grid lines - 20分刻み */}
+                      <div className="absolute inset-0">
+                        {Array.from({ length: 34 }, (_, i) => {
+                          const isHourLine = i % 3 === 0;
+                          const left = (i / 33) * 100;
+                          return (
+                            <div
+                              key={i}
+                              className={`absolute top-0 bottom-0 ${
+                                isHourLine ? 'border-l border-gray-300' : 'border-l border-gray-200/60'
+                              }`}
+                              style={{ left: `${left}%` }}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      {/* Holidays - 不定休表示 */}
+                      {selectedDateHolidays.map((holiday) => {
+                        // 全日休業
+                        if (!holiday.startTime || !holiday.endTime) {
+                          return (
+                            <div
+                              key={holiday.id}
+                              className="absolute inset-0 bg-red-500/20 flex items-center justify-center"
+                              title={holiday.reason || '終日休業'}
+                            >
+                              <span className="text-red-500 text-sm font-medium">
+                                {holiday.reason || '終日休業'}
+                              </span>
+                            </div>
+                          );
+                        }
+                        // 時間帯休業
+                        const startMin = timeToMinutes(holiday.startTime) - 600;
+                        const endMin = timeToMinutes(holiday.endTime) - 600;
+                        const totalMin = 660;
+                        const left = Math.max(0, (startMin / totalMin) * 100);
+                        const width = Math.min(100 - left, ((endMin - startMin) / totalMin) * 100);
+                        return (
+                          <div
+                            key={holiday.id}
+                            className="absolute top-0 bottom-0 bg-red-500/30 flex items-center justify-center"
+                            style={{ left: `${left}%`, width: `${width}%` }}
+                            title={`${holiday.startTime}〜${holiday.endTime} ${holiday.reason || '休業'}`}
+                          >
+                            <span className="text-red-600 text-xs font-medium truncate px-1">
+                              {holiday.reason || '休業'}
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Reservations with color segments */}
+                      {filteredReservations.filter(r => r.status === 'CONFIRMED').map((reservation) => {
+                        const startMin = timeToMinutes(reservation.startTime) - 600;
+                        const endMin = timeToMinutes(reservation.endTime) - 600;
+                        const totalMin = 660;
+                        const left = (startMin / totalMin) * 100;
+                        const width = ((endMin - startMin) / totalMin) * 100;
+
+                        return (
+                          <button
+                            key={`timeline-bar-${reservation.id}`}
+                            onClick={() => {
+                              const element = document.getElementById(`reservation-${reservation.id}`);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }
+                            }}
+                            className={`absolute top-1.5 bottom-1.5 md:top-2 md:bottom-2 rounded-md md:rounded-lg overflow-hidden
+                              shadow-sm hover:shadow-md transition-all flex cursor-pointer hover:scale-[1.02] active:scale-100`}
+                            style={{
+                              left: `${left}%`,
+                              width: `${Math.max(width, 4)}%`,
+                            }}
+                            title={`${reservation.startTime}〜${reservation.endTime} ${reservation.menuSummary} - ${reservation.user.name || '名前未登録'}`}
+                          >
+                            {/* Color segments */}
+                            {reservation.items.length > 0 ? (
+                              reservation.items.map((item, idx) => {
+                                const segmentWidth = (item.duration / reservation.totalDuration) * 100;
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className={`h-full flex items-center justify-center ${idx === 0 ? 'rounded-l-md md:rounded-l-lg' : ''} ${idx === reservation.items.length - 1 ? 'rounded-r-md md:rounded-r-lg' : ''}`}
+                                    style={{
+                                      backgroundColor: CATEGORY_COLORS[item.category] || '#888',
+                                      width: `${segmentWidth}%`,
+                                    }}
+                                  >
+                                    {segmentWidth > 20 && (
+                                      <span
+                                        className="text-xs font-medium truncate px-1"
+                                        style={{ color: getCategoryTextColor(item.category) }}
+                                      >
+                                        {item.menuName.split('（')[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="h-full w-full bg-[var(--color-accent)] flex items-center px-2">
+                                <span className="text-white text-xs font-medium truncate">
+                                  {reservation.menuSummary}
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Reservation Summary for the day */}
+                  <div className="flex items-center justify-between px-6 lg:px-8 text-sm text-gray-500">
+                    <span>
+                      {filteredReservations.filter(r => r.status === 'CONFIRMED').length}件の予約
+                    </span>
+                    <span>
+                      合計 ¥{filteredReservations.filter(r => r.status === 'CONFIRMED').reduce((sum, r) => sum + r.totalPrice, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Filters */}
             <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm mb-4 flex flex-col sm:flex-row gap-3 md:gap-4">
               <div className="flex-1">

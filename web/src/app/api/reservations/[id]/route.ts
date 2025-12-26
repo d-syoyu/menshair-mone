@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { canCancelReservation } from "@/constants/booking";
-import { sendReservationCancellationEmail } from "@/lib/email";
+import { sendReservationCancellationEmail, sendAdminCancellationEmail } from "@/lib/email";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -142,6 +142,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             id: true,
             name: true,
             email: true,
+            phone: true,
           },
         },
       },
@@ -209,6 +210,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         console.error('Failed to send cancellation confirmation email:', err);
       });
     }
+
+    // 管理者へのキャンセル通知メール（非同期・エラー時もAPIは成功扱い）
+    sendAdminCancellationEmail({
+      reservationId: reservation.id,
+      customerName: reservation.user?.name || 'お客様',
+      customerEmail: reservation.user?.email,
+      customerPhone: reservation.user?.phone,
+      date: new Date(reservation.date),
+      startTime: reservation.startTime,
+      menuSummary: reservation.menuSummary,
+      totalPrice: reservation.totalPrice,
+      cancelledByAdmin: session.user.role === "ADMIN",
+    }).catch((err) => {
+      console.error('Failed to send admin cancellation notification:', err);
+    });
 
     return NextResponse.json({
       message: "予約をキャンセルしました",

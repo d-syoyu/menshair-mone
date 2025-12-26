@@ -6,6 +6,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { parseLocalDate } from "@/lib/date-utils";
+import {
+  sendReservationChangeEmail,
+  sendReservationCancellationEmail,
+  sendAdminCancellationEmail
+} from "@/lib/email";
 
 // DB Menuの型定義
 interface DbMenu {
@@ -259,10 +264,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const { menuIds, date, startTime, endTime, note, status, couponCode } = validationResult.data;
 
-    // 予約が存在するか確認
+    // 予約が存在するか確認（変更通知メール用に全データ取得）
     const existingReservation = await prisma.reservation.findUnique({
       where: { id },
-      include: { items: true },
+      include: {
+        items: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
     });
 
     if (!existingReservation) {
@@ -487,6 +502,69 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         },
       });
     });
+
+    // メール送信処理
+    const customerEmail = updatedReservation.user?.email;
+
+    // ステータスがCANCELLEDに変更された場合 → キャンセル通知メール
+    if (status === "CANCELLED" && existingReservation.status !== "CANCELLED") {
+      // 顧客へのキャンセル通知
+      if (customerEmail) {
+        sendReservationCancellationEmail(customerEmail, {
+          reservationId: updatedReservation.id,
+          customerName: updatedReservation.user?.name || 'お客様',
+          date: new Date(updatedReservation.date),
+          startTime: updatedReservation.startTime,
+          menuSummary: updatedReservation.menuSummary,
+        }).catch((err) => {
+          console.error('Failed to send cancellation email to customer:', err);
+        });
+      }
+
+      // 管理者へのキャンセル通知
+      sendAdminCancellationEmail({
+        reservationId: updatedReservation.id,
+        customerName: updatedReservation.user?.name || 'お客様',
+        customerEmail: customerEmail,
+        customerPhone: updatedReservation.user?.phone,
+        date: new Date(updatedReservation.date),
+        startTime: updatedReservation.startTime,
+        menuSummary: updatedReservation.menuSummary,
+        totalPrice: updatedReservation.totalPrice,
+        cancelledByAdmin: true,
+      }).catch((err) => {
+        console.error('Failed to send cancellation notification to admin:', err);
+      });
+    }
+    // それ以外で日時・メニュー・料金が変更された場合 → 変更通知メール
+    else if (customerEmail && status !== "CANCELLED") {
+      const dateChanged = date && parseLocalDate(date).getTime() !== new Date(existingReservation.date).getTime();
+      const timeChanged = (startTime && startTime !== existingReservation.startTime) ||
+                          (endTime && endTime !== existingReservation.endTime);
+      const menuChanged = menuIds !== undefined;
+      const priceChanged = updatedReservation.totalPrice !== existingReservation.totalPrice;
+
+      // 重要な変更がある場合のみ通知
+      if (dateChanged || timeChanged || menuChanged || priceChanged) {
+        sendReservationChangeEmail(customerEmail, {
+          reservationId: updatedReservation.id,
+          customerName: updatedReservation.user?.name || 'お客様',
+          oldDate: new Date(existingReservation.date),
+          oldStartTime: existingReservation.startTime,
+          oldEndTime: existingReservation.endTime,
+          oldMenuSummary: existingReservation.menuSummary,
+          oldTotalPrice: existingReservation.totalPrice,
+          newDate: new Date(updatedReservation.date),
+          newStartTime: updatedReservation.startTime,
+          newEndTime: updatedReservation.endTime,
+          newMenuSummary: updatedReservation.menuSummary,
+          newTotalPrice: updatedReservation.totalPrice,
+          note: updatedReservation.note,
+        }).catch((err) => {
+          console.error('Failed to send change notification email:', err);
+        });
+      }
+    }
 
     return NextResponse.json(updatedReservation);
   } catch (error) {
