@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
         email: true,
         phone: true,
         createdAt: true,
-        _count: {
+        reservations: {
           select: {
-            reservations: true,
+            status: true,
           },
         },
       },
@@ -57,7 +57,25 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return NextResponse.json(customers);
+    // 予約回数と完了回数を計算
+    const customersWithCounts = customers.map((customer) => {
+      const totalReservations = customer.reservations.length;
+      const completedReservations = customer.reservations.filter(
+        (r) => r.status === "COMPLETED"
+      ).length;
+
+      // reservationsは返さない
+      const { reservations: _, ...rest } = customer;
+      return {
+        ...rest,
+        _count: {
+          reservations: totalReservations,
+          completedReservations: completedReservations,
+        },
+      };
+    });
+
+    return NextResponse.json(customersWithCounts);
   } catch (error) {
     console.error("Get customers error:", error);
     return NextResponse.json(

@@ -56,6 +56,7 @@ interface Customer {
   reservations: Reservation[];
   _count: {
     reservations: number;
+    completedReservations: number;
   };
 }
 
@@ -113,12 +114,18 @@ export default function AdminCustomersPage() {
             ...r.user,
             createdAt: new Date().toISOString(),
             reservations: [r],
-            _count: { reservations: 1 },
+            _count: {
+              reservations: 1,
+              completedReservations: r.status === 'COMPLETED' ? 1 : 0,
+            },
           });
         } else {
           const existing = customerMap.get(r.user.id)!;
           existing.reservations.push(r);
           existing._count.reservations += 1;
+          if (r.status === 'COMPLETED') {
+            existing._count.completedReservations += 1;
+          }
         }
       });
 
@@ -223,7 +230,7 @@ export default function AdminCustomersPage() {
       setCustomers(prev => [{
         ...data,
         reservations: [],
-        _count: { reservations: 0 },
+        _count: { reservations: 0, completedReservations: 0 },
       }, ...prev]);
 
       // モーダルを閉じてフォームをリセット
@@ -454,14 +461,25 @@ export default function AdminCustomersPage() {
                           {/* Stats & Actions */}
                           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                             {/* Stats */}
-                            <div className="text-right">
-                              <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 mb-1">
-                                <Calendar className="w-3.5 h-3.5" />
-                                <span>来店</span>
+                            <div className="flex gap-3 sm:gap-4">
+                              <div className="text-right">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>予約</span>
+                                </div>
+                                <p className="text-lg sm:text-xl font-light text-gray-600">
+                                  {customer._count.reservations}<span className="text-xs text-gray-400">回</span>
+                                </p>
                               </div>
-                              <p className="text-xl sm:text-2xl font-light text-[var(--color-accent)]">
-                                {completedCount}<span className="text-sm text-gray-400">回</span>
-                              </p>
+                              <div className="text-right">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>完了</span>
+                                </div>
+                                <p className="text-lg sm:text-xl font-light text-[var(--color-accent)]">
+                                  {customer._count.completedReservations}<span className="text-xs text-gray-400">回</span>
+                                </p>
+                              </div>
                             </div>
 
                             {/* Action Buttons */}
