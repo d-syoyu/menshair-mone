@@ -24,7 +24,7 @@ async function main() {
     excerpt: 'このメールはニュースレター配信のテストです。正しく受信できていれば成功です。',
     slug: 'test',
     publishedAt: new Date().toLocaleDateString('ja-JP'),
-    coverImage: 'https://www.mone0601.com/mone-logo.png',
+    coverImage: 'https://www.mone.hair/mone-logo.png',
   });
 
   const text = createNewsletterText({
@@ -33,7 +33,7 @@ async function main() {
     excerpt: 'このメールはニュースレター配信のテストです。正しく受信できていれば成功です。',
     slug: 'test',
     publishedAt: new Date().toLocaleDateString('ja-JP'),
-    coverImage: 'https://www.mone0601.com/mone-logo.png',
+    coverImage: 'https://www.mone.hair/mone-logo.png',
   });
 
   const result = await sendEmail({

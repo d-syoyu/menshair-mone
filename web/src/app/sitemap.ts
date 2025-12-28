@@ -3,7 +3,7 @@
 
 import { MetadataRoute } from "next";
 
-const BASE_URL = "https://www.mone0601.com";
+const BASE_URL = "https://www.mone.hair";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 静的ページ

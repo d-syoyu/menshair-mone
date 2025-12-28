@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.mone0601.com"),
+  metadataBase: new URL("https://www.mone.hair"),
   title: {
     default: "Men's hair MONE | 守口市メンズ専用サロン",
     template: "%s | Men's hair MONE",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ja_JP",
-    url: "https://www.mone0601.com",
+    url: "https://www.mone.hair",
     siteName: "Men's hair MONE",
     title: "Men's hair MONE | 守口市メンズ専用サロン",
     description:

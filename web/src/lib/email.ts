@@ -6,7 +6,7 @@ import { SALON_INFO } from '@/constants/salon';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const FROM_EMAIL = "Men's hair MONE <noreply@mone0601.com>";
+const FROM_EMAIL = "Men's hair MONE <noreply@mone.hair>";
 const SALON_NAME = "MONË";
 const SALON_ADDRESS = SALON_INFO.address;
 const SALON_PHONE = SALON_INFO.phone;
@@ -77,7 +77,7 @@ export function createNewsletterHtml(news: {
   publishedAt?: string;
   coverImage?: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
   const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
@@ -180,7 +180,7 @@ export function createNewsletterText(news: {
   publishedAt?: string;
   coverImage?: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const newsUrl = `${siteUrl}/news/${news.slug}`;
   const coverImageUrl = getAbsoluteImageUrl(news.coverImage, siteUrl);
 
@@ -234,7 +234,7 @@ export interface ReservationConfirmationData {
 
 // 予約完了メールHTML
 export function createReservationConfirmationHtml(data: ReservationConfirmationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
   const finalPrice = data.totalPrice - data.couponDiscount;
@@ -358,7 +358,7 @@ export function createReservationConfirmationHtml(data: ReservationConfirmationD
 
 // 予約完了メール プレーンテキスト版
 export function createReservationConfirmationText(data: ReservationConfirmationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
   const finalPrice = data.totalPrice - data.couponDiscount;
@@ -417,7 +417,7 @@ export interface ReservationCancellationData {
 
 // キャンセル確認メールHTML
 export function createReservationCancellationHtml(data: ReservationCancellationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const bookingUrl = `${siteUrl}/booking`;
   const dateStr = formatReservationDate(data.date);
 
@@ -511,7 +511,7 @@ export function createReservationCancellationHtml(data: ReservationCancellationD
 
 // キャンセル確認メール プレーンテキスト版
 export function createReservationCancellationText(data: ReservationCancellationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const bookingUrl = `${siteUrl}/booking`;
   const dateStr = formatReservationDate(data.date);
 
@@ -672,7 +672,7 @@ export interface AdminNewReservationData {
 
 // 管理者への新規予約通知HTML
 export function createAdminNewReservationHtml(data: AdminNewReservationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const adminUrl = `${siteUrl}/admin/reservations`;
   const dateStr = formatReservationDate(data.date);
   const reservationType = data.isPhoneReservation ? '電話予約' : 'Web予約';
@@ -771,7 +771,7 @@ export function createAdminNewReservationHtml(data: AdminNewReservationData) {
 export function createAdminNewReservationText(data: AdminNewReservationData) {
   const dateStr = formatReservationDate(data.date);
   const reservationType = data.isPhoneReservation ? '電話予約' : 'Web予約';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
 
   let text = `【${SALON_NAME}】新規${reservationType}のお知らせ\n\n`;
   text += `新しい予約が入りました。\n\n`;
@@ -817,7 +817,7 @@ export interface AdminCancellationData {
 
 // 管理者へのキャンセル通知HTML
 export function createAdminCancellationHtml(data: AdminCancellationData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const adminUrl = `${siteUrl}/admin/reservations`;
   const dateStr = formatReservationDate(data.date);
   const cancelType = data.cancelledByAdmin ? '管理者によるキャンセル' : 'お客様によるキャンセル';
@@ -908,7 +908,7 @@ export function createAdminCancellationHtml(data: AdminCancellationData) {
 export function createAdminCancellationText(data: AdminCancellationData) {
   const dateStr = formatReservationDate(data.date);
   const cancelType = data.cancelledByAdmin ? '管理者によるキャンセル' : 'お客様によるキャンセル';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
 
   let text = `【${SALON_NAME}】予約キャンセルのお知らせ\n\n`;
   text += `${cancelType}\n\n`;
@@ -959,7 +959,7 @@ export interface ReservationChangeData {
 
 // 予約変更通知HTML
 export function createReservationChangeHtml(data: ReservationChangeData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const oldDateStr = formatReservationDate(data.oldDate);
   const newDateStr = formatReservationDate(data.newDate);
@@ -1101,7 +1101,7 @@ export function createReservationChangeHtml(data: ReservationChangeData) {
 export function createReservationChangeText(data: ReservationChangeData) {
   const oldDateStr = formatReservationDate(data.oldDate);
   const newDateStr = formatReservationDate(data.newDate);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
 
   let text = `${SALON_NAME} - ご予約内容変更のお知らせ\n\n`;
   text += `${data.customerName} 様\n\n`;
@@ -1159,7 +1159,7 @@ export interface ReminderData {
 
 // 前日リマインダーHTML
 export function createReminderHtml(data: ReminderData) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
 
@@ -1278,7 +1278,7 @@ export function createReminderHtml(data: ReminderData) {
 // 前日リマインダーテキスト
 export function createReminderText(data: ReminderData) {
   const dateStr = formatReservationDate(data.date);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
 
   let text = `${SALON_NAME} - 明日のご予約のお知らせ\n\n`;
   text += `${data.customerName} 様\n\n`;

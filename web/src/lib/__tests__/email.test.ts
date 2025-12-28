@@ -288,8 +288,8 @@ describe('sendReservationCancellationEmail', () => {
 
 describe('createMagicLinkHtml', () => {
   const baseParams = {
-    url: 'https://mone0601.com/api/auth/callback/resend?token=abc123',
-    host: 'mone0601.com',
+    url: 'https://www.mone.hair/api/auth/callback/resend?token=abc123',
+    host: 'www.mone.hair',
   };
 
   it('必要な情報がHTMLに含まれる', () => {
@@ -313,8 +313,8 @@ describe('createMagicLinkHtml', () => {
 
 describe('createMagicLinkText', () => {
   const baseParams = {
-    url: 'https://mone0601.com/api/auth/callback/resend?token=xyz789',
-    host: 'mone0601.com',
+    url: 'https://www.mone.hair/api/auth/callback/resend?token=xyz789',
+    host: 'www.mone.hair',
   };
 
   it('プレーンテキストに必要情報が含まれる', () => {

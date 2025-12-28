@@ -122,11 +122,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Email Magic Link (顧客向け)
     Resend({
       apiKey: process.env.RESEND_API_KEY!,
-      from: "Men's hair MONE <noreply@mone0601.com>",
+      from: "Men's hair MONE <noreply@mone.hair>",
       async sendVerificationRequest({ identifier: email, url, provider }) {
         const resend = new ResendClient(process.env.RESEND_API_KEY!);
         const host = new URL(url).host;
-        const from = provider.from || "Men's hair MONE <noreply@mone0601.com>";
+        const from = provider.from || "Men's hair MONE <noreply@mone.hair>";
 
         await resend.emails.send({
           from,

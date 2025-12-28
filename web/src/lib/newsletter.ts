@@ -31,7 +31,7 @@ export function verifyUnsubscribeToken(email: string, token: string): boolean {
  */
 export function generateUnsubscribeUrl(email: string): string {
   const token = generateUnsubscribeToken(email);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone0601.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const params = new URLSearchParams({
     email: email,
     token: token,

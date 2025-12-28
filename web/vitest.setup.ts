@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 
 // Mock environment variables
 process.env.RESEND_API_KEY = 'test_resend_api_key';
-process.env.NEXT_PUBLIC_SITE_URL = 'https://mone0601.com';
+process.env.NEXT_PUBLIC_SITE_URL = 'https://www.mone.hair';
 
 // Mock Resend - using a class mock
 vi.mock('resend', () => {
