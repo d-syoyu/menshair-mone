@@ -22,6 +22,15 @@ function CustomPrismaAdapter(): Adapter {
     // useVerificationTokenをオーバーライドして、identifier + tokenで削除
     async useVerificationToken(params: { identifier: string; token: string }) {
       try {
+        // パラメータのバリデーション（identifier欠落エラーを防止）
+        if (!params?.identifier || !params?.token) {
+          console.error("[Auth] useVerificationToken: Missing required parameters", {
+            hasIdentifier: !!params?.identifier,
+            hasToken: !!params?.token,
+          });
+          return null;
+        }
+
         // まずトークンを検索
         const verificationToken = await prisma.verificationToken.findUnique({
           where: {

@@ -18,15 +18,19 @@ function createPool(): Pool {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  // Serverless環境向けに最適化されたプール設定
+  // Neon Serverless環境向けに最適化されたプール設定
   return new Pool({
     connectionString,
-    // 最大接続数を制限（serverlessでは重要）
-    max: 5,
-    // アイドル接続のタイムアウト（30秒）
-    idleTimeoutMillis: 30000,
-    // 接続タイムアウト（10秒）
-    connectionTimeoutMillis: 10000,
+    // 最大接続数（Neon poolerに合わせて調整）
+    max: 20,
+    // 最小接続数（コールドスタート対策）
+    min: 2,
+    // アイドル接続のタイムアウト（60秒）
+    idleTimeoutMillis: 60000,
+    // 接続タイムアウト（30秒に延長）
+    connectionTimeoutMillis: 30000,
+    // 接続がアイドル状態でも維持
+    allowExitOnIdle: false,
   });
 }
 
@@ -44,26 +48,14 @@ function createPrismaClient(): PrismaClient {
   });
 }
 
-// 遅延初期化: 実際に使用される時のみPrismaClientを作成
-function getPrismaClient(): PrismaClient {
-  if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = createPrismaClient();
-  }
-  return globalForPrisma.prisma;
-}
+// シングルトンパターンでPrismaClientを取得
+// 開発環境ではホットリロード時に複数インスタンスが作られるのを防ぐ
+export const prisma: PrismaClient =
+  globalForPrisma.prisma ?? createPrismaClient();
 
-// Proxyを使用して遅延初期化を実現
-// インポート時ではなく、実際にアクセスされた時にのみPrismaClientを作成
-export const prisma = new Proxy({} as PrismaClient, {
-  get(_target, prop: string | symbol) {
-    const client = getPrismaClient();
-    const value = client[prop as keyof PrismaClient];
-    if (typeof value === "function") {
-      return value.bind(client);
-    }
-    return value;
-  },
-});
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
 
 // Poolのエクスポート（seed.tsなどで使用）
 export function getPool(): Pool {

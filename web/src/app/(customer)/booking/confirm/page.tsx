@@ -143,9 +143,6 @@ function BookingConfirmContent() {
     totalPrice: selectedMenus.reduce((sum, m) => sum + m.price, 0),
     totalDuration: selectedMenus.reduce((sum, m) => sum + m.duration, 0),
     menuSummary: selectedMenus.map(m => m.name).join(' + '),
-    earliestLastBookingTime: selectedMenus.reduce((earliest, m) => {
-      return m.lastBookingTime < earliest ? m.lastBookingTime : earliest;
-    }, '20:00'),
   } : null;
 
   // ローディング中

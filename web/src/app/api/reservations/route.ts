@@ -189,15 +189,13 @@ export async function POST(request: NextRequest) {
     const totalPrice = menus.reduce((sum, menu) => sum + menu.price, 0);
     const totalDuration = menus.reduce((sum, menu) => sum + menu.duration, 0);
     const menuSummary = menus.map((m) => m.name).join("、");
-    const earliestLastBookingTime = menus.reduce(
-      (earliest, menu) => (menu.lastBookingTime < earliest ? menu.lastBookingTime : earliest),
-      "23:59"
-    );
+    // 営業時間を取得（曜日別）
+    const businessHours = getBusinessHours(date);
 
     // 最終受付時間チェック
-    if (startTime >= earliestLastBookingTime) {
+    if (startTime > businessHours.lastBooking) {
       return NextResponse.json(
-        { error: `選択されたメニューの最終受付は${earliestLastBookingTime}です` },
+        { error: `最終受付は${businessHours.lastBooking}です` },
         { status: 400 }
       );
     }
@@ -239,8 +237,7 @@ export async function POST(request: NextRequest) {
       appliedCouponDiscount = couponResult.discountAmount;
     }
 
-    // 営業時間チェック（曜日別開店・閉店時間）
-    const businessHours = getBusinessHours(date);
+    // 営業時間チェック（開店・閉店時間）
     if (startTime < businessHours.open) {
       return NextResponse.json(
         { error: "営業時間外のため予約できません" },

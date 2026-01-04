@@ -207,20 +207,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    // 予約が存在するか確認
-    const existingReservation = await prisma.reservation.findUnique({
-      where: { id },
-    });
-
-    if (!existingReservation) {
-      return NextResponse.json(
-        { error: "予約が見つかりません" },
-        { status: 404 }
-      );
-    }
-
     // トランザクションで予約とアイテムを削除
+    // 存在確認もトランザクション内で行い、TOCTOU競合を防止
     await prisma.$transaction(async (tx) => {
+      // 予約が存在するか確認（トランザクション内で実行）
+      const existingReservation = await tx.reservation.findUnique({
+        where: { id },
+      });
+
+      if (!existingReservation) {
+        throw new Error("RESERVATION_NOT_FOUND");
+      }
+
       // 予約アイテムを削除
       await tx.reservationItem.deleteMany({
         where: { reservationId: id },
@@ -234,6 +232,27 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, message: "予約を削除しました" });
   } catch (error) {
+    // 予約が見つからない場合は404を返す
+    if (error instanceof Error && error.message === "RESERVATION_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "予約が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    // Prisma P2025エラー（レコードが見つからない）の場合も404を返す
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { error: "予約が見つかりません（既に削除されています）" },
+        { status: 404 }
+      );
+    }
+
     console.error("Delete reservation error:", error);
     return NextResponse.json(
       { error: "予約の削除に失敗しました" },
