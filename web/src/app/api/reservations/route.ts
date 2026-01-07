@@ -47,6 +47,18 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
+    // 日付フィルタリング
+    const date = searchParams.get("date");
+    if (date) {
+      const targetDate = new Date(date + "T00:00:00");
+      const nextDate = new Date(date + "T00:00:00");
+      nextDate.setDate(nextDate.getDate() + 1);
+      where.date = {
+        gte: targetDate,
+        lt: nextDate,
+      };
+    }
+
     const [reservations, total] = await Promise.all([
       prisma.reservation.findMany({
         where,

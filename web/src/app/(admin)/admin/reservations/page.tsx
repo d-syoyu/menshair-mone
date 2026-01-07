@@ -244,7 +244,7 @@ function AdminReservationsContent() {
   useEffect(() => {
     fetchReservations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, page]);
+  }, [statusFilter, page, selectedDate]);
 
   // ハイライトされた予約までスクロール
   useEffect(() => {
@@ -295,6 +295,11 @@ function AdminReservationsContent() {
       let url = `/api/reservations?limit=20&page=${page}`;
       if (statusFilter) {
         url += `&status=${statusFilter}`;
+      }
+      // 日付パラメータを追加
+      if (selectedDate) {
+        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        url += `&date=${dateStr}`;
       }
       const res = await fetch(url);
       const data = await res.json();
