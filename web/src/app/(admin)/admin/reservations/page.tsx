@@ -169,6 +169,7 @@ function AdminReservationsContent() {
   };
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [calendarReservations, setCalendarReservations] = useState<Reservation[]>([]); // カレンダー用
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -245,6 +246,22 @@ function AdminReservationsContent() {
     fetchReservations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page, selectedDate]);
+
+  // カレンダー用の月全体の予約を取得
+  useEffect(() => {
+    const fetchCalendarReservations = async () => {
+      try {
+        const year = currentMonth.getFullYear();
+        const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+        const res = await fetch(`/api/reservations?month=${year}-${month}&limit=1000`);
+        const data = await res.json();
+        setCalendarReservations(data.reservations || []);
+      } catch (error) {
+        console.error('Failed to fetch calendar reservations:', error);
+      }
+    };
+    fetchCalendarReservations();
+  }, [currentMonth]);
 
   // ハイライトされた予約までスクロール
   useEffect(() => {
@@ -659,9 +676,9 @@ function AdminReservationsContent() {
     return days;
   };
 
-  // その日の予約数を取得
+  // その日の予約数を取得（カレンダー用データから）
   const getReservationCount = (date: Date) => {
-    return reservations.filter((r) => {
+    return calendarReservations.filter((r) => {
       const resDate = new Date(r.date);
       return (
         resDate.toDateString() === date.toDateString() &&
