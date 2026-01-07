@@ -19,6 +19,9 @@ interface SendEmailOptions {
   text?: string;
 }
 
+// Resend APIの制限: toフィールドは最大50件まで
+const RESEND_MAX_RECIPIENTS = 50;
+
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const toAddresses = Array.isArray(to) ? to : [to];
   console.log(`[Email] Attempting to send email to: ${toAddresses.join(', ')}, subject: ${subject}`);
@@ -29,22 +32,74 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   }
 
   try {
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: toAddresses,
-      subject,
-      html,
-      text,
-    });
+    // 50件以下の場合は一括送信
+    if (toAddresses.length <= RESEND_MAX_RECIPIENTS) {
+      const result = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: toAddresses,
+        subject,
+        html,
+        text,
+      });
 
-    // Resend APIのエラーレスポンスをチェック
-    if (result.error) {
-      console.error(`[Email] Failed to send email to: ${toAddresses.join(', ')}, error:`, result.error);
-      return { success: false, error: result.error.message || 'Unknown error' };
+      if (result.error) {
+        console.error(`[Email] Failed to send email to: ${toAddresses.join(', ')}, error:`, result.error);
+        return { success: false, error: result.error.message || 'Unknown error' };
+      }
+
+      console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, id: ${result.data?.id}`);
+      return { success: true, data: result.data };
     }
 
-    console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, id: ${result.data?.id}`);
-    return { success: true, data: result.data };
+    // 50件超の場合はバッチ処理
+    console.log(`[Email] Batch sending to ${toAddresses.length} recipients (${Math.ceil(toAddresses.length / RESEND_MAX_RECIPIENTS)} batches)`);
+
+    const batches: string[][] = [];
+    for (let i = 0; i < toAddresses.length; i += RESEND_MAX_RECIPIENTS) {
+      batches.push(toAddresses.slice(i, i + RESEND_MAX_RECIPIENTS));
+    }
+
+    const results: { batchIndex: number; success: boolean; id?: string; error?: string }[] = [];
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      console.log(`[Email] Sending batch ${i + 1}/${batches.length} (${batch.length} recipients)`);
+
+      const result = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: batch,
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error(`[Email] Batch ${i + 1} failed:`, result.error);
+        results.push({ batchIndex: i, success: false, error: result.error.message || 'Unknown error' });
+      } else {
+        console.log(`[Email] Batch ${i + 1} succeeded, id: ${result.data?.id}`);
+        results.push({ batchIndex: i, success: true, id: result.data?.id });
+      }
+    }
+
+    // 結果集計
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    if (failCount === 0) {
+      console.log(`[Email] All ${batches.length} batches sent successfully`);
+      return { success: true, data: { batchResults: results, totalBatches: batches.length } };
+    } else if (successCount > 0) {
+      console.warn(`[Email] Partial success: ${successCount}/${batches.length} batches sent`);
+      return {
+        success: false,
+        error: `Partial failure: ${failCount}/${batches.length} batches failed`,
+        data: { batchResults: results, totalBatches: batches.length }
+      };
+    } else {
+      console.error(`[Email] All ${batches.length} batches failed`);
+      return { success: false, error: 'All batches failed', data: { batchResults: results } };
+    }
   } catch (error) {
     console.error('[Email] Failed to send email:', error);
     return { success: false, error: String(error) };
