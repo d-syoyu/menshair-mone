@@ -94,7 +94,6 @@ export default function AdminCouponsPage() {
 
   // Form state
   const [couponForm, setCouponForm] = useState({
-    code: '',
     name: '',
     type: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
     value: 0,
@@ -193,7 +192,6 @@ export default function AdminCouponsPage() {
     if (coupon) {
       setEditingCoupon(coupon);
       setCouponForm({
-        code: coupon.code,
         name: coupon.name,
         type: coupon.type,
         value: coupon.value,
@@ -228,7 +226,6 @@ export default function AdminCouponsPage() {
       const nextMonth = new Date(today);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       setCouponForm({
-        code: '',
         name: '',
         type: 'PERCENTAGE',
         value: 0,
@@ -252,6 +249,16 @@ export default function AdminCouponsPage() {
     setIsCouponModalOpen(true);
   };
 
+  // クーポンコード自動生成
+  const generateCouponCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
   const handleCouponSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -260,8 +267,11 @@ export default function AdminCouponsPage() {
         : '/api/admin/coupons';
       const method = editingCoupon ? 'PUT' : 'POST';
 
+      // 新規作成時はコードを自動生成、編集時は既存コードを維持
+      const code = editingCoupon ? editingCoupon.code : generateCouponCode();
+
       const submitData = {
-        code: couponForm.code,
+        code,
         name: couponForm.name,
         type: couponForm.type,
         value: couponForm.value,
@@ -487,9 +497,6 @@ export default function AdminCouponsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <p className="font-medium">{coupon.name}</p>
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded font-mono">
-                          {coupon.code}
-                        </span>
                         {getStatusBadge(coupon)}
                       </div>
                       {coupon.description && (
@@ -574,33 +581,18 @@ export default function AdminCouponsPage() {
                   <div className="space-y-4">
                     <h3 className="text-sm font-medium text-gray-900 border-b pb-2">基本情報</h3>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          クーポンコード <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={couponForm.code}
-                          onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)] font-mono"
-                          placeholder="WELCOME10"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          クーポン名 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={couponForm.name}
-                          onChange={(e) => setCouponForm({ ...couponForm, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
-                          placeholder="新規顧客10%OFF"
-                          required
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        クーポン名 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={couponForm.name}
+                        onChange={(e) => setCouponForm({ ...couponForm, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[var(--color-accent)]"
+                        placeholder="新規顧客10%OFF"
+                        required
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
