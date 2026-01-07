@@ -222,14 +222,22 @@ export async function POST(request: NextRequest) {
       }
 
       // 共通検証関数で全条件をチェック
-      const menuIds = data.items
-        .filter((i) => i.itemType === "MENU" && i.menuId)
-        .map((i) => i.menuId!);
+      const menuItems = data.items.filter((i) => i.itemType === "MENU" && i.menuId);
+      const menuIds = menuItems.map((i) => i.menuId!);
       const categories = data.items
         .filter((i) => i.category)
         .map((i) => i.category as string);
       const saleDateObj = parseLocalDate(data.saleDate);
       const weekday = saleDateObj.getDay();
+
+      // 部分適用計算用：メニューIDからカテゴリIDを取得
+      const menuDetails = await prisma.menu.findMany({
+        where: { id: { in: menuIds } },
+        select: { id: true, categoryId: true },
+      });
+      const menuIdToCategoryId = new Map(
+        menuDetails.map((m) => [m.id, m.categoryId])
+      );
 
       const couponResult = await validateCoupon({
         code: couponRecord.code,
@@ -239,6 +247,12 @@ export async function POST(request: NextRequest) {
         categories,
         weekday,
         time: data.saleTime,
+        // 部分適用計算用（対象メニューのみに割引を適用）
+        menuItems: menuItems.map((i) => ({
+          menuId: i.menuId!,
+          categoryId: menuIdToCategoryId.get(i.menuId!) || "",
+          price: i.unitPrice * i.quantity,
+        })),
       });
 
       if (!couponResult.valid) {

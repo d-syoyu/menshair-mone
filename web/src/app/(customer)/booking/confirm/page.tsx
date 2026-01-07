@@ -42,8 +42,23 @@ interface UserProfile {
   phone: string | null;
 }
 
-// クーポン検証結果の型
-interface CouponInfo {
+// 利用可能なクーポンの型
+interface AvailableCoupon {
+  id: string;
+  code: string;
+  name: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  description: string | null;
+  minimumAmount: number | null;
+  applicableMenuIds: string[];
+  applicableCategoryIds: string[];
+  validUntil: string;
+  conditions: string[];
+}
+
+// 選択されたクーポン情報の型
+interface SelectedCouponInfo {
   id: string;
   code: string;
   name: string;
@@ -81,10 +96,11 @@ function BookingConfirmContent() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   // クーポン
-  const [couponCode, setCouponCode] = useState('');
-  const [couponInfo, setCouponInfo] = useState<CouponInfo | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(true);
+  const [selectedCoupon, setSelectedCoupon] = useState<SelectedCouponInfo | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [showCouponList, setShowCouponList] = useState(false);
 
   // DBから取得したメニュー
   const [allMenus, setAllMenus] = useState<DbMenu[]>([]);
@@ -145,6 +161,40 @@ function BookingConfirmContent() {
     menuSummary: selectedMenus.map(m => m.name).join(' + '),
   } : null;
 
+  // 利用可能なクーポン一覧を取得
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      if (!totals || !date || !time) return;
+
+      try {
+        const categoryIds = selectedMenus.map(m => m.categoryId);
+        const params = new URLSearchParams({
+          menuIds: menuIds.join(','),
+          categoryIds: categoryIds.join(','),
+          weekday: date.getDay().toString(),
+          time: time,
+          subtotal: totals.totalPrice.toString(),
+        });
+
+        const res = await fetch(`/api/coupons?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableCoupons(data.coupons || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch coupons:', error);
+      } finally {
+        setIsLoadingCoupons(false);
+      }
+    };
+
+    if (selectedMenus.length > 0) {
+      fetchCoupons();
+    } else {
+      setIsLoadingCoupons(false);
+    }
+  }, [selectedMenus.length, totals?.totalPrice, date, time, menuIds]);
+
   // ローディング中
   if (isLoading || isLoadingProfile) {
     return (
@@ -176,35 +226,36 @@ function BookingConfirmContent() {
     );
   }
 
-  // クーポン検証
-  const validateCoupon = async () => {
-    if (!couponCode.trim()) {
-      setCouponError('クーポンコードを入力してください');
-      return;
-    }
-
+  // クーポン選択
+  const selectCoupon = async (coupon: AvailableCoupon) => {
     setIsValidatingCoupon(true);
-    setCouponError(null);
-    setCouponInfo(null);
+    setShowCouponList(false);
 
     try {
+      // 選択したクーポンを検証して割引額を取得
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: couponCode.trim().toUpperCase(),
+          code: coupon.code,
           subtotal: totals.totalPrice,
           menuIds,
           categories: selectedMenus.map(m => m.categoryId),
           weekday: date.getDay(),
           time: time,
+          // 部分適用計算用（対象メニューのみに割引を適用）
+          menuItems: selectedMenus.map(m => ({
+            menuId: m.id,
+            categoryId: m.categoryId,
+            price: m.price,
+          })),
         }),
       });
 
       const data = await res.json();
 
       if (data.valid) {
-        setCouponInfo({
+        setSelectedCoupon({
           id: data.coupon.id,
           code: data.coupon.code,
           name: data.coupon.name,
@@ -214,11 +265,9 @@ function BookingConfirmContent() {
           discountAmount: data.discountAmount,
           message: data.message,
         });
-      } else {
-        setCouponError(data.error || 'クーポンが無効です');
       }
-    } catch {
-      setCouponError('クーポンの検証に失敗しました');
+    } catch (error) {
+      console.error('Failed to validate coupon:', error);
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -226,9 +275,7 @@ function BookingConfirmContent() {
 
   // クーポン解除
   const removeCoupon = () => {
-    setCouponInfo(null);
-    setCouponCode('');
-    setCouponError(null);
+    setSelectedCoupon(null);
   };
 
   const handleSubmit = async () => {
@@ -256,7 +303,7 @@ function BookingConfirmContent() {
           note: note || undefined,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          couponCode: couponInfo?.code || undefined,
+          couponCode: selectedCoupon?.code || undefined,
         }),
       });
 
@@ -378,7 +425,7 @@ function BookingConfirmContent() {
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-white">小計</span>
                     <div>
-                      <span className={`text-lg font-medium ${couponInfo ? 'text-text-muted line-through' : 'text-gold'}`}>
+                      <span className={`text-lg font-medium ${selectedCoupon ? 'text-text-muted line-through' : 'text-gold'}`}>
                         ¥{totals.totalPrice.toLocaleString()}
                       </span>
                       <span className="text-sm text-text-muted ml-2">
@@ -386,21 +433,21 @@ function BookingConfirmContent() {
                       </span>
                     </div>
                   </div>
-                  {couponInfo && (
+                  {selectedCoupon && (
                     <>
                       <div className="flex justify-between items-center mt-2 text-green-400">
                         <span className="text-sm flex items-center gap-1">
                           <Ticket className="w-4 h-4" />
-                          {couponInfo.name}
+                          {selectedCoupon.name}
                         </span>
                         <span className="text-sm font-medium">
-                          -¥{couponInfo.discountAmount.toLocaleString()}
+                          -¥{selectedCoupon.discountAmount.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed border-glass-border">
                         <span className="font-medium text-white">合計（税込）</span>
                         <span className="text-gold text-xl font-medium">
-                          ¥{(totals.totalPrice - couponInfo.discountAmount).toLocaleString()}
+                          ¥{(totals.totalPrice - selectedCoupon.discountAmount).toLocaleString()}
                         </span>
                       </div>
                     </>
@@ -504,9 +551,14 @@ function BookingConfirmContent() {
           <h2 className="text-lg font-medium mb-4 text-white flex items-center gap-2">
             <Ticket className="w-5 h-5 text-accent-light" />
             クーポン
+            {availableCoupons.length > 0 && !selectedCoupon && (
+              <span className="ml-auto text-xs bg-accent/20 text-accent-light px-2 py-1 rounded-full">
+                {availableCoupons.length}件利用可能
+              </span>
+            )}
           </h2>
 
-          {couponInfo ? (
+          {selectedCoupon ? (
             // クーポン適用済み
             <div className="bg-green-900/20 border border-green-500/30 rounded p-4">
               <div className="flex items-start justify-between gap-3">
@@ -515,9 +567,8 @@ function BookingConfirmContent() {
                     <Check className="w-4 h-4 text-green-400" />
                     <span className="text-green-400 font-medium text-sm">クーポン適用中</span>
                   </div>
-                  <p className="text-white font-medium">{couponInfo.name}</p>
-                  <p className="text-xs text-text-muted mt-1">コード: {couponInfo.code}</p>
-                  <p className="text-gold font-medium mt-2">{couponInfo.message}</p>
+                  <p className="text-white font-medium">{selectedCoupon.name}</p>
+                  <p className="text-gold font-medium mt-2">{selectedCoupon.message}</p>
                 </div>
                 <button
                   onClick={removeCoupon}
@@ -528,36 +579,55 @@ function BookingConfirmContent() {
                 </button>
               </div>
             </div>
+          ) : isLoadingCoupons ? (
+            // ローディング中
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
+              <span className="ml-2 text-text-muted text-sm">クーポンを読み込み中...</span>
+            </div>
+          ) : availableCoupons.length === 0 ? (
+            // 利用可能なクーポンなし
+            <p className="text-text-muted text-sm">利用可能なクーポンはありません</p>
           ) : (
-            // クーポン入力フォーム
-            <div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => {
-                    setCouponCode(e.target.value.toUpperCase());
-                    setCouponError(null);
-                  }}
-                  placeholder="クーポンコードを入力"
-                  maxLength={50}
-                  className="flex-1 min-w-0 p-3 border border-glass-border rounded bg-glass-light text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors uppercase"
-                />
+            // クーポン選択UI
+            <div className="space-y-3">
+              {availableCoupons.map((coupon) => (
                 <button
-                  onClick={validateCoupon}
-                  disabled={isValidatingCoupon || !couponCode.trim()}
-                  className="px-4 py-3 bg-accent text-white text-sm font-medium hover:bg-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center gap-2"
+                  key={coupon.id}
+                  onClick={() => selectCoupon(coupon)}
+                  disabled={isValidatingCoupon}
+                  className="w-full text-left p-4 border border-glass-border rounded hover:border-accent transition-colors bg-glass-light disabled:opacity-50"
                 >
-                  {isValidatingCoupon ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    '適用'
-                  )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{coupon.name}</p>
+                      {coupon.description && (
+                        <p className="text-sm text-text-muted mt-1">{coupon.description}</p>
+                      )}
+                      <p className="text-gold font-medium mt-2">
+                        {coupon.type === 'PERCENTAGE'
+                          ? `${coupon.value}% OFF`
+                          : `¥${coupon.value.toLocaleString()} OFF`}
+                      </p>
+                      {coupon.conditions.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {coupon.conditions.map((condition, i) => (
+                            <span
+                              key={i}
+                              className="text-xs bg-glass-light text-text-muted px-2 py-0.5 rounded"
+                            >
+                              {condition}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-accent">
+                      <Check className="w-5 h-5 opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </div>
                 </button>
-              </div>
-              {couponError && (
-                <p className="text-red-400 text-sm mt-2">{couponError}</p>
-              )}
+              ))}
             </div>
           )}
         </motion.div>

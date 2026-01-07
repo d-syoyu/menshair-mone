@@ -3,6 +3,13 @@
 
 import { prisma } from "@/lib/db";
 
+// メニューアイテム情報（部分適用計算用）
+export interface MenuItemForCoupon {
+  menuId: string;
+  categoryId: string;
+  price: number;
+}
+
 // 検証パラメータの型定義
 export interface CouponValidationParams {
   code: string;
@@ -12,6 +19,8 @@ export interface CouponValidationParams {
   categories?: string[];
   weekday?: number;
   time?: string;
+  // 部分適用計算用（対象メニューのみに割引を適用する場合に使用）
+  menuItems?: MenuItemForCoupon[];
 }
 
 // 検証成功時の戻り値
@@ -27,6 +36,9 @@ export interface CouponValidationSuccess {
   };
   discountAmount: number;
   message: string;
+  // 部分適用時の追加情報
+  applicableSubtotal?: number;
+  applicableMenuIds?: string[];
 }
 
 // 検証失敗時の戻り値
@@ -67,6 +79,7 @@ export async function validateCoupon(
     categories = [],
     weekday,
     time,
+    menuItems = [],
   } = params;
 
   const now = new Date();
@@ -161,28 +174,32 @@ export async function validateCoupon(
     };
   }
 
-  // 9. メニュー制限チェック（1つでも対象があればOK）
-  if (coupon.applicableMenuIds.length > 0 && menuIds.length > 0) {
-    const hasApplicableMenu = menuIds.some((id) =>
-      coupon.applicableMenuIds.includes(id)
-    );
-    if (!hasApplicableMenu) {
-      return {
-        valid: false,
-        error: "対象メニューが含まれていません",
-      };
-    }
-  }
+  // 9 & 10. メニュー制限・カテゴリ制限チェック（OR条件：どちらかに該当すればOK）
+  const hasMenuRestriction = coupon.applicableMenuIds.length > 0;
+  const hasCategoryRestriction = coupon.applicableCategoryIds.length > 0;
 
-  // 10. カテゴリ制限チェック（1つでも対象があればOK）
-  if (coupon.applicableCategoryIds.length > 0 && categories.length > 0) {
-    const hasApplicableCategory = categories.some((cat) =>
-      coupon.applicableCategoryIds.includes(cat)
-    );
-    if (!hasApplicableCategory) {
+  if (hasMenuRestriction || hasCategoryRestriction) {
+    // 対象メニューに含まれるか
+    const hasApplicableMenu = hasMenuRestriction
+      ? menuIds.some((id) => coupon.applicableMenuIds.includes(id))
+      : false;
+    // 対象カテゴリに含まれるか
+    const hasApplicableCategory = hasCategoryRestriction
+      ? categories.some((cat) => coupon.applicableCategoryIds.includes(cat))
+      : false;
+
+    // OR条件：どちらかに該当すればOK
+    // - メニュー制限のみ → メニューが該当すればOK
+    // - カテゴリ制限のみ → カテゴリが該当すればOK
+    // - 両方制限 → どちらかに該当すればOK
+    const isApplicable =
+      (hasMenuRestriction && hasApplicableMenu) ||
+      (hasCategoryRestriction && hasApplicableCategory);
+
+    if (!isApplicable) {
       return {
         valid: false,
-        error: "対象カテゴリが含まれていません",
+        error: "対象メニュー/カテゴリが含まれていません",
       };
     }
   }
@@ -209,12 +226,38 @@ export async function validateCoupon(
     }
   }
 
-  // 13. 割引額計算
+  // 13. 割引額計算（部分適用対応）
+  let targetSubtotal = subtotal;
+  const applicableMenuIdList: string[] = [];
+
+  // カテゴリまたはメニュー制限がある場合、対象メニューのみの小計を計算
+  const hasRestriction = hasMenuRestriction || hasCategoryRestriction;
+
+  if (hasRestriction && menuItems.length > 0) {
+    targetSubtotal = 0;
+    for (const item of menuItems) {
+      // OR条件で判定：
+      // - メニュー制限あり && 対象メニューに含まれる → 対象
+      // - カテゴリ制限あり && 対象カテゴリに含まれる → 対象
+      const menuMatch =
+        hasMenuRestriction && coupon.applicableMenuIds.includes(item.menuId);
+      const categoryMatch =
+        hasCategoryRestriction && coupon.applicableCategoryIds.includes(item.categoryId);
+
+      // どちらかの条件を満たせば対象
+      if (menuMatch || categoryMatch) {
+        targetSubtotal += item.price;
+        applicableMenuIdList.push(item.menuId);
+      }
+    }
+  }
+
+  // 割引計算（対象小計に対して適用）
   let discountAmount: number;
   if (coupon.type === "PERCENTAGE") {
-    discountAmount = Math.floor((subtotal * coupon.value) / 100);
+    discountAmount = Math.floor((targetSubtotal * coupon.value) / 100);
   } else {
-    discountAmount = Math.min(coupon.value, subtotal); // 小計を超えない
+    discountAmount = Math.min(coupon.value, targetSubtotal); // 対象小計を超えない
   }
 
   // 検証成功
@@ -233,5 +276,8 @@ export async function validateCoupon(
       coupon.type === "PERCENTAGE"
         ? `${coupon.value}% OFF: ¥${discountAmount.toLocaleString()}割引`
         : `¥${discountAmount.toLocaleString()}割引`,
+    // 部分適用時の追加情報
+    applicableSubtotal: hasRestriction ? targetSubtotal : undefined,
+    applicableMenuIds: hasRestriction ? applicableMenuIdList : undefined,
   };
 }

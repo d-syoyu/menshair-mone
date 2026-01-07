@@ -245,6 +245,12 @@ export async function POST(request: NextRequest) {
         categories: menus.map((m) => m.categoryId),
         weekday,
         time: startTime,
+        // 部分適用計算用（対象メニューのみに割引を適用）
+        menuItems: menus.map((m) => ({
+          menuId: m.id,
+          categoryId: m.categoryId,
+          price: m.price,
+        })),
       });
 
       if (!couponResult.valid) {

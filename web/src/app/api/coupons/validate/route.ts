@@ -6,6 +6,13 @@ import { auth } from "@/lib/auth";
 import { validateCoupon } from "@/lib/coupon-validation";
 import { z } from "zod";
 
+// メニューアイテムスキーマ（部分適用計算用）
+const menuItemSchema = z.object({
+  menuId: z.string(),
+  categoryId: z.string(),
+  price: z.number().int().nonnegative(),
+});
+
 // バリデーションスキーマ
 const validateCouponSchema = z.object({
   code: z.string().min(1, "クーポンコードは必須です"),
@@ -14,6 +21,8 @@ const validateCouponSchema = z.object({
   categories: z.array(z.string()).optional(),
   weekday: z.number().int().min(0).max(6).optional(),
   time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  // 部分適用計算用（対象メニューのみに割引を適用する場合）
+  menuItems: z.array(menuItemSchema).optional(),
 });
 
 // POST /api/coupons/validate - クーポン検証（顧客向け）
@@ -38,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { code, subtotal, menuIds, categories, weekday, time } =
+    const { code, subtotal, menuIds, categories, weekday, time, menuItems } =
       validationResult.data;
 
     // 共通検証関数を呼び出し（顧客IDを渡す）
@@ -50,6 +59,7 @@ export async function POST(request: NextRequest) {
       categories,
       weekday,
       time,
+      menuItems,
     });
 
     return NextResponse.json(result);
