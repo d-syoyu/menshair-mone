@@ -66,6 +66,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // 本番環境（HTTPS）では __Secure- プレフィックスが必要
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieName = isProduction
+      ? "__Secure-authjs.session-token"
+      : "authjs.session-token";
+
     const token = await encode({
       token: {
         sub: user.id,
@@ -76,16 +82,15 @@ export async function POST(request: Request) {
         exp: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90日間
       },
       secret,
-      salt: "authjs.session-token",
+      salt: cookieName, // saltはcookie名と一致させる
     });
 
-    console.error('[Admin Login API] JWT generated, setting cookie');
+    console.error(`[Admin Login API] JWT generated, setting cookie: ${cookieName}`);
 
-    // セッションCookieを設定
     const cookieStore = await cookies();
-    cookieStore.set("authjs.session-token", token, {
+    cookieStore.set(cookieName, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "lax",
       path: "/",
       maxAge: 90 * 24 * 60 * 60, // 90日間
