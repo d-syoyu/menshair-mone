@@ -24,7 +24,7 @@ const RESEND_MAX_RECIPIENTS = 50;
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const toAddresses = Array.isArray(to) ? to : [to];
-  console.log(`[Email] Attempting to send email to: ${toAddresses.join(', ')}, subject: ${subject}`);
+  console.log(`[Email] Attempting to send email to ${toAddresses.length} recipient(s), subject: ${subject}`);
 
   if (!resend) {
     console.error('[Email] Resend API key not configured - RESEND_API_KEY is missing');
@@ -32,53 +32,48 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   }
 
   try {
-    // 50件以下の場合は一括送信
-    if (toAddresses.length <= RESEND_MAX_RECIPIENTS) {
+    // 単一受信者の場合
+    if (toAddresses.length === 1) {
       const result = await resend.emails.send({
         from: FROM_EMAIL,
-        to: toAddresses,
+        to: toAddresses[0],
         subject,
         html,
         text,
       });
 
       if (result.error) {
-        console.error(`[Email] Failed to send email to: ${toAddresses.join(', ')}, error:`, result.error);
+        console.error(`[Email] Failed to send email to: ${toAddresses[0]}, error:`, result.error);
         return { success: false, error: result.error.message || 'Unknown error' };
       }
 
-      console.log(`[Email] Successfully sent email to: ${toAddresses.join(', ')}, id: ${result.data?.id}`);
+      console.log(`[Email] Successfully sent email to: ${toAddresses[0]}, id: ${result.data?.id}`);
       return { success: true, data: result.data };
     }
 
-    // 50件超の場合はバッチ処理
-    console.log(`[Email] Batch sending to ${toAddresses.length} recipients (${Math.ceil(toAddresses.length / RESEND_MAX_RECIPIENTS)} batches)`);
+    // 複数受信者の場合は各受信者に個別送信（プライバシー保護のため）
+    console.log(`[Email] Sending individually to ${toAddresses.length} recipients to protect privacy`);
 
-    const batches: string[][] = [];
-    for (let i = 0; i < toAddresses.length; i += RESEND_MAX_RECIPIENTS) {
-      batches.push(toAddresses.slice(i, i + RESEND_MAX_RECIPIENTS));
-    }
+    const results: { email: string; success: boolean; id?: string; error?: string }[] = [];
 
-    const results: { batchIndex: number; success: boolean; id?: string; error?: string }[] = [];
-
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
-      console.log(`[Email] Sending batch ${i + 1}/${batches.length} (${batch.length} recipients)`);
+    for (let i = 0; i < toAddresses.length; i++) {
+      const email = toAddresses[i];
+      console.log(`[Email] Sending to ${i + 1}/${toAddresses.length}: ${email}`);
 
       const result = await resend.emails.send({
         from: FROM_EMAIL,
-        to: batch,
+        to: email,
         subject,
         html,
         text,
       });
 
       if (result.error) {
-        console.error(`[Email] Batch ${i + 1} failed:`, result.error);
-        results.push({ batchIndex: i, success: false, error: result.error.message || 'Unknown error' });
+        console.error(`[Email] Failed to send to ${email}:`, result.error);
+        results.push({ email, success: false, error: result.error.message || 'Unknown error' });
       } else {
-        console.log(`[Email] Batch ${i + 1} succeeded, id: ${result.data?.id}`);
-        results.push({ batchIndex: i, success: true, id: result.data?.id });
+        console.log(`[Email] Successfully sent to ${email}, id: ${result.data?.id}`);
+        results.push({ email, success: true, id: result.data?.id });
       }
     }
 
@@ -87,18 +82,18 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
     const failCount = results.filter(r => !r.success).length;
 
     if (failCount === 0) {
-      console.log(`[Email] All ${batches.length} batches sent successfully`);
-      return { success: true, data: { batchResults: results, totalBatches: batches.length } };
+      console.log(`[Email] All ${toAddresses.length} emails sent successfully`);
+      return { success: true, data: { results, totalRecipients: toAddresses.length } };
     } else if (successCount > 0) {
-      console.warn(`[Email] Partial success: ${successCount}/${batches.length} batches sent`);
+      console.warn(`[Email] Partial success: ${successCount}/${toAddresses.length} emails sent`);
       return {
         success: false,
-        error: `Partial failure: ${failCount}/${batches.length} batches failed`,
-        data: { batchResults: results, totalBatches: batches.length }
+        error: `Partial failure: ${failCount}/${toAddresses.length} emails failed`,
+        data: { results, totalRecipients: toAddresses.length }
       };
     } else {
-      console.error(`[Email] All ${batches.length} batches failed`);
-      return { success: false, error: 'All batches failed', data: { batchResults: results } };
+      console.error(`[Email] All ${toAddresses.length} emails failed`);
+      return { success: false, error: 'All emails failed', data: { results } };
     }
   } catch (error) {
     console.error('[Email] Failed to send email:', error);
