@@ -109,6 +109,7 @@ declare module "@auth/core/jwt" {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: CustomPrismaAdapter(),
   trustHost: true,
+  debug: true, // デバッグモードを有効化
   session: {
     strategy: "jwt",
     // セッション有効期限: 90日間（ブラウザを閉じても維持）
@@ -156,42 +157,46 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         try {
-          console.log('[Admin Login] Authorization attempt started');
+          console.error('[Admin Login] Authorization attempt started');
+          console.error('[Admin Login] Environment check:', {
+            hasDatabaseUrl: !!process.env.DATABASE_URL,
+            nodeEnv: process.env.NODE_ENV,
+          });
 
           if (!credentials?.email || !credentials?.password) {
-            console.log('[Admin Login] Missing credentials');
+            console.error('[Admin Login] Missing credentials');
             return null;
           }
 
           const email = credentials.email as string;
           const password = credentials.password as string;
 
-          console.log(`[Admin Login] Looking up user: ${email}`);
+          console.error(`[Admin Login] Looking up user: ${email}`);
 
           const user = await prisma.user.findUnique({
             where: { email },
           });
 
           if (!user) {
-            console.log(`[Admin Login] User not found: ${email}`);
+            console.error(`[Admin Login] User not found: ${email}`);
             return null;
           }
 
           if (!user.password) {
-            console.log(`[Admin Login] User has no password set: ${email}`);
+            console.error(`[Admin Login] User has no password set: ${email}`);
             return null;
           }
 
-          console.log(`[Admin Login] User found, checking password for: ${email}`);
+          console.error(`[Admin Login] User found, checking password for: ${email}`);
 
           const isPasswordValid = await bcrypt.compare(password, user.password);
 
           if (!isPasswordValid) {
-            console.log(`[Admin Login] Invalid password for: ${email}`);
+            console.error(`[Admin Login] Invalid password for: ${email}`);
             return null;
           }
 
-          console.log(`[Admin Login] Login successful: ${email} (role: ${user.role})`);
+          console.error(`[Admin Login] Login successful: ${email} (role: ${user.role})`);
 
           return {
             id: user.id,
@@ -200,7 +205,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: user.role,
           };
         } catch (error) {
-          console.error('[Admin Login] Authorization error:', error);
+          console.error('[Admin Login] Authorization error:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined,
+          });
           return null;
         }
       },
