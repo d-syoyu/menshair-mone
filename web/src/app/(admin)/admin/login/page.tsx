@@ -43,15 +43,16 @@ function AdminLoginContent() {
 
     console.error('[Admin Login Page] SignIn result:', result);
 
-    if (result?.error) {
+    // result.ok を優先的にチェック（ok: true なら成功とみなす）
+    if (result?.ok) {
+      // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
+      console.error('[Admin Login Page] SignIn successful, redirecting to admin');
+      window.location.replace(`/admin?t=${Date.now()}`);
+    } else if (result?.error) {
       // エラーの場合はここでハンドリング
       console.error('[Admin Login Page] SignIn error:', result.error);
       setIsLoading(false);
       window.location.replace('/admin/login?error=CredentialsSignin');
-    } else if (result?.ok) {
-      // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
-      console.error('[Admin Login Page] SignIn successful, redirecting to admin');
-      window.location.replace(`/admin?t=${Date.now()}`);
     } else {
       console.warn('[Admin Login Page] SignIn returned unexpected result');
       setIsLoading(false);
