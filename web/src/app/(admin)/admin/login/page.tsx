@@ -24,8 +24,6 @@ function AdminLoginContent() {
     e.preventDefault();
     setIsLoading(true);
 
-    console.error('[Admin Login Page] Login attempt:', { email });
-
     // メールアドレスを保存/削除
     if (rememberMe) {
       localStorage.setItem(STORAGE_KEY, email);
@@ -39,9 +37,6 @@ function AdminLoginContent() {
     }
 
     try {
-      console.error('[Admin Login Page] Calling admin-login API');
-
-      // 直接APIエンドポイントを呼び出す
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
         headers: {
@@ -50,23 +45,15 @@ function AdminLoginContent() {
         body: JSON.stringify({ email, password }),
       });
 
-      console.error('[Admin Login Page] API response status:', response.status);
-
       const data = await response.json();
-      console.error('[Admin Login Page] API response data:', JSON.stringify(data, null, 2));
 
       if (response.ok && data.success) {
-        console.error('[Admin Login Page] Login successful, redirecting to admin');
-
-        // ページをリロードしてセッションを読み込む
         window.location.replace('/admin');
       } else {
-        console.error('[Admin Login Page] Login failed:', data.error);
         setIsLoading(false);
         window.location.replace('/admin/login?error=CredentialsSignin');
       }
-    } catch (error) {
-      console.error('[Admin Login Page] Login error:', error);
+    } catch {
       setIsLoading(false);
       window.location.replace('/admin/login?error=CredentialsSignin');
     }

@@ -109,7 +109,6 @@ declare module "@auth/core/jwt" {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: CustomPrismaAdapter(),
   trustHost: true,
-  debug: true, // デバッグモードを有効化
   session: {
     strategy: "jwt",
     // セッション有効期限: 90日間（ブラウザを閉じても維持）
@@ -157,62 +156,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "パスワード", type: "password" },
       },
       async authorize(credentials) {
-        try {
-          console.error('[Admin Login] Authorization attempt started');
-          console.error('[Admin Login] Environment check:', {
-            hasDatabaseUrl: !!process.env.DATABASE_URL,
-            nodeEnv: process.env.NODE_ENV,
-          });
-
-          if (!credentials?.email || !credentials?.password) {
-            console.error('[Admin Login] Missing credentials');
-            return null;
-          }
-
-          const email = credentials.email as string;
-          const password = credentials.password as string;
-
-          console.error(`[Admin Login] Looking up user: ${email}`);
-
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
-
-          if (!user) {
-            console.error(`[Admin Login] User not found: ${email}`);
-            return null;
-          }
-
-          if (!user.password) {
-            console.error(`[Admin Login] User has no password set: ${email}`);
-            return null;
-          }
-
-          console.error(`[Admin Login] User found, checking password for: ${email}`);
-
-          const isPasswordValid = await bcrypt.compare(password, user.password);
-
-          if (!isPasswordValid) {
-            console.error(`[Admin Login] Invalid password for: ${email}`);
-            return null;
-          }
-
-          console.error(`[Admin Login] Login successful: ${email} (role: ${user.role})`);
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
-        } catch (error) {
-          console.error('[Admin Login] Authorization error:', {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            name: error instanceof Error ? error.name : undefined,
-          });
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
+
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (!user || !user.password) {
+          return null;
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
   ],

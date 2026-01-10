@@ -102,24 +102,10 @@ export default function AdminDashboard() {
 
   // 認証チェック - 未ログインまたは管理者でない場合はリダイレクト
   useEffect(() => {
-    console.error('[Admin Page] Session status:', status);
-    console.error('[Admin Page] Session data:', JSON.stringify(session, null, 2));
-
-    if (status === 'loading') {
-      console.error('[Admin Page] Session loading...');
-      return;
-    }
-    if (status === 'unauthenticated') {
-      console.error('[Admin Page] Unauthenticated - redirecting to login');
+    if (status === 'loading') return;
+    if (status === 'unauthenticated' || session?.user?.role !== 'ADMIN') {
       router.replace('/admin/login');
-      return;
     }
-    if (session?.user?.role !== 'ADMIN') {
-      console.error('[Admin Page] User role is not ADMIN:', session?.user?.role);
-      router.replace('/admin/login');
-      return;
-    }
-    console.error('[Admin Page] Authentication successful');
   }, [status, session, router]);
 
   useEffect(() => {
