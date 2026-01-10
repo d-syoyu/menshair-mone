@@ -825,17 +825,17 @@ export default function NewSalePage() {
           variants={fadeInUp}
           className="mb-6"
         >
-          <div className="flex items-center justify-between bg-white rounded-xl shadow-sm p-4">
+          <div className="flex items-center justify-between bg-white rounded-xl shadow-sm p-3 sm:p-4 overflow-x-auto">
             {STEPS.map((stepInfo, index) => {
               const Icon = stepInfo.icon;
               const isActive = currentStep === stepInfo.step;
               const isCompleted = currentStep > stepInfo.step;
               return (
-                <div key={stepInfo.step} className="flex items-center">
+                <div key={stepInfo.step} className="flex items-center flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(stepInfo.step as Step)}
-                    className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                    className={`flex flex-col items-center gap-1 px-1 sm:px-2 py-1 rounded-lg transition-colors ${
                       isActive
                         ? 'text-[var(--color-accent)]'
                         : isCompleted
@@ -844,7 +844,7 @@ export default function NewSalePage() {
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
                         isActive
                           ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
                           : isCompleted
@@ -853,15 +853,15 @@ export default function NewSalePage() {
                       }`}
                     >
                       {isCompleted ? (
-                        <Check className="w-5 h-5" />
+                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                       ) : (
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                       )}
                     </div>
-                    <span className="text-xs font-medium hidden sm:block">{stepInfo.label}</span>
+                    <span className="text-[10px] sm:text-xs font-medium hidden xs:block">{stepInfo.label}</span>
                   </button>
                   {index < STEPS.length - 1 && (
-                    <ChevronRight className="w-4 h-4 text-gray-300 mx-1" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-300 mx-0.5 sm:mx-1 flex-shrink-0" />
                   )}
                 </div>
               );
@@ -1667,14 +1667,14 @@ export default function NewSalePage() {
             {currentStep === 5 && (
               <div className="space-y-6">
                 {/* 支払方法 */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
                   <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
                     <Receipt className="w-5 h-5 text-[var(--color-gold)]" />
                     支払方法
                   </h2>
                   <div className="space-y-3">
                     {payments.map((payment, index) => (
-                      <div key={index} className="flex flex-wrap items-center gap-2">
+                      <div key={index} className="flex items-center gap-2">
                         <select
                           value={payment.paymentMethod}
                           onChange={(e) => {
@@ -1682,7 +1682,7 @@ export default function NewSalePage() {
                             newPayments[index].paymentMethod = e.target.value;
                             setPayments(newPayments);
                           }}
-                          className="flex-1 min-w-[120px] px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)]"
+                          className="flex-1 min-w-0 px-2 sm:px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:border-[var(--color-accent)] text-sm sm:text-base"
                         >
                           {paymentMethods.map((method) => (
                             <option key={method.code} value={method.code}>
@@ -1690,36 +1690,34 @@ export default function NewSalePage() {
                             </option>
                           ))}
                         </select>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            value={payment.amount}
-                            onChange={(e) => {
-                              const newPayments = [...payments];
-                              newPayments[index].amount = parseInt(e.target.value) || 0;
-                              setPayments(newPayments);
-                            }}
-                            className="w-24 sm:w-28 px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)]"
-                            placeholder="0"
-                          />
+                        <input
+                          type="number"
+                          min="0"
+                          value={payment.amount}
+                          onChange={(e) => {
+                            const newPayments = [...payments];
+                            newPayments[index].amount = parseInt(e.target.value) || 0;
+                            setPayments(newPayments);
+                          }}
+                          className="w-20 sm:w-28 px-2 sm:px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-900 text-right focus:outline-none focus:border-[var(--color-accent)] text-sm sm:text-base"
+                          placeholder="0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSetFullAmount(index)}
+                          className="px-2 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
+                        >
+                          全額
+                        </button>
+                        {payments.length > 1 && (
                           <button
                             type="button"
-                            onClick={() => handleSetFullAmount(index)}
-                            className="px-2 sm:px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
+                            onClick={() => handleRemovePayment(index)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                           >
-                            全額
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                          {payments.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePayment(index)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
