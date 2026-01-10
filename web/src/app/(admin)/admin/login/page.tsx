@@ -25,6 +25,8 @@ function AdminLoginContent() {
     e.preventDefault();
     setIsLoading(true);
 
+    console.error('[Admin Login Page] Login attempt:', { email });
+
     // メールアドレスを保存/削除
     if (rememberMe) {
       localStorage.setItem(STORAGE_KEY, email);
@@ -39,7 +41,7 @@ function AdminLoginContent() {
       redirect: false,
     });
 
-    console.log('[Admin Login Page] SignIn result:', result);
+    console.error('[Admin Login Page] SignIn result:', result);
 
     if (result?.error) {
       // エラーの場合はここでハンドリング
@@ -48,7 +50,7 @@ function AdminLoginContent() {
       window.location.replace('/admin/login?error=CredentialsSignin');
     } else if (result?.ok) {
       // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
-      console.log('[Admin Login Page] SignIn successful, redirecting to admin');
+      console.error('[Admin Login Page] SignIn successful, redirecting to admin');
       window.location.replace(`/admin?t=${Date.now()}`);
     } else {
       console.warn('[Admin Login Page] SignIn returned unexpected result');
