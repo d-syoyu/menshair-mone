@@ -262,7 +262,7 @@ export default function AdminDashboard() {
             <button
               onClick={async () => {
                 await signOut({ redirect: false });
-                window.location.href = '/admin/login';
+                window.location.replace(`/admin/login?t=${Date.now()}`);
               }}
               className="flex items-center gap-2 px-4 py-3 text-base text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
