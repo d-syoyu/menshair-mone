@@ -155,33 +155,54 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "パスワード", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        try {
+          console.log('[Admin Login] Authorization attempt started');
+
+          if (!credentials?.email || !credentials?.password) {
+            console.log('[Admin Login] Missing credentials');
+            return null;
+          }
+
+          const email = credentials.email as string;
+          const password = credentials.password as string;
+
+          console.log(`[Admin Login] Looking up user: ${email}`);
+
+          const user = await prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (!user) {
+            console.log(`[Admin Login] User not found: ${email}`);
+            return null;
+          }
+
+          if (!user.password) {
+            console.log(`[Admin Login] User has no password set: ${email}`);
+            return null;
+          }
+
+          console.log(`[Admin Login] User found, checking password for: ${email}`);
+
+          const isPasswordValid = await bcrypt.compare(password, user.password);
+
+          if (!isPasswordValid) {
+            console.log(`[Admin Login] Invalid password for: ${email}`);
+            return null;
+          }
+
+          console.log(`[Admin Login] Login successful: ${email} (role: ${user.role})`);
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error('[Admin Login] Authorization error:', error);
           return null;
         }
-
-        const email = credentials.email as string;
-        const password = credentials.password as string;
-
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (!user || !user.password) {
-          return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
