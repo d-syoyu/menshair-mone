@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Shield } from 'lucide-react';
 
@@ -20,7 +19,7 @@ function AdminLoginContent() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
-  // 管理者ログイン（Credentials）
+  // 管理者ログイン（直接APIを使用）
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -39,34 +38,37 @@ function AdminLoginContent() {
       window.history.replaceState({}, '', '/admin/login');
     }
 
-    // redirect: false でリダイレクトを防ぎ、結果を手動で処理
-    console.error('[Admin Login Page] Calling signIn with credentials provider');
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-      callbackUrl: '/admin',
-    });
+    try {
+      console.error('[Admin Login Page] Calling admin-login API');
 
-    console.error('[Admin Login Page] SignIn result:', JSON.stringify(result, null, 2));
+      // 直接APIエンドポイントを呼び出す
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // result.ok を優先的にチェック（ok: true なら成功とみなす）
-    if (result?.ok) {
-      // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
-      console.error('[Admin Login Page] SignIn successful, redirecting to admin');
+      console.error('[Admin Login Page] API response status:', response.status);
 
-      // セッションが確立されるまで少し待つ
-      setTimeout(() => {
-        window.location.replace(`/admin?t=${Date.now()}`);
-      }, 500);
-    } else if (result?.error) {
-      // エラーの場合はここでハンドリング
-      console.error('[Admin Login Page] SignIn error:', result.error);
+      const data = await response.json();
+      console.error('[Admin Login Page] API response data:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data.success) {
+        console.error('[Admin Login Page] Login successful, redirecting to admin');
+
+        // ページをリロードしてセッションを読み込む
+        window.location.replace('/admin');
+      } else {
+        console.error('[Admin Login Page] Login failed:', data.error);
+        setIsLoading(false);
+        window.location.replace('/admin/login?error=CredentialsSignin');
+      }
+    } catch (error) {
+      console.error('[Admin Login Page] Login error:', error);
       setIsLoading(false);
       window.location.replace('/admin/login?error=CredentialsSignin');
-    } else {
-      console.warn('[Admin Login Page] SignIn returned unexpected result');
-      setIsLoading(false);
     }
   };
 
