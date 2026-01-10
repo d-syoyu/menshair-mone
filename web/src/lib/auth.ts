@@ -186,22 +186,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // 初回サインイン時（userが存在する場合）
-      if (user && account) {
-        // データベースからユーザーを取得して正しいIDを設定
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email! },
-          select: { id: true, role: true },
-        });
-
-        if (dbUser) {
-          token.sub = dbUser.id;
-          token.role = dbUser.role;
-        } else {
-          // フォールバック
-          token.role = user.role || "CUSTOMER";
+      if (user) {
+        // Credentialsプロバイダーの場合、userオブジェクトに直接roleが含まれている
+        if (user.role) {
           token.sub = user.id;
+          token.role = user.role;
+        } else {
+          // LINE/Emailプロバイダーの場合、データベースからroleを取得
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            select: { id: true, role: true },
+          });
+
+          if (dbUser) {
+            token.sub = dbUser.id;
+            token.role = dbUser.role;
+          } else {
+            // フォールバック
+            token.role = "CUSTOMER";
+            token.sub = user.id;
+          }
         }
       }
       return token;
