@@ -34,20 +34,31 @@ function AdminLoginContent() {
       localStorage.removeItem(STORAGE_KEY);
     }
 
+    // URLからerrorパラメータを削除（古いエラーが残らないように）
+    if (window.location.search.includes('error=')) {
+      window.history.replaceState({}, '', '/admin/login');
+    }
+
     // redirect: false でリダイレクトを防ぎ、結果を手動で処理
+    console.error('[Admin Login Page] Calling signIn with credentials provider');
     const result = await signIn('credentials', {
       email,
       password,
       redirect: false,
+      callbackUrl: '/admin',
     });
 
-    console.error('[Admin Login Page] SignIn result:', result);
+    console.error('[Admin Login Page] SignIn result:', JSON.stringify(result, null, 2));
 
     // result.ok を優先的にチェック（ok: true なら成功とみなす）
     if (result?.ok) {
       // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
       console.error('[Admin Login Page] SignIn successful, redirecting to admin');
-      window.location.replace(`/admin?t=${Date.now()}`);
+
+      // セッションが確立されるまで少し待つ
+      setTimeout(() => {
+        window.location.replace(`/admin?t=${Date.now()}`);
+      }, 500);
     } else if (result?.error) {
       // エラーの場合はここでハンドリング
       console.error('[Admin Login Page] SignIn error:', result.error);
