@@ -150,6 +150,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     // Credentials (管理者向け)
     Credentials({
+      id: "credentials",
       name: "credentials",
       credentials: {
         email: { label: "メールアドレス", type: "email" },
