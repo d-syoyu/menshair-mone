@@ -716,6 +716,8 @@ export interface AdminNewReservationData {
   endTime: string;
   menuSummary: string;
   totalPrice: number;
+  couponCode?: string | null;
+  couponDiscount?: number;
   note?: string | null;
   isPhoneReservation?: boolean;
 }
@@ -783,10 +785,25 @@ export function createAdminNewReservationHtml(data: AdminNewReservationData) {
                   <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">メニュー</td>
                   <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #333; font-size: 14px;">${data.menuSummary}</td>
                 </tr>
+                ${data.couponDiscount && data.couponDiscount > 0 ? `
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">小計</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #999; font-size: 14px; text-decoration: line-through;">${formatPrice(data.totalPrice)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">クーポン割引${data.couponCode ? ` (${data.couponCode})` : ''}</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #2d5a27; font-size: 14px; font-weight: 500;">-${formatPrice(data.couponDiscount)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">料金（割引後）</td>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #2d5a27; font-size: 16px; font-weight: 600;">${formatPrice(data.totalPrice - data.couponDiscount)}</td>
+                </tr>
+                ` : `
                 <tr>
                   <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">料金</td>
                   <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #2d5a27; font-size: 16px; font-weight: 600;">${formatPrice(data.totalPrice)}</td>
                 </tr>
+                `}
                 ${data.note ? `
                 <tr>
                   <td style="padding: 10px 0; border-bottom: 1px solid #eee; color: #666; font-size: 13px;">備考</td>
@@ -831,7 +848,13 @@ export function createAdminNewReservationText(data: AdminNewReservationData) {
   if (data.customerEmail) text += `メール: ${data.customerEmail}\n`;
   text += `日時: ${dateStr} ${data.startTime}〜${data.endTime}\n`;
   text += `メニュー: ${data.menuSummary}\n`;
-  text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  if (data.couponDiscount && data.couponDiscount > 0) {
+    text += `小計: ${formatPrice(data.totalPrice)}\n`;
+    text += `クーポン割引${data.couponCode ? ` (${data.couponCode})` : ''}: -${formatPrice(data.couponDiscount)}\n`;
+    text += `料金（割引後）: ${formatPrice(data.totalPrice - data.couponDiscount)}\n`;
+  } else {
+    text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  }
   if (data.note) text += `備考: ${data.note}\n`;
   text += `\n管理画面: ${siteUrl}/admin/reservations\n`;
 
