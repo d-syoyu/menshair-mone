@@ -42,10 +42,10 @@ function AdminLoginContent() {
     if (result?.error) {
       // エラーの場合はここでハンドリング
       setIsLoading(false);
-      window.location.href = '/admin/login?error=CredentialsSignin';
+      window.location.replace('/admin/login?error=CredentialsSignin');
     } else if (result?.ok) {
-      // 成功したら管理画面へ
-      window.location.href = '/admin';
+      // 成功したら管理画面へ（キャッシュバスティング用のタイムスタンプを追加）
+      window.location.replace(`/admin?t=${Date.now()}`);
     } else {
       setIsLoading(false);
     }
