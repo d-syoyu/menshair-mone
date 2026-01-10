@@ -75,6 +75,15 @@ interface Reservation {
   endTime: string;
   status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
   note?: string;
+  couponCode?: string | null;
+  couponDiscount?: number;
+  coupon?: {
+    id: string;
+    code: string;
+    name: string;
+    type: string;
+    value: number;
+  } | null;
   user: {
     id: string;
     name: string | null;
@@ -945,9 +954,20 @@ function AdminReservationsContent() {
                         <p className="text-xs text-gray-500 truncate">
                           {reservation.user.name || '名前未登録'}
                         </p>
-                        <p className="text-xs text-[var(--color-gold)]">
-                          ¥{reservation.totalPrice.toLocaleString()}
-                        </p>
+                        {reservation.couponDiscount && reservation.couponDiscount > 0 ? (
+                          <div className="text-xs">
+                            <p className="text-gray-400 line-through">
+                              ¥{reservation.totalPrice.toLocaleString()}
+                            </p>
+                            <p className="text-[var(--color-gold)] font-medium">
+                              ¥{(reservation.totalPrice - reservation.couponDiscount).toLocaleString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[var(--color-gold)]">
+                            ¥{reservation.totalPrice.toLocaleString()}
+                          </p>
+                        )}
                       </div>
 
                       {/* Actions */}
@@ -1112,7 +1132,7 @@ function AdminReservationsContent() {
                       {filteredReservations.filter(r => r.status === 'CONFIRMED').length}件の予約
                     </span>
                     <span>
-                      合計 ¥{filteredReservations.filter(r => r.status === 'CONFIRMED').reduce((sum, r) => sum + r.totalPrice, 0).toLocaleString()}
+                      合計 ¥{filteredReservations.filter(r => r.status === 'CONFIRMED').reduce((sum, r) => sum + (r.totalPrice - (r.couponDiscount || 0)), 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1232,12 +1252,36 @@ function AdminReservationsContent() {
                               備考: {reservation.note}
                             </p>
                           )}
+                          {reservation.couponDiscount && reservation.couponDiscount > 0 && (
+                            <div className="bg-green-50 p-3 rounded-lg mb-2">
+                              <p className="text-xs text-green-700 font-medium mb-1">
+                                クーポン適用: {reservation.couponCode}
+                              </p>
+                              <p className="text-sm text-green-600">
+                                -{reservation.couponDiscount.toLocaleString()}円割引
+                              </p>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                             <div>
-                              <p className="text-xs text-gray-500">合計</p>
-                              <p className="text-lg font-medium text-[var(--color-gold)]">
-                                ¥{reservation.totalPrice.toLocaleString()}
-                              </p>
+                              {reservation.couponDiscount && reservation.couponDiscount > 0 ? (
+                                <>
+                                  <p className="text-xs text-gray-400 line-through">
+                                    小計: ¥{reservation.totalPrice.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-gray-500">合計（割引後）</p>
+                                  <p className="text-lg font-medium text-[var(--color-gold)]">
+                                    ¥{(reservation.totalPrice - reservation.couponDiscount).toLocaleString()}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-xs text-gray-500">合計</p>
+                                  <p className="text-lg font-medium text-[var(--color-gold)]">
+                                    ¥{reservation.totalPrice.toLocaleString()}
+                                  </p>
+                                </>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <button
@@ -1340,14 +1384,38 @@ function AdminReservationsContent() {
                                   備考: {reservation.note}
                                 </p>
                               )}
+                              {reservation.couponDiscount && reservation.couponDiscount > 0 && (
+                                <div className="bg-green-50 p-2 rounded mt-2 text-sm">
+                                  <p className="text-green-700 font-medium">
+                                    クーポン: {reservation.couponCode}
+                                  </p>
+                                  <p className="text-green-600">
+                                    -{reservation.couponDiscount.toLocaleString()}円割引
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
                             {/* Price */}
                             <div className="text-right flex-shrink-0">
-                              <p className="text-xs text-gray-500 mb-1">合計</p>
-                              <p className="text-xl md:text-2xl font-medium text-[var(--color-gold)]">
-                                ¥{reservation.totalPrice.toLocaleString()}
-                              </p>
+                              {reservation.couponDiscount && reservation.couponDiscount > 0 ? (
+                                <>
+                                  <p className="text-xs text-gray-400 line-through mb-1">
+                                    ¥{reservation.totalPrice.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mb-1">合計（割引後）</p>
+                                  <p className="text-xl md:text-2xl font-medium text-[var(--color-gold)]">
+                                    ¥{(reservation.totalPrice - reservation.couponDiscount).toLocaleString()}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-xs text-gray-500 mb-1">合計</p>
+                                  <p className="text-xl md:text-2xl font-medium text-[var(--color-gold)]">
+                                    ¥{reservation.totalPrice.toLocaleString()}
+                                  </p>
+                                </>
+                              )}
                               <p className="text-sm text-gray-400 mt-1">
                                 {reservation.totalDuration}分
                               </p>

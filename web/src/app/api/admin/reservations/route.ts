@@ -435,6 +435,8 @@ export async function POST(request: NextRequest) {
       endTime: reservation.endTime,
       menuSummary: reservation.menuSummary,
       totalPrice: reservation.totalPrice,
+      couponCode: reservation.couponCode,
+      couponDiscount: reservation.couponDiscount,
       note: reservation.note,
       isPhoneReservation: true,
     }).catch((err) => {
