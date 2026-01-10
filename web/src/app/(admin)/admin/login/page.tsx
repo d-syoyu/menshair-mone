@@ -51,9 +51,22 @@ function AdminLoginContent() {
       });
 
       console.error('[Admin Login Page] API response status:', response.status);
+      console.error('[Admin Login Page] API response headers:', Object.fromEntries(response.headers.entries()));
 
-      const data = await response.json();
-      console.error('[Admin Login Page] API response data:', JSON.stringify(data, null, 2));
+      const responseText = await response.text();
+      console.error('[Admin Login Page] API response text:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.error('[Admin Login Page] API response data:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('[Admin Login Page] Failed to parse JSON:', parseError);
+        console.error('[Admin Login Page] Raw response was:', responseText);
+        setIsLoading(false);
+        alert('サーバーエラー: レスポンスの解析に失敗しました');
+        return;
+      }
 
       if (response.ok && data.success) {
         console.error('[Admin Login Page] Login successful, redirecting to admin');
@@ -61,9 +74,9 @@ function AdminLoginContent() {
         // ページをリロードしてセッションを読み込む
         window.location.replace('/admin');
       } else {
-        console.error('[Admin Login Page] Login failed:', data.error);
+        console.error('[Admin Login Page] Login failed:', data.error || 'Unknown error');
         setIsLoading(false);
-        window.location.replace('/admin/login?error=CredentialsSignin');
+        alert(`ログイン失敗: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('[Admin Login Page] Login error:', error);
