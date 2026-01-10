@@ -43,6 +43,7 @@ function AdminLoginContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
+        credentials: 'same-origin', // Cookieを確実に送受信
       });
 
       const data = await response.json();
