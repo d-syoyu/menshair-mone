@@ -1227,6 +1227,7 @@ export interface ReminderData {
   endTime: string;
   menuSummary: string;
   totalPrice: number;
+  couponDiscount?: number;
   note?: string | null;
 }
 
@@ -1235,6 +1236,8 @@ export function createReminderHtml(data: ReminderData) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
   const mypageUrl = `${siteUrl}/mypage/reservations`;
   const dateStr = formatReservationDate(data.date);
+  const couponDiscount = data.couponDiscount || 0;
+  const finalPrice = data.totalPrice - couponDiscount;
 
   return `
 <!DOCTYPE html>
@@ -1289,9 +1292,19 @@ export function createReminderHtml(data: ReminderData) {
                   <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">メニュー</td>
                   <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #ffffff; font-size: 14px;">${data.menuSummary}</td>
                 </tr>
+                ${couponDiscount > 0 ? `
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">小計</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 14px; text-decoration: line-through;">${formatPrice(data.totalPrice)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">クーポン割引</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #4a7c59; font-size: 14px;">-${formatPrice(couponDiscount)}</td>
+                </tr>
+                ` : ''}
                 <tr>
                   <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #888888; font-size: 13px;">料金</td>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #c4a77d; font-size: 16px; font-weight: 600;">${formatPrice(data.totalPrice)}</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #3a3a3a; color: #c4a77d; font-size: 16px; font-weight: 600;">${formatPrice(finalPrice)}</td>
                 </tr>
                 ${data.note ? `
                 <tr>
@@ -1352,6 +1365,8 @@ export function createReminderHtml(data: ReminderData) {
 export function createReminderText(data: ReminderData) {
   const dateStr = formatReservationDate(data.date);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.mone.hair';
+  const couponDiscount = data.couponDiscount || 0;
+  const finalPrice = data.totalPrice - couponDiscount;
 
   let text = `${SALON_NAME} - 明日のご予約のお知らせ\n\n`;
   text += `${data.customerName} 様\n\n`;
@@ -1360,7 +1375,11 @@ export function createReminderText(data: ReminderData) {
   text += `予約番号: ${data.reservationId}\n`;
   text += `日時: ${dateStr} ${data.startTime}〜${data.endTime}\n`;
   text += `メニュー: ${data.menuSummary}\n`;
-  text += `料金: ${formatPrice(data.totalPrice)}\n`;
+  if (couponDiscount > 0) {
+    text += `小計: ${formatPrice(data.totalPrice)}\n`;
+    text += `クーポン割引: -${formatPrice(couponDiscount)}\n`;
+  }
+  text += `料金: ${formatPrice(finalPrice)}\n`;
   if (data.note) text += `備考: ${data.note}\n`;
   text += `\n【アクセス】\n`;
   text += `${SALON_ADDRESS}\n`;

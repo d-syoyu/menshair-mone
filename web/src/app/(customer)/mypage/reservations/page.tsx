@@ -15,6 +15,15 @@ interface Reservation {
   id: string;
   menuSummary: string;
   totalPrice: number;
+  couponCode?: string | null;
+  couponDiscount?: number;
+  coupon?: {
+    id: string;
+    code: string;
+    name: string;
+    type: string;
+    value: number;
+  } | null;
   date: string;
   startTime: string;
   endTime: string;
@@ -182,9 +191,22 @@ export default function ReservationsPage() {
                             </span>
                           </div>
                         </div>
-                        <p className="text-gold">
-                          ¥{reservation.totalPrice.toLocaleString()}
-                        </p>
+                        <div className="text-right">
+                          {reservation.couponDiscount && reservation.couponDiscount > 0 ? (
+                            <>
+                              <p className="text-xs text-text-muted line-through">
+                                ¥{reservation.totalPrice.toLocaleString()}
+                              </p>
+                              <p className="text-gold">
+                                ¥{(reservation.totalPrice - reservation.couponDiscount).toLocaleString()}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-gold">
+                              ¥{reservation.totalPrice.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm mb-4">
@@ -258,9 +280,22 @@ export default function ReservationsPage() {
                             </span>
                           </div>
                         </div>
-                        <p className="text-text-muted">
-                          ¥{reservation.totalPrice.toLocaleString()}
-                        </p>
+                        <div className="text-right">
+                          {reservation.couponDiscount && reservation.couponDiscount > 0 ? (
+                            <>
+                              <p className="text-xs text-text-muted line-through">
+                                ¥{reservation.totalPrice.toLocaleString()}
+                              </p>
+                              <p className="text-text-muted">
+                                ¥{(reservation.totalPrice - reservation.couponDiscount).toLocaleString()}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-text-muted">
+                              ¥{reservation.totalPrice.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-sm text-text-muted">

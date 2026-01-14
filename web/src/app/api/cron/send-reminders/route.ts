@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
           endTime: reservation.endTime,
           menuSummary: reservation.menuSummary,
           totalPrice: reservation.totalPrice,
+          couponDiscount: reservation.couponDiscount,
           note: reservation.note,
         });
 
