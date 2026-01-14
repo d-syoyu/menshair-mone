@@ -12,5 +12,13 @@ export default async function GalleryPage() {
   // Fetch items from Notion
   const items = await getGalleryItems();
 
-  return <GalleryClient items={items} />;
+  // 作成日の降順（新しい順）にソート（左から新しい順）
+  const sortedItems = [...items].sort((a, b) => {
+    // createdAt は ISO 8601 形式
+    const dateA = a.createdAt || '';
+    const dateB = b.createdAt || '';
+    return dateB.localeCompare(dateA);
+  });
+
+  return <GalleryClient items={sortedItems} />;
 }

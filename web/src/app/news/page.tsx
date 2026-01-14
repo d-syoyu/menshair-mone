@@ -10,10 +10,12 @@ export default async function NewsPage() {
   const news = await getNews();
 
   // 公開日の降順（新しい順）にソート
+  // publishedAtがない場合はcreatedAtでソート
   const sortedNews = [...news].sort((a, b) => {
-    // publishedAt は "YYYY.MM.DD" 形式
-    const dateA = a.publishedAt?.replace(/\./g, '') || '0';
-    const dateB = b.publishedAt?.replace(/\./g, '') || '0';
+    // publishedAt は "YYYY.MM.DD" 形式、createdAt は ISO 8601 形式
+    const dateA = a.publishedAt?.replace(/\./g, '') || a.createdAt?.replace(/[-T:Z.]/g, '').slice(0, 8) || '0';
+    const dateB = b.publishedAt?.replace(/\./g, '') || b.createdAt?.replace(/[-T:Z.]/g, '').slice(0, 8) || '0';
+    // 降順（新しい順）: dateB - dateA
     return dateB.localeCompare(dateA);
   });
 

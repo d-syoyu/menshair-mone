@@ -19,6 +19,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     category: "お知らせ",
     coverImage: null,
     excerpt: "年末年始の営業時間についてお知らせいたします。",
+    createdAt: "2025-12-10T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>いつもMONËをご利用いただき、誠にありがとうございます。</p>
@@ -40,6 +41,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     category: "新メニュー",
     coverImage: null,
     excerpt: "頭皮の深層からケアする新しいヘッドスパメニューが登場しました。",
+    createdAt: "2025-12-01T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>お客様からのご要望にお応えし、新メニュー「プレミアムヘッドスパ」を導入いたしました。</p>
@@ -63,6 +65,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     category: "お知らせ",
     coverImage: null,
     excerpt: "より使いやすく、見やすいWebサイトにリニューアルいたしました。",
+    createdAt: "2025-11-20T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>このたび、MONËの公式Webサイトをリニューアルいたしました。</p>

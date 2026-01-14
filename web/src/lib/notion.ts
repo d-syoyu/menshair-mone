@@ -141,6 +141,7 @@ export interface BlogPost {
   coverImage: string | null;
   publishedAt: string;
   category: string;
+  createdAt: string; // ソート用の作成日時
 }
 
 export interface BlogPostDetail extends BlogPost {
@@ -241,6 +242,9 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
   // プロキシURLに変換
   coverImage = getProxiedImageUrl(coverImage);
 
+  // 作成日時を取得（ソート用）
+  const createdAt = page.created_time || "";
+
   return {
     id: page.id,
     slug,
@@ -250,6 +254,7 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
     coverImage,
     publishedAt,
     category,
+    createdAt,
   };
 }
 
@@ -449,6 +454,9 @@ export async function getBlogPostBySlug(
     }
     coverImage = getProxiedImageUrl(coverImage);
 
+    // 作成日時を取得
+    const createdAt = matchedPage.created_time || "";
+
     const post: BlogPost = {
       id: matchedPage.id,
       slug: postSlug,
@@ -458,6 +466,7 @@ export async function getBlogPostBySlug(
       coverImage,
       publishedAt,
       category,
+      createdAt,
     };
 
     // Get page blocks (content)
@@ -671,6 +680,9 @@ export async function getNewsWithStatus(): Promise<NewsWithStatus[]> {
           targets = targetProp.multi_select.map((opt) => opt.name);
         }
 
+        // 作成日時を取得
+        const createdAt = pageObj.created_time || "";
+
         newsItems.push({
           id: pageObj.id,
           slug,
@@ -680,6 +692,7 @@ export async function getNewsWithStatus(): Promise<NewsWithStatus[]> {
           coverImage,
           publishedAt,
           category,
+          createdAt,
           status,
           targets,
         });
@@ -705,6 +718,7 @@ export interface GalleryItem {
   category: string;
   image: string | null;
   order: number;
+  createdAt: string; // ソート用の作成日時
 }
 
 // Helper: Extract gallery item properties (日本語プロパティ名対応)
@@ -778,12 +792,16 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
   // プロキシURLに変換
   image = getProxiedImageUrl(image);
 
+  // 作成日時を取得（ソート用）
+  const createdAt = page.created_time || "";
+
   return {
     id: page.id,
     title,
     category,
     image,
     order,
+    createdAt,
   };
 }
 
@@ -858,6 +876,7 @@ export interface Product {
   description: string;
   image: string | null;
   order: number;
+  createdAt: string; // ソート用の作成日時
 }
 
 // Get data_source_id for Products database
@@ -946,6 +965,9 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
   // プロキシURLに変換
   image = getProxiedImageUrl(image);
 
+  // 作成日時を取得（ソート用）
+  const createdAt = page.created_time || "";
+
   return {
     id: page.id,
     name,
@@ -954,6 +976,7 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
     description,
     image,
     order,
+    createdAt,
   };
 }
 
@@ -1406,6 +1429,9 @@ export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
           targets = targetProp.multi_select.map((opt) => opt.name);
         }
 
+        // 作成日時を取得
+        const createdAt = pageObj.created_time || "";
+
         pendingItems.push({
           id: pageObj.id,
           slug,
@@ -1415,6 +1441,7 @@ export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
           coverImage,
           publishedAt,
           category,
+          createdAt,
           status,
           targets,
         });

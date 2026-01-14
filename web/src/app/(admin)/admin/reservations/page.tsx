@@ -640,24 +640,31 @@ function AdminReservationsContent() {
     return `${date.getMonth() + 1}/${date.getDate()}（${WEEKDAYS[date.getDay()]}）`;
   };
 
-  const filteredReservations = reservations.filter((r) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesName = r.user.name?.toLowerCase().includes(query);
-      const matchesEmail = r.user.email?.toLowerCase().includes(query);
-      const matchesMenu = r.menuSummary.toLowerCase().includes(query);
-      if (!matchesName && !matchesEmail && !matchesMenu) {
-        return false;
+  const filteredReservations = reservations
+    .filter((r) => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = r.user.name?.toLowerCase().includes(query);
+        const matchesEmail = r.user.email?.toLowerCase().includes(query);
+        const matchesMenu = r.menuSummary.toLowerCase().includes(query);
+        if (!matchesName && !matchesEmail && !matchesMenu) {
+          return false;
+        }
       }
-    }
-    if (selectedDate) {
-      const resDate = new Date(r.date);
-      if (resDate.toDateString() !== selectedDate.toDateString()) {
-        return false;
+      if (selectedDate) {
+        const resDate = new Date(r.date);
+        if (resDate.toDateString() !== selectedDate.toDateString()) {
+          return false;
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    })
+    // 予約時間順にソート（日付 + 開始時間の昇順）
+    .sort((a, b) => {
+      const dateTimeA = `${a.date}T${a.startTime}`;
+      const dateTimeB = `${b.date}T${b.startTime}`;
+      return dateTimeA.localeCompare(dateTimeB);
+    });
 
   // カレンダー生成
   const generateCalendarDays = () => {

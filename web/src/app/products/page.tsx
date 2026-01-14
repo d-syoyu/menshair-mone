@@ -8,7 +8,15 @@ export const revalidate = 0;
 
 export default async function ProductsPage() {
   // Notionから商品を取得
-  const products = await getProducts();
+  const productsRaw = await getProducts();
+
+  // 作成日の降順（新しい順）にソート（左から新しい順）
+  const products = [...productsRaw].sort((a, b) => {
+    // createdAt は ISO 8601 形式
+    const dateA = a.createdAt || '';
+    const dateB = b.createdAt || '';
+    return dateB.localeCompare(dateA);
+  });
 
   return (
     <div className="min-h-screen pt-32">
