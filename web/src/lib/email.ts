@@ -19,8 +19,8 @@ interface SendEmailOptions {
   text?: string;
 }
 
-// Resend APIの制限: toフィールドは最大50件まで
-const RESEND_MAX_RECIPIENTS = 50;
+// Resend Batch APIの制限: 1回のバッチで最大100件
+const RESEND_BATCH_SIZE = 100;
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const toAddresses = Array.isArray(to) ? to : [to];
@@ -51,29 +51,55 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       return { success: true, data: result.data };
     }
 
-    // 複数受信者の場合は各受信者に個別送信（プライバシー保護のため）
-    console.log(`[Email] Sending individually to ${toAddresses.length} recipients to protect privacy`);
+    // 複数受信者の場合はバッチ送信を使用（プライバシー保護のため各受信者に個別メール）
+    console.log(`[Email] Using batch API to send to ${toAddresses.length} recipients`);
 
     const results: { email: string; success: boolean; id?: string; error?: string }[] = [];
 
-    for (let i = 0; i < toAddresses.length; i++) {
-      const email = toAddresses[i];
-      console.log(`[Email] Sending to ${i + 1}/${toAddresses.length}: ${email}`);
+    // バッチサイズごとに分割して送信
+    for (let batchStart = 0; batchStart < toAddresses.length; batchStart += RESEND_BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + RESEND_BATCH_SIZE, toAddresses.length);
+      const batchAddresses = toAddresses.slice(batchStart, batchEnd);
+      const batchNumber = Math.floor(batchStart / RESEND_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(toAddresses.length / RESEND_BATCH_SIZE);
 
-      const result = await resend.emails.send({
+      console.log(`[Email] Sending batch ${batchNumber}/${totalBatches} (${batchAddresses.length} emails)`);
+
+      // バッチ用のメール配列を作成
+      const batchEmails = batchAddresses.map(email => ({
         from: FROM_EMAIL,
         to: email,
         subject,
         html,
         text,
-      });
+      }));
 
-      if (result.error) {
-        console.error(`[Email] Failed to send to ${email}:`, result.error);
-        results.push({ email, success: false, error: result.error.message || 'Unknown error' });
-      } else {
-        console.log(`[Email] Successfully sent to ${email}, id: ${result.data?.id}`);
-        results.push({ email, success: true, id: result.data?.id });
+      try {
+        const batchResult = await resend.batch.send(batchEmails);
+
+        if (batchResult.error) {
+          console.error(`[Email] Batch ${batchNumber} failed:`, batchResult.error);
+          // バッチ全体が失敗した場合、全アドレスを失敗として記録
+          for (const email of batchAddresses) {
+            results.push({ email, success: false, error: batchResult.error.message || 'Batch send failed' });
+          }
+        } else if (batchResult.data) {
+          console.log(`[Email] Batch ${batchNumber} sent successfully: ${batchResult.data.data.length} emails`);
+          // 各メールの結果を記録
+          for (let i = 0; i < batchAddresses.length; i++) {
+            const emailData = batchResult.data.data[i];
+            if (emailData && emailData.id) {
+              results.push({ email: batchAddresses[i], success: true, id: emailData.id });
+            } else {
+              results.push({ email: batchAddresses[i], success: false, error: 'No response data' });
+            }
+          }
+        }
+      } catch (batchError) {
+        console.error(`[Email] Batch ${batchNumber} error:`, batchError);
+        for (const email of batchAddresses) {
+          results.push({ email, success: false, error: String(batchError) });
+        }
       }
     }
 
