@@ -114,11 +114,17 @@ export default function Home() {
       .then((res) => res.json())
       .then((data: BlogPost[]) => {
         // 公開日の降順（新しい順）にソートして最新3件を表示
+        // 公開日がない場合は作成日をフォールバックとして使用
         const sorted = [...data].sort((a, b) => {
-          // publishedAt は "YYYY.MM.DD" 形式
-          const dateA = a.publishedAt?.replace(/\./g, '') || '0';
-          const dateB = b.publishedAt?.replace(/\./g, '') || '0';
-          return dateB.localeCompare(dateA);
+          const getDateKey = (item: BlogPost) => {
+            if (item.publishedAt) {
+              // publishedAt は "YYYY.MM.DD" 形式
+              return item.publishedAt.replace(/\./g, '');
+            }
+            // createdAt は ISO形式 "2024-01-15T10:30:00.000Z"
+            return item.createdAt?.replace(/[-T:\.Z]/g, '').slice(0, 8) || '0';
+          };
+          return getDateKey(b).localeCompare(getDateKey(a));
         });
         setNewsItems(sorted.slice(0, 3));
       })

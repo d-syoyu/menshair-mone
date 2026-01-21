@@ -6,7 +6,7 @@ import { SALON_INFO } from '@/constants/salon';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const FROM_EMAIL = "Men's hair MONE <noreply@mone.hair>";
+const FROM_EMAIL = "Mens hair MONE <noreply@mone.hair>";
 const SALON_NAME = "MONË";
 const SALON_ADDRESS = SALON_INFO.address;
 const SALON_PHONE = SALON_INFO.phone;
