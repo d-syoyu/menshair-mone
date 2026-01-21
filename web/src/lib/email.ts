@@ -22,8 +22,33 @@ interface SendEmailOptions {
 // Resend Batch APIの制限: 1回のバッチで最大100件
 const RESEND_BATCH_SIZE = 100;
 
+// メールアドレスのバリデーション（基本的な形式チェック）
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  // 空白をトリム
+  const trimmed = email.trim();
+  if (trimmed.length === 0) return false;
+  // 基本的なメール形式チェック: xxx@xxx.xxx
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}
+
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  const toAddresses = Array.isArray(to) ? to : [to];
+  const rawAddresses = Array.isArray(to) ? to : [to];
+
+  // 無効なメールアドレスをフィルタリング
+  const invalidAddresses = rawAddresses.filter(email => !isValidEmail(email));
+  const toAddresses = rawAddresses.filter(email => isValidEmail(email)).map(email => email.trim());
+
+  if (invalidAddresses.length > 0) {
+    console.warn(`[Email] Filtered out ${invalidAddresses.length} invalid email address(es):`, invalidAddresses.slice(0, 5));
+  }
+
+  if (toAddresses.length === 0) {
+    console.error('[Email] No valid email addresses to send to');
+    return { success: false, error: 'No valid email addresses' };
+  }
+
   console.log(`[Email] Attempting to send email to ${toAddresses.length} recipient(s), subject: ${subject}`);
 
   if (!resend) {

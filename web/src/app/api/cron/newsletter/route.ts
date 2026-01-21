@@ -114,19 +114,29 @@ export async function GET(request: NextRequest) {
           text,
         });
 
-        if (result.success) {
-          // 成功: ステータスを「送信済み」に、フラグをOFFに
+        // 送信結果を確認（1件でも成功していれば「送信済み」とする）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const emailResults = (result.data as any)?.results as { success: boolean }[] | undefined;
+        const successCount = emailResults?.filter(r => r.success).length ?? 0;
+        const totalSent = result.success ? emailAddresses.length : successCount;
+
+        // 完全成功、または部分成功（1件以上送信成功）の場合は「送信済み」
+        if (result.success || successCount > 0) {
           await updateNewsPageStatus(news.id, STATUS.SENT);
           await clearSendFlag(news.id);
-          console.log(`[Newsletter Cron] Sent: ${news.title} to ${emailAddresses.length} customers`);
+          if (result.success) {
+            console.log(`[Newsletter Cron] Sent: ${news.title} to ${emailAddresses.length} customers`);
+          } else {
+            console.log(`[Newsletter Cron] Partially sent: ${news.title} - ${successCount}/${emailAddresses.length} succeeded`);
+          }
           results.push({
             id: news.id,
             title: news.title,
             success: true,
-            sentCount: emailAddresses.length,
+            sentCount: totalSent,
           });
         } else {
-          // 失敗: ステータスを「送信失敗」に
+          // 完全失敗: ステータスを「送信失敗」に
           await updateNewsPageStatus(news.id, STATUS.FAILED);
           console.error(`[Newsletter Cron] Failed: ${news.title} - ${result.error}`);
           results.push({
