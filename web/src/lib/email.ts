@@ -89,6 +89,10 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       const totalBatches = Math.ceil(toAddresses.length / RESEND_BATCH_SIZE);
 
       console.log(`[Email] Sending batch ${batchNumber}/${totalBatches} (${batchAddresses.length} emails)`);
+      // デバッグ: 最初の3件のメールアドレスを表示
+      if (batchNumber === 1) {
+        console.log(`[Email] Sample addresses:`, batchAddresses.slice(0, 3));
+      }
 
       // バッチ用のメール配列を作成
       // Resend Batch APIでは to は配列形式で渡す必要がある
