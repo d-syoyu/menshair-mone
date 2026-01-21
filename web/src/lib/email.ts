@@ -95,17 +95,17 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       }
 
       // バッチ用のメール配列を作成
-      // Resend Batch APIでは to は配列形式で渡す必要がある
       const batchEmails = batchAddresses.map(email => ({
         from: FROM_EMAIL,
-        to: [email],
+        to: email,
         subject,
         html,
         text,
       }));
 
       try {
-        const batchResult = await resend.batch.send(batchEmails);
+        // batchValidation: 'lenient' で一部失敗しても他のメールは送信継続
+        const batchResult = await resend.batch.send(batchEmails, { batchValidation: 'lenient' });
 
         if (batchResult.error) {
           console.error(`[Email] Batch ${batchNumber} failed:`, batchResult.error);
