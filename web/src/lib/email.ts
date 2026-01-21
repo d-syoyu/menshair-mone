@@ -104,8 +104,8 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       }));
 
       try {
-        // batchValidation: 'lenient' で一部失敗しても他のメールは送信継続
-        const batchResult = await resend.batch.send(batchEmails, { batchValidation: 'lenient' });
+        // batchValidation: 'permissive' で一部失敗しても他のメールは送信継続
+        const batchResult = await resend.batch.send(batchEmails, { batchValidation: 'permissive' });
 
         if (batchResult.error) {
           console.error(`[Email] Batch ${batchNumber} failed:`, batchResult.error);
