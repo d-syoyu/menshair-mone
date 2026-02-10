@@ -134,15 +134,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       from: "Men's hair MONE <noreply@mone.hair>",
       async sendVerificationRequest({ identifier: email, url, provider }) {
         const resend = new ResendClient(process.env.RESEND_API_KEY!);
-        const host = new URL(url).host;
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.host;
         const from = provider.from || "Men's hair MONE <noreply@mone.hair>";
+
+        // メールプロバイダー（Yahoo, Gmail等）のリンクプリフェッチ対策
+        // 直接callbackに飛ばすとスキャナーがトークンを消費するため、
+        // 中間ページを経由させる
+        const verifyPageUrl = `${parsedUrl.origin}/verify-login?callbackUrl=${encodeURIComponent(url)}`;
 
         await resend.emails.send({
           from,
           to: email,
           subject: "【MONË】ログイン認証",
-          html: createMagicLinkHtml({ url, host }),
-          text: createMagicLinkText({ url, host }),
+          html: createMagicLinkHtml({ url: verifyPageUrl, host }),
+          text: createMagicLinkText({ url: verifyPageUrl, host }),
         });
       },
     }),
