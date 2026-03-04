@@ -10,8 +10,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import type { UserRole } from "@prisma/client";
 import type { Adapter, AdapterAccount } from "next-auth/adapters";
-import { createMagicLinkHtml, createMagicLinkText, FROM_EMAIL } from "./email";
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { createMagicLinkHtml, createMagicLinkText } from "./email";
+import { Resend as ResendClient } from "resend";
 
 // カスタムPrismaAdapter - useVerificationTokenの問題を修正
 function CustomPrismaAdapter(): Adapter {
@@ -130,35 +130,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     // Email Magic Link (顧客向け)
     Resend({
-      apiKey: process.env.RESEND_API_KEY || "unused",
-      from: FROM_EMAIL,
-      async sendVerificationRequest({ identifier: email, url }) {
-        const ses = new SESClient({
-          region: process.env.AWS_REGION || 'ap-northeast-1',
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-          },
-        });
+      apiKey: process.env.RESEND_API_KEY!,
+      from: "Men's hair MONE <noreply@mone.hair>",
+      async sendVerificationRequest({ identifier: email, url, provider }) {
+        const resend = new ResendClient(process.env.RESEND_API_KEY!);
         const parsedUrl = new URL(url);
         const host = parsedUrl.host;
+        const from = provider.from || "Men's hair MONE <noreply@mone.hair>";
 
         // メールプロバイダー（Yahoo, Gmail等）のリンクプリフェッチ対策
         // 直接callbackに飛ばすとスキャナーがトークンを消費するため、
         // 中間ページを経由させる
         const verifyPageUrl = `${parsedUrl.origin}/verify-login?callbackUrl=${encodeURIComponent(url)}`;
 
-        await ses.send(new SendEmailCommand({
-          Source: FROM_EMAIL,
-          Destination: { ToAddresses: [email] },
-          Message: {
-            Subject: { Data: "【MONË】ログイン認証", Charset: 'UTF-8' },
-            Body: {
-              Html: { Data: createMagicLinkHtml({ url: verifyPageUrl, host }), Charset: 'UTF-8' },
-              Text: { Data: createMagicLinkText({ url: verifyPageUrl, host }), Charset: 'UTF-8' },
-            },
-          },
-        }));
+        await resend.emails.send({
+          from,
+          to: email,
+          subject: "【MONË】ログイン認証",
+          html: createMagicLinkHtml({ url: verifyPageUrl, host }),
+          text: createMagicLinkText({ url: verifyPageUrl, host }),
+        });
       },
     }),
 

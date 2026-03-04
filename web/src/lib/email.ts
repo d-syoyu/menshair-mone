@@ -1,18 +1,12 @@
 // src/lib/email.ts
-// MONË - Email Utility using Amazon SES
+// MONË - Email Utility using Resend
 
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { Resend } from 'resend';
 import { SALON_INFO } from '@/constants/salon';
 
-const sesClient = process.env.AWS_ACCESS_KEY_ID ? new SESClient({
-  region: process.env.AWS_REGION || 'ap-northeast-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-}) : null;
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-export const FROM_EMAIL = "Mens hair MONE <noreply@mone.hair>";
+const FROM_EMAIL = "Mens hair MONE <noreply@mone.hair>";
 const SALON_NAME = "MONË";
 const SALON_ADDRESS = SALON_INFO.address;
 const SALON_PHONE = SALON_INFO.phone;
@@ -25,8 +19,8 @@ interface SendEmailOptions {
   text?: string;
 }
 
-// SES同時送信数（SESデフォルト上限: 14通/秒）
-const SES_CONCURRENCY = 10;
+// Resend Batch APIの制限: 1回のバッチで最大100件
+const RESEND_BATCH_SIZE = 100;
 
 // メールアドレスのバリデーション（基本的な形式チェック）
 function isValidEmail(email: string): boolean {
@@ -57,62 +51,90 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 
   console.log(`[Email] Attempting to send email to ${toAddresses.length} recipient(s), subject: ${subject}`);
 
-  if (!sesClient) {
-    console.error('[Email] AWS SES not configured - AWS_ACCESS_KEY_ID is missing');
+  if (!resend) {
+    console.error('[Email] Resend API key not configured - RESEND_API_KEY is missing');
     return { success: false, error: 'Email service not configured' };
   }
-
-  // SES送信ヘルパー
-  const sendViaSES = (toEmail: string) =>
-    sesClient.send(new SendEmailCommand({
-      Source: FROM_EMAIL,
-      Destination: { ToAddresses: [toEmail] },
-      Message: {
-        Subject: { Data: subject, Charset: 'UTF-8' },
-        Body: {
-          Html: { Data: html, Charset: 'UTF-8' },
-          ...(text ? { Text: { Data: text, Charset: 'UTF-8' } } : {}),
-        },
-      },
-    }));
 
   try {
     // 単一受信者の場合
     if (toAddresses.length === 1) {
-      try {
-        const result = await sendViaSES(toAddresses[0]);
-        console.log(`[Email] Successfully sent email to: ${toAddresses[0]}, messageId: ${result.MessageId}`);
-        return { success: true, data: { id: result.MessageId } };
-      } catch (err) {
-        console.error(`[Email] Failed to send email to: ${toAddresses[0]}, error:`, err);
-        return { success: false, error: String(err) };
+      const result = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: toAddresses[0],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error(`[Email] Failed to send email to: ${toAddresses[0]}, error:`, result.error);
+        return { success: false, error: result.error.message || 'Unknown error' };
       }
+
+      console.log(`[Email] Successfully sent email to: ${toAddresses[0]}, id: ${result.data?.id}`);
+      return { success: true, data: result.data };
     }
 
-    // 複数受信者: 10件ずつ並列送信（SES上限14通/秒に対して余裕あり）
-    console.log(`[Email] Sending to ${toAddresses.length} recipients via SES (concurrency: ${SES_CONCURRENCY})`);
-    console.log(`[Email] Sample addresses:`, toAddresses.slice(0, 3));
+    // 複数受信者の場合はバッチ送信を使用（プライバシー保護のため各受信者に個別メール）
+    console.log(`[Email] Using batch API to send to ${toAddresses.length} recipients`);
 
     const results: { email: string; success: boolean; id?: string; error?: string }[] = [];
-    const totalChunks = Math.ceil(toAddresses.length / SES_CONCURRENCY);
 
-    for (let i = 0; i < toAddresses.length; i += SES_CONCURRENCY) {
-      const chunk = toAddresses.slice(i, i + SES_CONCURRENCY);
-      const chunkNumber = Math.floor(i / SES_CONCURRENCY) + 1;
-      console.log(`[Email] Sending chunk ${chunkNumber}/${totalChunks} (${chunk.length} emails)`);
+    // バッチサイズごとに分割して送信
+    for (let batchStart = 0; batchStart < toAddresses.length; batchStart += RESEND_BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + RESEND_BATCH_SIZE, toAddresses.length);
+      const batchAddresses = toAddresses.slice(batchStart, batchEnd);
+      const batchNumber = Math.floor(batchStart / RESEND_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(toAddresses.length / RESEND_BATCH_SIZE);
 
-      const chunkResults = await Promise.all(
-        chunk.map(email =>
-          sendViaSES(email)
-            .then(res => ({ email, success: true, id: res.MessageId }))
-            .catch(err => ({ email, success: false, error: String(err) }))
-        )
-      );
-      results.push(...chunkResults);
+      console.log(`[Email] Sending batch ${batchNumber}/${totalBatches} (${batchAddresses.length} emails)`);
+      // デバッグ: 最初の3件のメールアドレスを表示
+      if (batchNumber === 1) {
+        console.log(`[Email] Sample addresses:`, batchAddresses.slice(0, 3));
+      }
 
-      // 最後のチャンク以外は100ms待機（レート制限対策）
-      if (i + SES_CONCURRENCY < toAddresses.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // バッチ用のメール配列を作成
+      const batchEmails = batchAddresses.map(email => ({
+        from: FROM_EMAIL,
+        to: email,
+        subject,
+        html,
+        text,
+      }));
+
+      try {
+        // batchValidation: 'permissive' で一部失敗しても他のメールは送信継続
+        const batchResult = await resend.batch.send(batchEmails, { batchValidation: 'permissive' });
+
+        if (batchResult.error) {
+          console.error(`[Email] Batch ${batchNumber} failed:`, batchResult.error);
+          // バッチ全体が失敗した場合、全アドレスを失敗として記録
+          for (const email of batchAddresses) {
+            results.push({ email, success: false, error: batchResult.error.message || 'Batch send failed' });
+          }
+        } else if (batchResult.data) {
+          console.log(`[Email] Batch ${batchNumber} sent successfully: ${batchResult.data.data.length} emails`);
+          // 各メールの結果を記録
+          for (let i = 0; i < batchAddresses.length; i++) {
+            const emailData = batchResult.data.data[i];
+            if (emailData && emailData.id) {
+              results.push({ email: batchAddresses[i], success: true, id: emailData.id });
+            } else {
+              results.push({ email: batchAddresses[i], success: false, error: 'No response data' });
+            }
+          }
+        }
+      } catch (batchError) {
+        console.error(`[Email] Batch ${batchNumber} error:`, batchError);
+        for (const email of batchAddresses) {
+          results.push({ email, success: false, error: String(batchError) });
+        }
+      }
+
+      // レート制限対策: 最後のバッチ以外は次のバッチ前に待機（秒間2リクエスト制限）
+      if (batchEnd < toAddresses.length) {
+        await new Promise(resolve => setTimeout(resolve, 700));
       }
     }
 
