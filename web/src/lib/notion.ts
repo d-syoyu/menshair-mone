@@ -270,7 +270,7 @@ async function fetchBlogPostsInternal(): Promise<BlogPost[]> {
     let response;
     const dataSourceId = await getNewsDataSourceId();
 
-    if (dataSourceId) {
+    if (dataSourceId && notion.dataSources) {
       try {
         response = await withRetry(
           () => notion.dataSources.query({ data_source_id: dataSourceId }),
@@ -1314,7 +1314,7 @@ export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
     let response;
     const dataSourceId = await getNewsDataSourceId();
 
-    if (dataSourceId) {
+    if (dataSourceId && notion.dataSources) {
       try {
         response = await withRetry(
           () => notion.dataSources.query({ data_source_id: dataSourceId }),

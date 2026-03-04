@@ -131,6 +131,11 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
           results.push({ email, success: false, error: String(batchError) });
         }
       }
+
+      // レート制限対策: 最後のバッチ以外は次のバッチ前に待機（秒間2リクエスト制限）
+      if (batchEnd < toAddresses.length) {
+        await new Promise(resolve => setTimeout(resolve, 700));
+      }
     }
 
     // 結果集計

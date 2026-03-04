@@ -1,7 +1,6 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
 import { Suspense, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -9,7 +8,6 @@ import { LogIn, ArrowLeft, Shield, Loader2 } from 'lucide-react';
 
 function VerifyLoginContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const callbackUrl = searchParams.get('callbackUrl');
@@ -32,8 +30,10 @@ function VerifyLoginContent() {
     }
 
     setIsLoading(true);
-    router.push(callbackUrl);
-  }, [callbackUrl, router]);
+    // フルページリロードで NextAuth コールバックを正しく処理
+    // router.push() はクライアントサイドルーティングのため認証コールバックが機能しない
+    window.location.href = callbackUrl;
+  }, [callbackUrl]);
 
   if (!callbackUrl) {
     return (

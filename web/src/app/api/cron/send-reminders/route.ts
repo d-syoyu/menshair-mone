@@ -112,6 +112,9 @@ export async function GET(request: NextRequest) {
         console.error(`[Reminder Cron] Error sending reminder for reservation ${reservation.id}:`, error);
         results.failed++;
       }
+
+      // レート制限対策: 送信間隔を空ける（秒間2リクエスト制限）
+      await new Promise(resolve => setTimeout(resolve, 600));
     }
 
     console.log(`[Reminder Cron] Completed. Success: ${results.success}, Failed: ${results.failed}, Skipped: ${results.skipped}`);
