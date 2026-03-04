@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@aws-sdk/client-ses": "^3.1001.0",
     "@holiday-jp/holiday_jp": "^2.5.1",
     "@notionhq/client": "^5.4.0",
     "@prisma/adapter-pg": "^7.1.0",
