@@ -45,7 +45,7 @@ export default function VerifyRequestPage() {
                   <p>メールが届かない場合：</p>
                   <ul className="list-disc list-inside space-y-1 text-text-muted">
                     <li>迷惑メールフォルダをご確認ください</li>
-                    <li>noreply@mone.hair からの受信を許可してください</li>
+                    <li>noreply@soga.ltd からの受信を許可してください</li>
                     <li>数分経っても届かない場合は再度お試しください</li>
                   </ul>
                 </div>
