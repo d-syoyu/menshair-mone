@@ -131,12 +131,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Email Magic Link (顧客向け)
     Resend({
       apiKey: process.env.RESEND_API_KEY!,
-      from: "Men's hair MONE <noreply@mone.hair>",
+      from: "Men's hair MONE <noreply@soga.ltd>",
       async sendVerificationRequest({ identifier: email, url, provider }) {
         const resend = new ResendClient(process.env.RESEND_API_KEY!);
         const parsedUrl = new URL(url);
         const host = parsedUrl.host;
-        const from = provider.from || "Men's hair MONE <noreply@mone.hair>";
+        const from = provider.from || "Men's hair MONE <noreply@soga.ltd>";
 
         // メールプロバイダー（Yahoo, Gmail等）のリンクプリフェッチ対策
         // 直接callbackに飛ばすとスキャナーがトークンを消費するため、
