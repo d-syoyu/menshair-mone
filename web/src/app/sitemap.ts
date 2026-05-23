@@ -3,9 +3,15 @@
 
 import { MetadataRoute } from "next";
 import { getNews } from "@/lib/notion";
+import { SITE_URL, toIsoDate } from "@/lib/seo";
 
-const BASE_URL = "https://www.mone.hair";
+const BASE_URL = SITE_URL;
 export const revalidate = 3600;
+
+function toSitemapDate(value: string | null | undefined): Date {
+  const iso = toIsoDate(value);
+  return iso ? new Date(iso) : new Date();
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 静的ページ
@@ -64,12 +70,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly",
       priority: 0.3,
     },
-    {
-      url: `${BASE_URL}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
   ];
 
   // ニュース記事を動的に取得（Notion APIから）
@@ -78,7 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const news = await getNews();
     newsPages = news.map((post) => ({
       url: `${BASE_URL}/news/${post.slug}`,
-      lastModified: post.createdAt ? new Date(post.createdAt) : new Date(),
+      lastModified: toSitemapDate(post.updatedAt || post.createdAt || post.publishedAt),
       changeFrequency: "monthly" as const,
       priority: 0.6,
     }));

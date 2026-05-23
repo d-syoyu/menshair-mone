@@ -87,7 +87,7 @@ export default function ProductsClient({ products }: ProductsClientProps) {
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.name}
+                        alt={[product.category, product.name, "Men's hair MONE取扱商品"].filter(Boolean).join(" - ")}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (

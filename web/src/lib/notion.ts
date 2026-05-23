@@ -142,6 +142,7 @@ export interface BlogPost {
   publishedAt: string;
   category: string;
   createdAt: string; // ソート用の作成日時
+  updatedAt: string;
 }
 
 export interface BlogPostDetail extends BlogPost {
@@ -244,6 +245,7 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";
+  const updatedAt = page.last_edited_time || createdAt;
 
   return {
     id: page.id,
@@ -255,6 +257,7 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
     publishedAt,
     category,
     createdAt,
+    updatedAt,
   };
 }
 
@@ -456,6 +459,7 @@ export async function getBlogPostBySlug(
 
     // 作成日時を取得
     const createdAt = matchedPage.created_time || "";
+    const updatedAt = matchedPage.last_edited_time || createdAt;
 
     const post: BlogPost = {
       id: matchedPage.id,
@@ -467,6 +471,7 @@ export async function getBlogPostBySlug(
       publishedAt,
       category,
       createdAt,
+      updatedAt,
     };
 
     // Get page blocks (content)
@@ -682,6 +687,7 @@ export async function getNewsWithStatus(): Promise<NewsWithStatus[]> {
 
         // 作成日時を取得
         const createdAt = pageObj.created_time || "";
+        const updatedAt = pageObj.last_edited_time || createdAt;
 
         newsItems.push({
           id: pageObj.id,
@@ -693,6 +699,7 @@ export async function getNewsWithStatus(): Promise<NewsWithStatus[]> {
           publishedAt,
           category,
           createdAt,
+          updatedAt,
           status,
           targets,
         });
@@ -719,6 +726,7 @@ export interface GalleryItem {
   image: string | null;
   order: number;
   createdAt: string; // ソート用の作成日時
+  updatedAt: string;
 }
 
 // Helper: Extract gallery item properties (日本語プロパティ名対応)
@@ -794,6 +802,7 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";
+  const updatedAt = page.last_edited_time || createdAt;
 
   return {
     id: page.id,
@@ -802,6 +811,7 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
     image,
     order,
     createdAt,
+    updatedAt,
   };
 }
 
@@ -877,6 +887,7 @@ export interface Product {
   image: string | null;
   order: number;
   createdAt: string; // ソート用の作成日時
+  updatedAt: string;
 }
 
 // Get data_source_id for Products database
@@ -967,6 +978,7 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";
+  const updatedAt = page.last_edited_time || createdAt;
 
   return {
     id: page.id,
@@ -977,6 +989,7 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
     image,
     order,
     createdAt,
+    updatedAt,
   };
 }
 
@@ -1431,6 +1444,7 @@ export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
 
         // 作成日時を取得
         const createdAt = pageObj.created_time || "";
+        const updatedAt = pageObj.last_edited_time || createdAt;
 
         pendingItems.push({
           id: pageObj.id,
@@ -1442,6 +1456,7 @@ export async function getPendingNewsletters(): Promise<NewsWithStatus[]> {
           publishedAt,
           category,
           createdAt,
+          updatedAt,
           status,
           targets,
         });

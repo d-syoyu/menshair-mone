@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getNewsBySlug, getAllNewsSlugs, type BlogPostDetail } from "@/lib/notion";
 import NewsDetailClient from "./NewsDetailClient";
 import type { Metadata } from "next";
+import { buildArticleJsonLd, renderJsonLd, toIsoDate } from "@/lib/seo";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -20,6 +21,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     coverImage: null,
     excerpt: "年末年始の営業時間についてお知らせいたします。",
     createdAt: "2025-12-10T00:00:00.000Z",
+    updatedAt: "2025-12-10T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>いつもMONËをご利用いただき、誠にありがとうございます。</p>
@@ -42,6 +44,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     coverImage: null,
     excerpt: "頭皮の深層からケアする新しいヘッドスパメニューが登場しました。",
     createdAt: "2025-12-01T00:00:00.000Z",
+    updatedAt: "2025-12-01T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>お客様からのご要望にお応えし、新メニュー「プレミアムヘッドスパ」を導入いたしました。</p>
@@ -66,6 +69,7 @@ const fallbackPosts: Record<string, BlogPostDetail> = {
     coverImage: null,
     excerpt: "より使いやすく、見やすいWebサイトにリニューアルいたしました。",
     createdAt: "2025-11-20T00:00:00.000Z",
+    updatedAt: "2025-11-20T00:00:00.000Z",
     blocks: [],
     fallbackContent: `
       <p>このたび、MONËの公式Webサイトをリニューアルいたしました。</p>
@@ -113,6 +117,8 @@ export async function generateMetadata({
     };
   }
 
+  const ogImage = `/news/${post.slug}/opengraph-image`;
+
   return {
     title: post.title,
     description: post.excerpt || `${post.title} | Men's hair MONEからのお知らせです。`,
@@ -124,8 +130,22 @@ export async function generateMetadata({
       title: post.title,
       description: post.excerpt,
       url: `/news/${post.slug}`,
-      publishedTime: post.createdAt,
-      images: post.coverImage ? [post.coverImage] : ["/og-image.jpg"],
+      publishedTime: toIsoDate(post.publishedAt) || post.createdAt,
+      modifiedTime: post.updatedAt,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt || `${post.title} | Men's hair MONEからのお知らせです。`,
+      images: [ogImage],
     },
   };
 }
@@ -148,5 +168,15 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
     notFound();
   }
 
-  return <NewsDetailClient post={post} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: renderJsonLd(buildArticleJsonLd(post)),
+        }}
+      />
+      <NewsDetailClient post={post} />
+    </>
+  );
 }

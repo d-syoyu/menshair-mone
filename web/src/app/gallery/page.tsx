@@ -4,6 +4,7 @@
 import { getGalleryItems } from "@/lib/notion";
 import GalleryClient from "./GalleryClient";
 import type { Metadata } from "next";
+import { buildGalleryJsonLd, renderJsonLd } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -12,6 +13,18 @@ export const metadata: Metadata = {
   description: "Men's hair MONEの店内、施術、スタイル写真をご紹介します。",
   alternates: {
     canonical: "/gallery",
+  },
+  openGraph: {
+    title: "ギャラリー | Men's hair MONE",
+    description: "Men's hair MONEの店内、施術、スタイル写真をご紹介します。",
+    url: "/gallery",
+    images: ["/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ギャラリー | Men's hair MONE",
+    description: "Men's hair MONEの店内、施術、スタイル写真をご紹介します。",
+    images: ["/og-image.jpg"],
   },
 };
 
@@ -27,5 +40,15 @@ export default async function GalleryPage() {
     return dateB.localeCompare(dateA);
   });
 
-  return <GalleryClient items={sortedItems} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: renderJsonLd(buildGalleryJsonLd(sortedItems)),
+        }}
+      />
+      <GalleryClient items={sortedItems} />
+    </>
+  );
 }

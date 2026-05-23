@@ -144,7 +144,7 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                   {item.image ? (
                     <img
                       src={item.image}
-                      alt={item.title}
+                      alt={[item.category, item.title, "Men's hair MONE"].filter(Boolean).join(" - ")}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
@@ -223,8 +223,8 @@ export default function GalleryClient({ items }: GalleryClientProps) {
             >
               {selectedImage.image && (
                 <img
-                  src={selectedImage.image}
-                  alt={selectedImage.title}
+                src={selectedImage.image}
+                alt={[selectedImage.category, selectedImage.title, "Men's hair MONE"].filter(Boolean).join(" - ")}
                   className="absolute inset-0 w-full h-full object-contain"
                 />
               )}

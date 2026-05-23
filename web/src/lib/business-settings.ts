@@ -50,6 +50,15 @@ export async function getClosedDaysText(): Promise<string> {
   }
 }
 
+export async function getClosedDaysForPublicSeo(): Promise<number[]> {
+  try {
+    return await getClosedDays();
+  } catch (error) {
+    logDatabaseFallback("Business Settings", error, "Monday closed-days SEO fallback");
+    return [1];
+  }
+}
+
 /**
  * 定休日の曜日名配列を取得する。
  */

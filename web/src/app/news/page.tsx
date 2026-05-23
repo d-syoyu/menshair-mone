@@ -10,6 +10,18 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/news',
   },
+  openGraph: {
+    title: "お知らせ | Men's hair MONE",
+    description: "Men's hair MONEからのお知らせ、キャンペーン、営業情報を掲載しています。",
+    url: "/news",
+    images: ["/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "お知らせ | Men's hair MONE",
+    description: "Men's hair MONEからのお知らせ、キャンペーン、営業情報を掲載しています。",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default async function NewsPage() {

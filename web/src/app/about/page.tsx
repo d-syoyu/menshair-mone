@@ -12,6 +12,20 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/about",
   },
+  openGraph: {
+    title: "店舗情報 | Men's hair MONE",
+    description:
+      "Men's hair MONEの店舗情報、アクセス、営業時間、定休日、支払方法、スタイリスト情報をご案内します。",
+    url: "/about",
+    images: ["/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "店舗情報 | Men's hair MONE",
+    description:
+      "Men's hair MONEの店舗情報、アクセス、営業時間、定休日、支払方法、スタイリスト情報をご案内します。",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default async function AboutPage() {

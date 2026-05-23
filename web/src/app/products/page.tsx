@@ -2,6 +2,7 @@ import { Phone, Instagram } from 'lucide-react';
 import { getProducts } from '@/lib/notion';
 import ProductsClient from './ProductsClient';
 import type { Metadata } from 'next';
+import { buildProductsJsonLd, renderJsonLd } from '@/lib/seo';
 
 export const revalidate = 3600;
 
@@ -10,6 +11,18 @@ export const metadata: Metadata = {
   description: "Men's hair MONEで取り扱うサロン専売品、スタイリング剤、ケア用品をご紹介します。",
   alternates: {
     canonical: '/products',
+  },
+  openGraph: {
+    title: "商品紹介 | Men's hair MONE",
+    description: "Men's hair MONEで取り扱うサロン専売品、スタイリング剤、ケア用品をご紹介します。",
+    url: "/products",
+    images: ["/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "商品紹介 | Men's hair MONE",
+    description: "Men's hair MONEで取り扱うサロン専売品、スタイリング剤、ケア用品をご紹介します。",
+    images: ["/og-image.jpg"],
   },
 };
 
@@ -27,6 +40,12 @@ export default async function ProductsPage() {
 
   return (
     <div className="min-h-screen pt-32">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: renderJsonLd(buildProductsJsonLd(products)),
+        }}
+      />
       {/* Hero */}
       <section className="container-wide pb-20">
         <div className="text-center animate-fade-up">
