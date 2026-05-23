@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { getNewsBySlug } from "@/lib/notion";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 3600;
 
 interface RouteParams {
   params: Promise<{ slug: string }>;

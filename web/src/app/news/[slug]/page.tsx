@@ -4,10 +4,10 @@
 import { notFound } from "next/navigation";
 import { getNewsBySlug, getAllNewsSlugs, type BlogPostDetail } from "@/lib/notion";
 import NewsDetailClient from "./NewsDetailClient";
+import type { Metadata } from "next";
 
-// 動的レンダリングに変更（キャッシュなし）
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
+export const dynamicParams = true;
 
 // Fallback data when Notion is not configured
 const fallbackPosts: Record<string, BlogPostDetail> = {
@@ -96,6 +96,38 @@ export async function generateStaticParams() {
 
 interface NewsDetailPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: NewsDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = (await getNewsBySlug(slug)) ?? fallbackPosts[slug];
+
+  if (!post) {
+    return {
+      title: "お知らせ",
+      alternates: {
+        canonical: `/news/${slug}`,
+      },
+    };
+  }
+
+  return {
+    title: post.title,
+    description: post.excerpt || `${post.title} | Men's hair MONEからのお知らせです。`,
+    alternates: {
+      canonical: `/news/${post.slug}`,
+    },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description: post.excerpt,
+      url: `/news/${post.slug}`,
+      publishedTime: post.createdAt,
+      images: post.coverImage ? [post.coverImage] : ["/og-image.jpg"],
+    },
+  };
 }
 
 export default async function NewsDetailPage({ params }: NewsDetailPageProps) {

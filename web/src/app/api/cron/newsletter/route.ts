@@ -10,6 +10,7 @@ import {
 } from "@/lib/notion";
 import { sendEmail, createNewsletterHtml, createNewsletterText } from "@/lib/email";
 import { filterCustomersByTargets } from "@/lib/customer-filter";
+import { revalidatePath } from "next/cache";
 
 // ステータス定数
 const STATUS = {
@@ -17,6 +18,15 @@ const STATUS = {
   SENT: "送信済み",
   FAILED: "送信失敗",
 } as const;
+
+function revalidatePublicNews(slug?: string) {
+  revalidatePath("/");
+  revalidatePath("/news");
+  revalidatePath("/sitemap.xml");
+  if (slug) {
+    revalidatePath(`/news/${slug}`);
+  }
+}
 
 // GET /api/cron/newsletter
 // Vercel Cron Jobから5分ごとに呼び出される
@@ -76,6 +86,7 @@ export async function GET(request: NextRequest) {
           console.log(`[Newsletter Cron] No customers for: ${news.title}`);
           await updateNewsPageStatus(news.id, STATUS.SENT);
           await clearSendFlag(news.id);
+          revalidatePublicNews(news.slug);
           results.push({
             id: news.id,
             title: news.title,
@@ -124,6 +135,7 @@ export async function GET(request: NextRequest) {
         if (result.success || successCount > 0) {
           await updateNewsPageStatus(news.id, STATUS.SENT);
           await clearSendFlag(news.id);
+          revalidatePublicNews(news.slug);
           if (result.success) {
             console.log(`[Newsletter Cron] Sent: ${news.title} to ${emailAddresses.length} customers`);
           } else {
@@ -138,6 +150,7 @@ export async function GET(request: NextRequest) {
         } else {
           // 完全失敗: ステータスを「送信失敗」に
           await updateNewsPageStatus(news.id, STATUS.FAILED);
+          revalidatePublicNews(news.slug);
           console.error(`[Newsletter Cron] Failed: ${news.title} - ${result.error}`);
           results.push({
             id: news.id,
@@ -149,6 +162,7 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         // 個別エラー
         await updateNewsPageStatus(news.id, STATUS.FAILED);
+        revalidatePublicNews(news.slug);
         console.error(`[Newsletter Cron] Error processing ${news.title}:`, error);
         results.push({
           id: news.id,

@@ -1,10 +1,17 @@
 import { Phone, Instagram } from 'lucide-react';
 import { getProducts } from '@/lib/notion';
 import ProductsClient from './ProductsClient';
+import type { Metadata } from 'next';
 
-// 動的レンダリングに変更（キャッシュなし）
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: '商品紹介',
+  description: "Men's hair MONEで取り扱うサロン専売品、スタイリング剤、ケア用品をご紹介します。",
+  alternates: {
+    canonical: '/products',
+  },
+};
 
 export default async function ProductsPage() {
   // Notionから商品を取得

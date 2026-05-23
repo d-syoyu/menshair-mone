@@ -1,8 +1,16 @@
 import { getCachedMenus } from '@/lib/menu-cache';
 import MenuContent from './MenuContent';
+import type { Metadata } from 'next';
 
-// ビルド時にDB接続しないよう動的レンダリングに設定
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: 'メニュー',
+  description: "Men's hair MONEのカット、シェービング、ヘッドスパ、カラーなどのメニューと料金をご案内します。",
+  alternates: {
+    canonical: '/menu',
+  },
+};
 
 export default async function MenuPage() {
   const { menus, categories } = await getCachedMenus();

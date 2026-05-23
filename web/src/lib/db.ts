@@ -18,13 +18,14 @@ function createPool(): Pool {
     throw new Error("DATABASE_URL is not defined");
   }
 
+  const max = Number(process.env.DB_POOL_MAX ?? 5);
+
   // Neon Serverless環境向けに最適化されたプール設定
   return new Pool({
     connectionString,
-    // 最大接続数（Neon poolerに合わせて調整）
-    max: 20,
-    // 最小接続数（コールドスタート対策）
-    min: 2,
+    // ServerlessではインスタンスごとにPoolが作られるため控えめにする
+    max,
+    min: 0,
     // アイドル接続のタイムアウト（60秒）
     idleTimeoutMillis: 60000,
     // 接続タイムアウト（30秒に延長）
@@ -44,18 +45,28 @@ function createPrismaClient(): PrismaClient {
 
   return new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    log: process.env.PRISMA_CLIENT_LOGS
+      ? process.env.PRISMA_CLIENT_LOGS.split(",").map((level) => level.trim()).filter(Boolean) as ("query" | "info" | "warn" | "error")[]
+      : ["warn"],
   });
 }
 
-// シングルトンパターンでPrismaClientを取得
-// 開発環境ではホットリロード時に複数インスタンスが作られるのを防ぐ
-export const prisma: PrismaClient =
-  globalForPrisma.prisma ?? createPrismaClient();
+export function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  return globalForPrisma.prisma;
 }
+
+// 既存の `prisma.xxx` 呼び出しを保ったまま、初回アクセスまでDB接続を遅延する
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 
 // Poolのエクスポート（seed.tsなどで使用）
 export function getPool(): Pool {
@@ -63,6 +74,26 @@ export function getPool(): Pool {
     globalForPrisma.pool = createPool();
   }
   return globalForPrisma.pool;
+}
+
+export function getDatabaseErrorSummary(error: unknown): string {
+  if (!error || typeof error !== "object") {
+    return String(error);
+  }
+
+  const maybeError = error as {
+    code?: string;
+    message?: string;
+    meta?: { code?: string } | null;
+  };
+  const code = maybeError.code ?? maybeError.meta?.code;
+  const message = maybeError.message?.split("\n").find(Boolean)?.trim();
+
+  return [code, message].filter(Boolean).join(": ") || "unknown database error";
+}
+
+export function logDatabaseFallback(scope: string, error: unknown, fallback: string) {
+  console.warn(`[${scope}] Database unavailable (${getDatabaseErrorSummary(error)}). Using ${fallback}.`);
 }
 
 export default prisma;

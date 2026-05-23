@@ -1,23 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Zen_Kaku_Gothic_New } from "next/font/google";
+import { Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import FloatingButtons from "../components/FloatingPhoneButton";
-import { SessionProvider } from "../components/providers/session-provider";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-serif",
-  display: "swap",
-});
-
-const zenKaku = Zen_Kaku_Gothic_New({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-sans",
   display: "swap",
 });
 
@@ -31,30 +23,34 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.mone.hair"),
   title: {
-    default: "Men's hair MONE | 守口市メンズ専用サロン",
+    default: "Men's hair MONE | 守口市のメンズ専門プライベートサロン",
     template: "%s | Men's hair MONE",
   },
   description:
-    "守口市のメンズ専用プライベートサロン Men's hair MONE（モネ）。ヘッドスパ・シェービング・カットなど、大人の男性に寄り添った上質な施術をご提供します。谷町線守口駅から徒歩8分。",
+    "大阪府守口市のメンズ専門プライベートサロン Men's hair MONE（モネ）。ヘッドスパ、シェービング、カットなど、大人の男性に寄り添った上質な施術をご提供します。谷町線守口駅から徒歩圏内。",
   keywords: [
     "メンズサロン",
     "守口市",
+    "守口 メンズカット",
     "ヘッドスパ",
     "シェービング",
     "理容室",
     "床屋",
-    "男性専用",
+    "男性専門",
     "プライベートサロン",
   ],
   authors: [{ name: "Men's hair MONE" }],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "ja_JP",
     url: "https://www.mone.hair",
     siteName: "Men's hair MONE",
-    title: "Men's hair MONE | 守口市メンズ専用サロン",
+    title: "Men's hair MONE | 守口市のメンズ専門プライベートサロン",
     description:
-      "守口市のメンズ専用プライベートサロン。ヘッドスパ・シェービング・カットなど、大人の男性に寄り添った上質な施術をご提供。",
+      "大阪府守口市のメンズ専門プライベートサロン。ヘッドスパ、シェービング、カットなど、大人の男性に寄り添った上質な施術をご提供します。",
     images: [
       {
         url: "/og-image.jpg",
@@ -66,9 +62,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Men's hair MONE | 守口市メンズ専用サロン",
+    title: "Men's hair MONE | 守口市のメンズ専門プライベートサロン",
     description:
-      "守口市のメンズ専用プライベートサロン。ヘッドスパ・シェービング・カットなど、大人の男性に寄り添った上質な施術をご提供。",
+      "大阪府守口市のメンズ専門プライベートサロン。ヘッドスパ、シェービング、カットなど、大人の男性に寄り添った上質な施術をご提供します。",
     images: ["/og-image.jpg"],
   },
   robots: {
@@ -104,16 +100,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`scroll-smooth ${cormorant.variable} ${zenKaku.variable}`} data-scroll-behavior="smooth">
+    <html lang="ja" className={`scroll-smooth ${cormorant.variable}`} data-scroll-behavior="smooth">
       <body className="flex flex-col min-h-screen">
-        <SessionProvider>
-          <Header />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-          <FloatingButtons />
-        </SessionProvider>
+        <Header />
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Footer />
+        <FloatingButtons />
       </body>
     </html>
   );

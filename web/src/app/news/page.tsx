@@ -1,9 +1,16 @@
 import { getNews } from '@/lib/notion';
 import NewsClient from './NewsClient';
+import type { Metadata } from 'next';
 
-// 動的レンダリングに変更（キャッシュなし）
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: 'お知らせ',
+  description: "Men's hair MONEからのお知らせ、キャンペーン、営業情報を掲載しています。",
+  alternates: {
+    canonical: '/news',
+  },
+};
 
 export default async function NewsPage() {
   // Notionからニュースを取得

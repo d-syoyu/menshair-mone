@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { BUSINESS_SETTINGS_CACHE_TAG } from "@/lib/business-settings";
 
 // 営業設定更新スキーマ
 const updateBusinessSettingsSchema = z.object({
@@ -69,6 +71,11 @@ export async function PUT(request: NextRequest) {
       update: { value: JSON.stringify(closedDays) },
       create: { key: "closed_days", value: JSON.stringify(closedDays) },
     });
+
+    revalidateTag(BUSINESS_SETTINGS_CACHE_TAG, "max");
+    revalidatePath("/");
+    revalidatePath("/about");
+    revalidatePath("/sitemap.xml");
 
     return NextResponse.json({
       closedDays,

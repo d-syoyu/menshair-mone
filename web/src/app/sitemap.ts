@@ -2,8 +2,10 @@
 // MONË - 動的サイトマップ生成
 
 import { MetadataRoute } from "next";
+import { getNews } from "@/lib/notion";
 
 const BASE_URL = "https://www.mone.hair";
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 静的ページ
@@ -73,20 +75,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ニュース記事を動的に取得（Notion APIから）
   let newsPages: MetadataRoute.Sitemap = [];
   try {
-    const res = await fetch(`${BASE_URL}/api/news`, {
-      next: { revalidate: 3600 }, // 1時間キャッシュ
-    });
-    if (res.ok) {
-      const data = await res.json();
-      newsPages = (data.posts || []).map(
-        (post: { slug: string; updatedAt?: string }) => ({
-          url: `${BASE_URL}/news/${post.slug}`,
-          lastModified: post.updatedAt ? new Date(post.updatedAt) : new Date(),
-          changeFrequency: "monthly" as const,
-          priority: 0.6,
-        })
-      );
-    }
+    const news = await getNews();
+    newsPages = news.map((post) => ({
+      url: `${BASE_URL}/news/${post.slug}`,
+      lastModified: post.createdAt ? new Date(post.createdAt) : new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
   } catch (error) {
     console.error("Failed to fetch news for sitemap:", error);
   }

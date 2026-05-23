@@ -3,10 +3,17 @@
 
 import { getGalleryItems } from "@/lib/notion";
 import GalleryClient from "./GalleryClient";
+import type { Metadata } from "next";
 
-// 動的レンダリングに変更（キャッシュなし）
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "ギャラリー",
+  description: "Men's hair MONEの店内、施術、スタイル写真をご紹介します。",
+  alternates: {
+    canonical: "/gallery",
+  },
+};
 
 export default async function GalleryPage() {
   // Fetch items from Notion

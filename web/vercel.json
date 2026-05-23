@@ -5,12 +5,19 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/revalidate-notion",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/send-reminders",
       "schedule": "0 0 * * *"
     }
   ],
   "functions": {
     "src/app/api/cron/newsletter/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/revalidate-notion/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/cron/send-reminders/route.ts": {

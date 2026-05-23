@@ -63,7 +63,7 @@ html {
 }
 
 body {
-  font-family: var(--font-sans), "Zen Kaku Gothic New", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
   color: var(--color-text-primary);
   background: var(--color-dark);
   line-height: 1.8;
@@ -590,7 +590,7 @@ h1, h2, h3, h4, h5, h6 {
 .admin-page h4,
 .admin-page h5,
 .admin-page h6 {
-  font-family: var(--font-sans), "Zen Kaku Gothic New", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #1a1a1a;
@@ -691,6 +691,56 @@ h1, h2, h3, h4, h5, h6 {
    ============================================ */
 
 @layer utilities {
+  @keyframes hero-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hero-divider-scale {
+    from {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+    to {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  }
+
+  .hero-enter {
+    animation: hero-fade-up 760ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  .hero-enter-delay-1 {
+    animation-delay: 160ms;
+  }
+
+  .hero-enter-delay-2 {
+    animation-delay: 320ms;
+  }
+
+  .hero-enter-delay-3 {
+    animation-delay: 480ms;
+  }
+
+  .hero-divider-enter {
+    transform-origin: center;
+    animation: hero-divider-scale 700ms cubic-bezier(0.4, 0, 0.2, 1) 280ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-enter,
+    .hero-divider-enter {
+      animation: none;
+    }
+  }
+
   /* Glow for quotation marks - extra strong with multiple layers */
   .hero-glow-quote {
     text-shadow:

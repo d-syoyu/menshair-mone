@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNewsPageById, updateNewsPageStatus, getNewsletterTargets } from "@/lib/notion";
 import { sendEmail, createNewsletterHtml, createNewsletterText } from "@/lib/email";
 import { filterCustomersByTargets } from "@/lib/customer-filter";
+import { revalidatePath } from "next/cache";
 
 // ステータス定数
 const STATUS = {
@@ -13,6 +14,15 @@ const STATUS = {
   SENT: "送信済み",
   FAILED: "送信失敗",
 } as const;
+
+function revalidatePublicNews(slug?: string) {
+  revalidatePath("/");
+  revalidatePath("/news");
+  revalidatePath("/sitemap.xml");
+  if (slug) {
+    revalidatePath(`/news/${slug}`);
+  }
+}
 
 // POST /api/notion-webhook
 // Notionのボタンオートメーションから呼び出される
@@ -48,6 +58,7 @@ export async function POST(request: NextRequest) {
     const news = await getNewsPageById(pageId);
     if (!news) {
       await updateNewsPageStatus(pageId, STATUS.FAILED);
+      revalidatePublicNews();
       return NextResponse.json(
         { error: "News page not found" },
         { status: 404 }
@@ -73,6 +84,7 @@ export async function POST(request: NextRequest) {
     if (customers.length === 0) {
       console.log("[Notion Webhook] No customers to send to");
       await updateNewsPageStatus(pageId, STATUS.SENT);
+      revalidatePublicNews(news.slug);
       return NextResponse.json({
         success: true,
         message: "No customers matched the target criteria",
@@ -114,6 +126,7 @@ export async function POST(request: NextRequest) {
     // 7. ステータスを更新
     if (result.success) {
       await updateNewsPageStatus(pageId, STATUS.SENT);
+      revalidatePublicNews(news.slug);
       console.log(`[Notion Webhook] Email sent to ${emailAddresses.length} customers`);
 
       return NextResponse.json({
@@ -124,6 +137,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       await updateNewsPageStatus(pageId, STATUS.FAILED);
+      revalidatePublicNews(news.slug);
       console.error("[Notion Webhook] Email send failed:", result.error);
 
       return NextResponse.json(

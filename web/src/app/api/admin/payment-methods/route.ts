@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkAdminAuth } from "@/lib/auth";
 import { z } from "zod";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PAYMENT_METHODS_CACHE_TAG } from "@/lib/payment-methods";
 
 // 支払方法更新スキーマ
 const updatePaymentMethodSchema = z.object({
@@ -15,6 +17,13 @@ const updatePaymentMethodSchema = z.object({
 });
 
 const updatePaymentMethodsSchema = z.array(updatePaymentMethodSchema);
+
+function revalidatePaymentMethodViews() {
+  revalidateTag(PAYMENT_METHODS_CACHE_TAG, "max");
+  revalidatePath("/about");
+  revalidatePath("/terms");
+  revalidatePath("/api/payment-methods");
+}
 
 // 支払方法作成スキーマ（任意のコードを許可）
 const createPaymentMethodSchema = z.object({
@@ -91,6 +100,8 @@ export async function PUT(request: NextRequest) {
       orderBy: { displayOrder: "asc" },
     });
 
+    revalidatePaymentMethodViews();
+
     return NextResponse.json({
       paymentMethods,
     });
@@ -154,6 +165,8 @@ export async function POST(request: NextRequest) {
       orderBy: { displayOrder: "asc" },
     });
 
+    revalidatePaymentMethodViews();
+
     return NextResponse.json({
       paymentMethods,
     });
@@ -206,6 +219,8 @@ export async function DELETE(request: NextRequest) {
     const paymentMethods = await prisma.paymentMethodSetting.findMany({
       orderBy: { displayOrder: "asc" },
     });
+
+    revalidatePaymentMethodViews();
 
     return NextResponse.json({
       paymentMethods,
