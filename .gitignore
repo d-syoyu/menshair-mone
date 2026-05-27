@@ -4,6 +4,18 @@
 # Dev server logs
 next-dev.err
 next-dev.out
+next-dev*.log
+next-dev.*.log
+
+# Local agent/session files
+.codex/
+
+# Generated email/test artifacts
+emails-sent-*.csv
+sample-emails/
+
+# Generated measurement output
+logs_result.csv
 
 # Claude Code local settings (contains API keys)
 .claude/settings.local.json
