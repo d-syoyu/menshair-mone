@@ -8,6 +8,13 @@ import {
   generateTimeSlots,
   isWithinBookingWindow,
 } from "@/constants/booking";
+import {
+  addDaysToDbDate,
+  getJstDateString,
+  getJstTimeString,
+  getJstWeekday,
+  parseLocalDate,
+} from "@/lib/date-utils";
 
 interface TimeSlot {
   time: string;
@@ -34,11 +41,8 @@ async function getClosedDays(): Promise<number[]> {
 
 // 特別営業日かどうかをチェックするヘルパー関数
 async function isSpecialOpenDay(date: Date): Promise<boolean> {
-  const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0);
-
   const specialOpenDay = await prisma.specialOpenDay.findFirst({
-    where: { date: targetDate },
+    where: { date },
   });
 
   return !!specialOpenDay;
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 日付をパース
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
     if (isNaN(date.getTime())) {
       return NextResponse.json(
         { error: "日付の形式が正しくありません" },
@@ -67,7 +71,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const dayOfWeek = date.getDay();
+    const dayOfWeek = getJstWeekday(date);
 
     // 定休日チェック（データベースから取得）
     const closedDays = await getClosedDays();
@@ -87,10 +91,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 不定休チェック（全日休業と時間帯休業を区別）
-    const holidayDate = new Date(dateStr);
-    holidayDate.setHours(0, 0, 0, 0);
     const holidays = await prisma.holiday.findMany({
-      where: { date: holidayDate },
+      where: { date },
     });
 
     // 全日休業（startTimeとendTimeがnull）がある場合は完全に休業
@@ -164,16 +166,14 @@ export async function GET(request: NextRequest) {
     }
 
     // その日の予約を取得
-    const startOfDay = new Date(dateStr);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(dateStr);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = date;
+    const endOfDay = addDaysToDbDate(startOfDay, 1);
 
     const existingReservations = await prisma.reservation.findMany({
       where: {
         date: {
           gte: startOfDay,
-          lte: endOfDay,
+          lt: endOfDay,
         },
         status: "CONFIRMED",
       },
@@ -189,7 +189,8 @@ export async function GET(request: NextRequest) {
 
     // 現在時刻チェック用
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
+    const isToday = dateStr === getJstDateString(now);
+    const currentJstTime = getJstTimeString(now);
 
     // 開店時間以降のスロットのみをフィルタリング
     const filteredSlots = allSlots.filter((slotTime) => slotTime >= businessHours.open);
@@ -203,10 +204,7 @@ export async function GET(request: NextRequest) {
 
         // 2. 今日の場合、過去の時間は除外
         if (isToday) {
-          const [hours, minutes] = slotTime.split(":").map(Number);
-          const slotDate = new Date(date);
-          slotDate.setHours(hours, minutes, 0, 0);
-          if (slotDate <= now) {
+          if (slotTime <= currentJstTime) {
             return { time: slotTime, available: false };
           }
         }

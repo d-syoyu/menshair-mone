@@ -3,6 +3,7 @@
 
 import { Resend } from 'resend';
 import { SALON_INFO } from '@/constants/salon';
+import { formatJstDate } from '@/lib/date-utils';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -317,12 +318,7 @@ export function createNewsletterText(news: {
 
 // 日付フォーマット（例: 2025年1月15日（水））
 export function formatReservationDate(date: Date): string {
-  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const weekday = weekdays[date.getDay()];
-  return `${year}年${month}月${day}日（${weekday}）`;
+  return formatJstDate(date, "jp");
 }
 
 // 金額フォーマット

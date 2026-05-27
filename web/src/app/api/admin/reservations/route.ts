@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { parseLocalDate } from "@/lib/date-utils";
+import { getJstTimeString, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
 
 // DB Menuの型定義
@@ -73,8 +73,8 @@ async function validateCouponForReservation({
   }
 
   const now = new Date();
-  const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
-  const currentTime = time || now.toTimeString().slice(0, 5);
+  const currentWeekday = typeof weekday === "number" ? weekday : getJstWeekday(now);
+  const currentTime = time || getJstTimeString(now);
   if (!coupon.isActive) {
     throw new Error("このクーポンは現在無効です");
   }
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     // 予約日時を作成（タイムゾーン対応）
     const reservationDate = parseLocalDate(date);
-    const weekday = reservationDate.getDay();
+    const weekday = getJstWeekday(reservationDate);
 
     // 不定休チェック
     const holidays = await prisma.holiday.findMany({

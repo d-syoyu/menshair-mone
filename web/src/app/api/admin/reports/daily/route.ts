@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkAdminAuth } from "@/lib/auth";
+import { addDaysToDbDate, dbDateToJstDateString, getJstTodayDbDate, parseLocalDate } from "@/lib/date-utils";
 
 // GET /api/admin/reports/daily - 日別売上レポート
 export async function GET(request: NextRequest) {
@@ -16,11 +17,8 @@ export async function GET(request: NextRequest) {
     const dateParam = searchParams.get("date");
 
     // デフォルトは今日
-    const targetDate = dateParam ? new Date(dateParam) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
-
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+    const targetDate = dateParam ? parseLocalDate(dateParam) : getJstTodayDbDate();
+    const nextDate = addDaysToDbDate(targetDate, 1);
 
     // 当日の会計データを取得
     const sales = await prisma.sale.findMany({
@@ -104,7 +102,7 @@ export async function GET(request: NextRequest) {
     const totalTax = sales.reduce((sum, sale) => sum + sale.taxAmount, 0);
 
     return NextResponse.json({
-      date: targetDate.toISOString().split("T")[0],
+      date: dbDateToJstDateString(targetDate),
       summary: {
         totalSales,
         saleCount,

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkAdminAuth } from "@/lib/auth";
+import { dbDateToJstDateString, getJstDateParts, getJstMonthRange, getJstWeekday } from "@/lib/date-utils";
 
 // GET /api/admin/reports/monthly - 月別売上レポート
 export async function GET(request: NextRequest) {
@@ -17,17 +18,17 @@ export async function GET(request: NextRequest) {
     const monthParam = searchParams.get("month");
 
     // デフォルトは今月
-    const now = new Date();
-    const year = yearParam ? parseInt(yearParam) : now.getFullYear();
-    const month = monthParam ? parseInt(monthParam) : now.getMonth() + 1;
+    const now = getJstDateParts();
+    const year = yearParam ? parseInt(yearParam) : now.year;
+    const month = monthParam ? parseInt(monthParam) : now.month;
 
     // 月の開始日と終了日
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const { start: startDate, end: endDate } = getJstMonthRange(year, month);
 
     // 前月の開始日と終了日（前月比用）
-    const prevStartDate = new Date(year, month - 2, 1);
-    const prevEndDate = new Date(year, month - 1, 1);
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const { start: prevStartDate, end: prevEndDate } = getJstMonthRange(prevYear, prevMonth);
 
     // 当月の会計データを取得
     const sales = await prisma.sale.findMany({
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     for (const sale of sales) {
-      const dateStr = sale.saleDate.toISOString().split("T")[0];
+      const dateStr = dbDateToJstDateString(sale.saleDate);
       if (dailyData[dateStr]) {
         dailyData[dateStr].amount += sale.totalAmount;
         dailyData[dateStr].count += 1;
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
     const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
     for (const sale of sales) {
-      const dayOfWeek = weekdays[sale.saleDate.getDay()];
+      const dayOfWeek = weekdays[getJstWeekday(sale.saleDate)];
       weekdayBreakdown[dayOfWeek].count += 1;
       weekdayBreakdown[dayOfWeek].amount += sale.totalAmount;
     }

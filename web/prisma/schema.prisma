@@ -31,6 +31,9 @@ model User {
   reservations  Reservation[]
   sales         Sale[]              // 顧客の売上履歴
   createdSales  Sale[]   @relation("CreatedSales") // 管理者が作成した売上
+
+  @@index([role, createdAt])
+  @@index([phone])
 }
 
 model Account {
@@ -107,6 +110,7 @@ model Reservation {
   @@index([userId])
   @@index([status])
   @@index([date, status]) // Compound index for reservation queries
+  @@index([status, date, startTime])
   @@index([couponId])
 }
 
@@ -297,6 +301,8 @@ model Sale {
   @@index([couponId])
   @@index([paymentMethod])
   @@index([createdAt])
+  @@index([saleDate, saleTime])
+  @@index([paymentMethod, saleDate])
 }
 
 // 会計明細（施術メニュー + 店販商品）

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { addDaysToDbDate, getJstDateParts, getJstDateString, jstDateStringToDbDate } from '@/lib/date-utils';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -19,21 +21,19 @@ import {
   Scissors,
   Package,
 } from 'lucide-react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  CartesianGrid,
-} from 'recharts';
+const PieChart = dynamic(() => import('recharts').then((module) => module.PieChart), { ssr: false });
+const Pie = dynamic(() => import('recharts').then((module) => module.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then((module) => module.Cell), { ssr: false });
+const BarChart = dynamic(() => import('recharts').then((module) => module.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then((module) => module.Bar), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then((module) => module.LineChart), { ssr: false });
+const Line = dynamic(() => import('recharts').then((module) => module.Line), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then((module) => module.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then((module) => module.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then((module) => module.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then((module) => module.ResponsiveContainer), { ssr: false });
+const Legend = dynamic(() => import('recharts').then((module) => module.Legend), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then((module) => module.CartesianGrid), { ssr: false });
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -146,23 +146,22 @@ interface AnalyticsData {
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('daily');
+  const todayDateString = getJstDateString();
 
   // Daily state
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => getJstDateString());
   const [dailyReport, setDailyReport] = useState<DailyReport | null>(null);
 
   // Monthly state
-  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => getJstDateParts().year);
+  const [selectedMonth, setSelectedMonth] = useState(() => getJstDateParts().month);
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(null);
 
   // Analytics state
   const [analyticsStartDate, setAnalyticsStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
+    return getJstDateString(addDaysToDbDate(jstDateStringToDbDate(getJstDateString()), -30));
   });
-  const [analyticsEndDate, setAnalyticsEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [analyticsEndDate, setAnalyticsEndDate] = useState(() => getJstDateString());
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -221,15 +220,12 @@ export default function ReportsPage() {
   const formatShortPrice = (price: number) => price >= 10000 ? `¥${(price / 10000).toFixed(1)}万` : `¥${(price / 1000).toFixed(0)}k`;
 
   const goToPrevDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    setSelectedDate(getJstDateString(addDaysToDbDate(jstDateStringToDbDate(selectedDate), -1)));
   };
 
   const goToNextDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    if (d <= new Date()) setSelectedDate(d.toISOString().split('T')[0]);
+    const nextDate = getJstDateString(addDaysToDbDate(jstDateStringToDbDate(selectedDate), 1));
+    if (nextDate <= todayDateString) setSelectedDate(nextDate);
   };
 
   const goToPrevMonth = () => {
@@ -238,20 +234,18 @@ export default function ReportsPage() {
   };
 
   const goToNextMonth = () => {
-    const now = new Date();
-    const next = new Date(selectedYear, selectedMonth);
-    if (next <= now) {
+    const { year: currentYear, month: currentMonth } = getJstDateParts();
+    if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
       if (selectedMonth === 12) { setSelectedYear(selectedYear + 1); setSelectedMonth(1); }
       else setSelectedMonth(selectedMonth + 1);
     }
   };
 
   const setPresetPeriod = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    setAnalyticsStartDate(start.toISOString().split('T')[0]);
-    setAnalyticsEndDate(end.toISOString().split('T')[0]);
+    const end = jstDateStringToDbDate(getJstDateString());
+    const start = addDaysToDbDate(end, -days);
+    setAnalyticsStartDate(getJstDateString(start));
+    setAnalyticsEndDate(getJstDateString(end));
   };
 
   const tabs = [
@@ -304,11 +298,11 @@ export default function ReportsPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
+                max={todayDateString}
                 className="pl-10 pr-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-[var(--color-accent)]"
               />
             </div>
-            <button onClick={goToNextDay} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={selectedDate === new Date().toISOString().split('T')[0]}>
+            <button onClick={goToNextDay} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={selectedDate === todayDateString}>
               <ChevronRight className="w-5 h-5" />
             </button>
           </motion.div>
@@ -321,7 +315,7 @@ export default function ReportsPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="px-3 py-2 border border-gray-200 rounded-lg bg-white">
-              {[...Array(5)].map((_, i) => <option key={i} value={new Date().getFullYear() - i}>{new Date().getFullYear() - i}年</option>)}
+              {[...Array(5)].map((_, i) => <option key={i} value={getJstDateParts().year - i}>{getJstDateParts().year - i}年</option>)}
             </select>
             <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="px-3 py-2 border border-gray-200 rounded-lg bg-white">
               {[...Array(12)].map((_, i) => <option key={i} value={i + 1}>{i + 1}月</option>)}
@@ -348,7 +342,7 @@ export default function ReportsPage() {
               <div className="flex items-center gap-2 sm:ml-auto">
                 <input type="date" value={analyticsStartDate} onChange={(e) => setAnalyticsStartDate(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm" />
                 <span className="text-gray-400">〜</span>
-                <input type="date" value={analyticsEndDate} onChange={(e) => setAnalyticsEndDate(e.target.value)} max={new Date().toISOString().split('T')[0]} className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm" />
+                <input type="date" value={analyticsEndDate} onChange={(e) => setAnalyticsEndDate(e.target.value)} max={todayDateString} className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm" />
               </div>
             </div>
           </motion.div>
@@ -403,7 +397,7 @@ export default function ReportsPage() {
                             >
                               {Object.keys(dailyReport.paymentMethodBreakdown).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
-                            <Tooltip formatter={(v: number) => formatPrice(v)} />
+                            <Tooltip formatter={(v: unknown) => formatPrice(Number(v))} />
                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                           </PieChart>
                         </ResponsiveContainer>
@@ -418,7 +412,7 @@ export default function ReportsPage() {
                         <BarChart data={Object.entries(dailyReport.hourlyBreakdown).map(([h, d]) => ({ hour: h, amount: d.amount }))}>
                           <XAxis dataKey="hour" />
                           <YAxis tickFormatter={(v) => formatShortPrice(v)} />
-                          <Tooltip formatter={(v: number) => [formatPrice(v), '売上']} />
+                          <Tooltip formatter={(v: unknown) => [formatPrice(Number(v)), '売上']} />
                           <Bar dataKey="amount" fill="#D4A64A" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
@@ -502,7 +496,7 @@ export default function ReportsPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="day" tickFormatter={(v) => `${v}日`} />
                         <YAxis tickFormatter={(v) => formatShortPrice(v)} />
-                        <Tooltip formatter={(v: number) => [formatPrice(v), '売上']} labelFormatter={(l) => `${l}日`} />
+                        <Tooltip formatter={(v: unknown) => [formatPrice(Number(v)), '売上']} labelFormatter={(l) => `${l}日`} />
                         <Line type="monotone" dataKey="amount" stroke="#D4A64A" strokeWidth={2} dot={{ fill: '#D4A64A', r: 3 }} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -523,7 +517,7 @@ export default function ReportsPage() {
                             >
                               {Object.keys(monthlyReport.paymentMethodBreakdown).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
-                            <Tooltip formatter={(v: number) => formatPrice(v)} />
+                            <Tooltip formatter={(v: unknown) => formatPrice(Number(v))} />
                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                           </PieChart>
                         </ResponsiveContainer>
@@ -539,7 +533,7 @@ export default function ReportsPage() {
                           <BarChart data={Object.entries(monthlyReport.weekdayBreakdown).map(([d, v]) => ({ day: d, amount: v.amount }))}>
                             <XAxis dataKey="day" />
                             <YAxis tickFormatter={(v) => formatShortPrice(v)} />
-                            <Tooltip formatter={(v: number) => [formatPrice(v), '売上']} />
+                            <Tooltip formatter={(v: unknown) => [formatPrice(Number(v)), '売上']} />
                             <Bar dataKey="amount" fill="#D4A64A" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
@@ -592,7 +586,7 @@ export default function ReportsPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="shortDate" tick={{ fontSize: 12 }} />
                         <YAxis tickFormatter={(v) => formatShortPrice(v)} />
-                        <Tooltip formatter={(v: number) => [formatPrice(v), '売上']} />
+                        <Tooltip formatter={(v: unknown) => [formatPrice(Number(v)), '売上']} />
                         <Line type="monotone" dataKey="amount" stroke="#D4A64A" strokeWidth={2} dot={{ fill: '#D4A64A', r: 2 }} />
                       </LineChart>
                     </ResponsiveContainer>

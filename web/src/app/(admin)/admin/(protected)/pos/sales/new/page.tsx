@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatJstDate, getJstDateString, getJstTimeString, getJstWeekday } from '@/lib/date-utils';
 import {
   ArrowLeft,
   ArrowRight,
@@ -217,32 +218,43 @@ export default function NewSalePage() {
   const [payments, setPayments] = useState<PaymentEntry[]>([{ paymentMethod: 'CASH', amount: 0 }]);
 
   // 日時・備考（ローカルタイムゾーンで取得）
-  const [saleDate, setSaleDate] = useState(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
-  const [saleTime, setSaleTime] = useState(() => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  });
+  const [saleDate, setSaleDate] = useState(() => getJstDateString());
+  const [saleTime, setSaleTime] = useState(() => getJstTimeString());
   const [note, setNote] = useState('');
 
   // ========== データ取得 ==========
 
   useEffect(() => {
-    Promise.all([
-      fetchMenus(),
-      fetchProducts(),
-      fetchProductCategories(),
-      fetchDiscounts(),
-      fetchPaymentMethods(),
-      fetchTaxRate(),
-      fetchReservations(),
-      fetchCoupons(),
-    ]).then(() => setIsLoading(false));
+    const fetchBootstrap = async () => {
+      try {
+        const res = await fetch('/api/admin/pos/bootstrap');
+        if (!res.ok) {
+          throw new Error('Failed to fetch POS bootstrap data');
+        }
+        const data = await res.json();
+        const methods = Array.isArray(data.paymentMethods) ? data.paymentMethods : [];
+
+        setMenus(Array.isArray(data.menus) ? data.menus : []);
+        setProducts(Array.isArray(data.products) ? data.products : []);
+        setProductCategories(Array.isArray(data.productCategories) ? data.productCategories : []);
+        setDiscounts(Array.isArray(data.discounts) ? data.discounts : []);
+        setPaymentMethods(methods);
+        setTaxRate(typeof data.taxRate === 'number' ? data.taxRate : 10);
+        setReservations(Array.isArray(data.reservations) ? data.reservations : []);
+        setAvailableCoupons(Array.isArray(data.coupons) ? data.coupons : []);
+
+        if (methods.length > 0) {
+          setPayments([{ paymentMethod: methods[0].code, amount: 0 }]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch POS bootstrap data:', err);
+        setError('会計初期データの取得に失敗しました');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBootstrap();
   }, []);
 
   const fetchMenus = async () => {
@@ -326,7 +338,7 @@ export default function NewSalePage() {
   const fetchReservations = async () => {
     try {
       // 本日以降のCONFIRMED予約を取得
-      const today = new Date().toISOString().split('T')[0];
+      const today = getJstDateString();
       const res = await fetch(`/api/admin/reservations?status=CONFIRMED`);
       const data = await res.json();
       // APIは { reservations: [...] } を返す
@@ -508,7 +520,7 @@ export default function NewSalePage() {
         .map(id => menus.find(m => m.id === id)?.category.name)
         .filter(Boolean) as string[];
 
-      const saleWeekday = new Date(saleDate).getDay();
+      const saleWeekday = getJstWeekday(saleDate);
 
       const res = await fetch('/api/admin/coupons/validate', {
         method: 'POST',
@@ -565,7 +577,7 @@ export default function NewSalePage() {
         .map(id => menus.find(m => m.id === id)?.category.name)
         .filter(Boolean) as string[];
 
-      const saleWeekday = new Date(saleDate).getDay();
+      const saleWeekday = getJstWeekday(saleDate);
 
       const res = await fetch('/api/admin/coupons/validate', {
         method: 'POST',
@@ -745,8 +757,7 @@ export default function NewSalePage() {
   const formatPrice = (price: number) => `¥${price.toLocaleString()}`;
 
   const formatReservationDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    return formatJstDate(dateStr, "slash");
   };
 
   // ========== ステップナビゲーション ==========

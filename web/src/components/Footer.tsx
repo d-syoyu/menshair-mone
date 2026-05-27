@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Instagram, MapPin, Phone, Clock } from 'lucide-react';
+import { getJstDateParts } from '@/lib/date-utils';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -14,8 +15,8 @@ const Footer = () => {
   useEffect(() => {
     const fetchClosedDays = async () => {
       try {
-        const now = new Date();
-        const res = await fetch(`/api/holidays?year=${now.getFullYear()}&month=${now.getMonth() + 1}`);
+        const { year, month } = getJstDateParts();
+        const res = await fetch(`/api/holidays?year=${year}&month=${month}`);
         const data = await res.json();
         const closedDays: number[] = data.closedDays || [1];
         if (closedDays.length === 0) {

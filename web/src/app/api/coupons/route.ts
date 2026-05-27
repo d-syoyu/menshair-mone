@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getJstTimeString, getJstWeekday } from "@/lib/date-utils";
 
 // GET /api/coupons - 利用可能なクーポン一覧取得
 export async function GET(request: NextRequest) {
@@ -20,11 +21,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const menuIds = searchParams.get("menuIds")?.split(",").filter(Boolean) || [];
     const categoryIds = searchParams.get("categoryIds")?.split(",").filter(Boolean) || [];
-    const weekday = searchParams.get("weekday") ? parseInt(searchParams.get("weekday")!) : new Date().getDay();
-    const time = searchParams.get("time") || new Date().toTimeString().slice(0, 5);
+    const now = new Date();
+    const weekday = searchParams.get("weekday") ? parseInt(searchParams.get("weekday")!) : getJstWeekday(now);
+    const time = searchParams.get("time") || getJstTimeString(now);
     const subtotal = searchParams.get("subtotal") ? parseInt(searchParams.get("subtotal")!) : 0;
 
-    const now = new Date();
     const customerId = session.user.id;
 
     // 有効なクーポンを取得

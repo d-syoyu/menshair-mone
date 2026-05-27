@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkAdminAuth } from "@/lib/auth";
 import { z } from "zod";
-import { parseLocalDate, parseLocalDateStart, parseLocalDateEnd } from "@/lib/date-utils";
+import { dbDateToJstDateString, getJstWeekday, parseLocalDate, parseLocalDateStart, parseLocalDateEnd } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
 
 // 会計明細スキーマ
@@ -45,7 +45,7 @@ const createSaleSchema = z.object({
 
 // 伝票番号の自動採番
 async function generateSaleNumber(saleDate: Date): Promise<string> {
-  const dateStr = saleDate.toISOString().split("T")[0].replace(/-/g, "");
+  const dateStr = dbDateToJstDateString(saleDate).replace(/-/g, "");
   const prefix = `SALE-${dateStr}-`;
 
   // 同日の最新伝票番号を取得
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
         .filter((i) => i.category)
         .map((i) => i.category as string);
       const saleDateObj = parseLocalDate(data.saleDate);
-      const weekday = saleDateObj.getDay();
+      const weekday = getJstWeekday(saleDateObj);
 
       // 部分適用計算用：メニューIDからカテゴリIDを取得
       const menuDetails = await prisma.menu.findMany({

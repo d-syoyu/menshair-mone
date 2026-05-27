@@ -4,6 +4,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkAdminAuth } from "@/lib/auth";
+import {
+  addDaysToDbDate,
+  dbDateToJstDateString,
+  getJstTodayDbDate,
+  getJstWeekday,
+  parseLocalDate,
+} from "@/lib/date-utils";
 
 // GET /api/admin/analytics - 売上分析データ取得
 export async function GET(request: NextRequest) {
@@ -16,20 +23,18 @@ export async function GET(request: NextRequest) {
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
     // デフォルトは過去30日間
-    const endDate = endDateParam ? new Date(endDateParam) : new Date();
-    endDate.setHours(23, 59, 59, 999);
-
+    const endDate = endDateParam ? parseLocalDate(endDateParam) : getJstTodayDbDate();
+    const endExclusive = addDaysToDbDate(endDate, 1);
     const startDate = startDateParam
-      ? new Date(startDateParam)
-      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-    startDate.setHours(0, 0, 0, 0);
+      ? parseLocalDate(startDateParam)
+      : addDaysToDbDate(endExclusive, -30);
 
     // 会計データを取得
     const sales = await prisma.sale.findMany({
       where: {
         saleDate: {
           gte: startDate,
-          lte: endDate,
+          lt: endExclusive,
         },
         paymentStatus: "PAID",
       },
@@ -185,7 +190,7 @@ export async function GET(request: NextRequest) {
     const dailyTrend: Record<string, { date: string; amount: number; count: number }> = {};
 
     for (const sale of sales) {
-      const dateStr = sale.saleDate.toISOString().split("T")[0];
+      const dateStr = dbDateToJstDateString(sale.saleDate);
       if (!dailyTrend[dateStr]) {
         dailyTrend[dateStr] = { date: dateStr, amount: 0, count: 0 };
       }
@@ -199,14 +204,14 @@ export async function GET(request: NextRequest) {
       where: {
         date: {
           gte: startDate,
-          lte: endDate,
+          lt: endExclusive,
         },
         startTime: null, // 終日休業のみ（時間帯休業は営業日としてカウント）
       },
       select: { date: true },
     });
     const holidayDates = new Set(
-      holidays.map((h) => h.date.toISOString().split("T")[0])
+      holidays.map((h) => dbDateToJstDateString(h.date))
     );
 
     // 定休日: 月曜日 (1)
@@ -215,15 +220,15 @@ export async function GET(request: NextRequest) {
     // 期間内の営業日数をカウント
     let businessDays = 0;
     const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay();
-      const dateStr = currentDate.toISOString().split("T")[0];
+    while (currentDate < endExclusive) {
+      const dayOfWeek = getJstWeekday(currentDate);
+      const dateStr = dbDateToJstDateString(currentDate);
 
       // 定休日（月曜）でなく、不定休（終日）でなければ営業日
       if (dayOfWeek !== CLOSED_DAY && !holidayDates.has(dateStr)) {
         businessDays++;
       }
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
     // 営業日平均売上
@@ -244,8 +249,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       period: {
-        startDate: startDate.toISOString().split("T")[0],
-        endDate: endDate.toISOString().split("T")[0],
+        startDate: dbDateToJstDateString(startDate),
+        endDate: dbDateToJstDateString(endDate),
       },
       summary: {
         totalSales,

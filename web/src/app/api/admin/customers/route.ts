@@ -1,19 +1,14 @@
-// src/app/api/admin/customers/route.ts
-// MONË - Customers Admin API (電話予約対応)
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 
-// 顧客作成スキーマ
 const createCustomerSchema = z.object({
   name: z.string().min(1, "名前は必須です"),
   phone: z.string().min(1, "電話番号は必須です"),
   email: z.string().email("メールアドレスの形式が正しくありません").optional().nullable(),
 });
 
-// GET /api/admin/customers - 顧客一覧取得（検索対応）
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -24,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("q");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
 
     const where = query
       ? {
@@ -47,9 +42,9 @@ export async function GET(request: NextRequest) {
         email: true,
         phone: true,
         createdAt: true,
-        reservations: {
+        _count: {
           select: {
-            status: true,
+            reservations: true,
           },
         },
       },
@@ -57,23 +52,31 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    // 予約回数と完了回数を計算
-    const customersWithCounts = customers.map((customer) => {
-      const totalReservations = customer.reservations.length;
-      const completedReservations = customer.reservations.filter(
-        (r) => r.status === "COMPLETED"
-      ).length;
+    const completedCounts = customers.length
+      ? await prisma.reservation.groupBy({
+          by: ["userId"],
+          where: {
+            userId: { in: customers.map((customer) => customer.id) },
+            status: "COMPLETED",
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const completedCountByUserId = new Map(
+      completedCounts.map((row) => [row.userId, row._count._all])
+    );
 
-      // reservationsは返さない
-      const { reservations: _, ...rest } = customer;
-      return {
-        ...rest,
-        _count: {
-          reservations: totalReservations,
-          completedReservations: completedReservations,
-        },
-      };
-    });
+    const customersWithCounts = customers.map((customer) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      createdAt: customer.createdAt,
+      _count: {
+        reservations: customer._count.reservations,
+        completedReservations: completedCountByUserId.get(customer.id) ?? 0,
+      },
+    }));
 
     return NextResponse.json(customersWithCounts);
   } catch (error) {
@@ -85,7 +88,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/customers - 顧客作成（電話予約用）
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -106,7 +108,6 @@ export async function POST(request: NextRequest) {
 
     const { name, phone, email } = validationResult.data;
 
-    // 電話番号の重複チェック
     if (phone) {
       const existingByPhone = await prisma.user.findFirst({
         where: { phone },
@@ -120,7 +121,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // メールの重複チェック
     if (email) {
       const existingByEmail = await prisma.user.findUnique({
         where: { email },

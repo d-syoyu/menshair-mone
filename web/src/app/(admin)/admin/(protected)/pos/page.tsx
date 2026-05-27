@@ -18,6 +18,7 @@ import {
   CreditCard,
   BarChart3,
 } from 'lucide-react';
+import { formatJstDate } from '@/lib/date-utils';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -87,6 +88,15 @@ export default function POSDashboard() {
 
   const fetchData = async () => {
     try {
+      const dashboardRes = await fetch('/api/admin/pos/dashboard');
+      if (!dashboardRes.ok) {
+        throw new Error(`POS dashboard fetch failed: ${dashboardRes.status}`);
+      }
+      const dashboardData = await dashboardRes.json();
+      setTodaySales(Array.isArray(dashboardData.todaySales) ? dashboardData.todaySales : []);
+      setStats(dashboardData.stats);
+      return;
+
       // 今日の日付
       const today = new Date();
       const todayStr = formatLocalDate(today);
@@ -158,7 +168,7 @@ export default function POSDashboard() {
     return `${names[0]} 他${names.length - 1}件`;
   };
 
-  const today = new Date();
+  const todayLabel = formatJstDate(new Date(), "jp");
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
@@ -181,8 +191,7 @@ export default function POSDashboard() {
             <div>
               <h1 className="text-2xl md:text-3xl font-medium">POS・売上管理</h1>
               <p className="text-base md:text-lg text-gray-500">
-                {today.getFullYear()}年{today.getMonth() + 1}月{today.getDate()}日（
-                {WEEKDAYS[today.getDay()]}）
+                {todayLabel}
               </p>
             </div>
           </div>

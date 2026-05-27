@@ -163,7 +163,7 @@ export class NewsPage extends BasePage {
   constructor(page: Page) {
     super(page);
 
-    this.pageTitle = page.locator('h1, h2').filter({ hasText: /お知らせ|NEWS/ });
+    this.pageTitle = page.locator('h1').filter({ hasText: /お知らせ|NEWS/ });
     this.newsList = page.locator('[data-news-list], .news-list');
     this.newsItems = page.locator('[data-news-item], .news-item, article');
     this.categoryFilters = page.locator('[data-category-filter], .category-filter');

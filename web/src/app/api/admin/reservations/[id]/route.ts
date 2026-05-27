@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { parseLocalDate } from "@/lib/date-utils";
+import { getJstTimeString, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import {
   sendReservationChangeEmail,
   sendReservationCancellationEmail,
@@ -82,8 +82,8 @@ async function validateCouponForReservation({
   }
 
   const now = new Date();
-  const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
-  const currentTime = time || now.toTimeString().slice(0, 5);
+  const currentWeekday = typeof weekday === "number" ? weekday : getJstWeekday(now);
+  const currentTime = time || getJstTimeString(now);
   if (!coupon.isActive) {
     throw new Error("このクーポンは現在無効です");
   }
@@ -441,7 +441,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const nextCouponCode = couponCode !== undefined ? couponCode : existingReservation.couponCode ?? undefined;
     const effectiveDate = updateData.date || existingReservation.date;
     const effectiveStartTime = updateData.startTime || existingReservation.startTime;
-    const effectiveWeekday = effectiveDate.getDay();
+    const effectiveWeekday = getJstWeekday(effectiveDate);
     const effectiveMenuIds = menuIds ?? existingReservation.items.map((i) => i.menuId);
     const effectiveCategories =
       newMenus?.map((m) => m.category.name) ?? existingReservation.items.map((i) => i.category);

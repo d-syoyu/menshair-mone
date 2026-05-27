@@ -1,41 +1,35 @@
-// src/app/api/admin/holidays/route.ts
-// MONË - Holiday Management API
-
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { parseLocalDate } from "@/lib/date-utils";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getJstMonthRange, getJstYearRange, parseLocalDate } from "@/lib/date-utils";
 
-// 不定休作成スキーマ
 const createHolidaySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません（例: 2024-01-15）"),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(), // "10:00" 形式、nullの場合は全日休業
-  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(), // "18:00" 形式、nullの場合は全日休業
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません"),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   reason: z.string().optional(),
 }).refine(
   (data) => {
-    // startTimeとendTimeは両方指定するか、両方未指定
     if ((data.startTime && !data.endTime) || (!data.startTime && data.endTime)) {
       return false;
     }
-    // startTimeとendTimeが両方指定されている場合、startTime < endTime
     if (data.startTime && data.endTime) {
       return data.startTime < data.endTime;
     }
     return true;
   },
-  {
-    message: "時間帯は開始時間と終了時間の両方を指定し、開始時間は終了時間より前にしてください",
-  }
+  { message: "時間帯は開始時刻と終了時刻の両方を指定してください" }
 );
 
-// GET /api/admin/holidays - 不定休一覧取得
+async function requireAdmin() {
+  const session = await auth();
+  return !!session?.user && session.user.role === "ADMIN";
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!(await requireAdmin())) {
       return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
@@ -43,32 +37,18 @@ export async function GET(request: NextRequest) {
     const year = searchParams.get("year");
     const month = searchParams.get("month");
 
-    let where = {};
-
-    // 年月でフィルタリング
-    if (year && month) {
-      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      const endDate = new Date(parseInt(year), parseInt(month), 0);
-      endDate.setHours(23, 59, 59, 999);
-
-      where = {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      };
-    } else if (year) {
-      const startDate = new Date(parseInt(year), 0, 1);
-      const endDate = new Date(parseInt(year), 11, 31);
-      endDate.setHours(23, 59, 59, 999);
-
-      where = {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      };
-    }
+    const where = year
+      ? {
+          date: {
+            gte: month
+              ? getJstMonthRange(Number(year), Number(month)).start
+              : getJstYearRange(Number(year)).start,
+            lt: month
+              ? getJstMonthRange(Number(year), Number(month)).end
+              : getJstYearRange(Number(year)).end,
+          },
+        }
+      : {};
 
     const holidays = await prisma.holiday.findMany({
       where,
@@ -78,26 +58,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(holidays);
   } catch (error) {
     console.error("Get holidays error:", error);
-    const errorMessage = error instanceof Error ? error.message : "不定休の取得に失敗しました";
     return NextResponse.json(
-      { error: "不定休の取得に失敗しました", details: errorMessage },
+      { error: "休業日の取得に失敗しました" },
       { status: 500 }
     );
   }
 }
 
-// POST /api/admin/holidays - 不定休作成
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
+    if (!(await requireAdmin())) {
       return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const validationResult = createHolidaySchema.safeParse(body);
-
+    const validationResult = createHolidaySchema.safeParse(await request.json());
     if (!validationResult.success) {
       return NextResponse.json(
         { error: validationResult.error.issues[0].message },
@@ -106,10 +80,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { date, startTime, endTime, reason } = validationResult.data;
-    // タイムゾーン問題を避けるため、共通ユーティリティを使用
     const holidayDate = parseLocalDate(date);
 
-    // 既存チェック（同じ日付・時間帯の組み合わせ）
     const existingHoliday = await prisma.holiday.findFirst({
       where: {
         date: holidayDate,
@@ -120,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     if (existingHoliday) {
       return NextResponse.json(
-        { error: "この日付・時間帯は既に不定休として登録されています" },
+        { error: "この日付と時間帯は既に休業日として登録されています" },
         { status: 409 }
       );
     }
@@ -137,9 +109,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(holiday, { status: 201 });
   } catch (error) {
     console.error("Create holiday error:", error);
-    const errorMessage = error instanceof Error ? error.message : "不定休の作成に失敗しました";
     return NextResponse.json(
-      { error: "不定休の作成に失敗しました", details: errorMessage },
+      { error: "休業日の作成に失敗しました" },
       { status: 500 }
     );
   }

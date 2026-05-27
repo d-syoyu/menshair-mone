@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { addDaysToDbDate, formatJstDate, getJstDateString, jstDateStringToDbDate } from '@/lib/date-utils';
 // DBメニューの型定義
 interface DbMenu {
   id: string;
@@ -170,21 +171,19 @@ export default function AdminCouponsPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatJstDate(dateStr, "jp");
   };
 
   const formatDateForInput = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toISOString().split('T')[0];
+    return formatJstDate(dateStr, "input");
   };
 
   const isExpired = (validUntil: string) => {
-    return new Date(validUntil) < new Date();
+    return formatDateForInput(validUntil) < getJstDateString();
   };
 
   const isNotStarted = (validFrom: string) => {
-    return new Date(validFrom) > new Date();
+    return formatDateForInput(validFrom) > getJstDateString();
   };
 
   // Coupon handlers
@@ -222,16 +221,15 @@ export default function AdminCouponsPage() {
       setShowAdvanced(!!hasAdvanced);
     } else {
       setEditingCoupon(null);
-      const today = new Date();
-      const nextMonth = new Date(today);
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const today = getJstDateString();
+      const nextMonth = getJstDateString(addDaysToDbDate(jstDateStringToDbDate(today), 31));
       setCouponForm({
         name: '',
         type: 'PERCENTAGE',
         value: 0,
         description: '',
-        validFrom: today.toISOString().split('T')[0],
-        validUntil: nextMonth.toISOString().split('T')[0],
+        validFrom: today,
+        validUntil: nextMonth,
         usageLimit: null,
         usageLimitPerCustomer: null,
         minimumAmount: null,

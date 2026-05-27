@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendReminderEmail } from "@/lib/email";
+import { addDaysToDbDate, dbDateToJstDateString, getJstTodayDbDate } from "@/lib/date-utils";
 
 // Cron secret for authentication (set in environment variables)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -30,19 +31,14 @@ export async function GET(request: NextRequest) {
     console.log("[Reminder Cron] Starting reminder email job...");
 
     // 明日の日付を取得（日本時間）
-    const now = new Date();
-    const jstOffset = 9 * 60 * 60 * 1000; // JST = UTC+9
-    const jstNow = new Date(now.getTime() + jstOffset);
+    const today = getJstTodayDbDate();
 
     // 明日の開始と終了を計算
-    const tomorrow = new Date(jstNow);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const tomorrow = addDaysToDbDate(today, 1);
 
-    const dayAfterTomorrow = new Date(tomorrow);
-    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+    const dayAfterTomorrow = addDaysToDbDate(tomorrow, 1);
 
-    console.log(`[Reminder Cron] Looking for reservations on: ${tomorrow.toISOString().split('T')[0]}`);
+    console.log(`[Reminder Cron] Looking for reservations on: ${dbDateToJstDateString(tomorrow)}`);
 
     // 明日のCONFIRMED予約を取得（メールアドレスがある顧客のみ）
     const reservations = await prisma.reservation.findMany({
@@ -121,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       message: "Reminder job completed",
-      date: tomorrow.toISOString().split('T')[0],
+      date: dbDateToJstDateString(tomorrow),
       totalReservations: reservations.length,
       results,
     });

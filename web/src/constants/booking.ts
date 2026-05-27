@@ -1,6 +1,15 @@
 // constants/booking.ts
 // MONË - 予約システム設定
 
+import {
+  addDaysToDbDate,
+  dbDateToJstDateString,
+  getJstDateString,
+  getJstTodayDbDate,
+  getJstWeekday,
+  jstDateTimeStringToInstant,
+} from "@/lib/date-utils";
+
 export const BOOKING_CONFIG = {
   // 営業時間（最大値。実際の営業時間は曜日により異なる）
   openTime: "09:00", // 土日祝の開店時間（平日は10:00）
@@ -71,39 +80,40 @@ export const calculateEndTime = (startTime: string, durationMinutes: number): st
 
 // 月曜日かどうかをチェック
 export const isClosedDay = (date: Date): boolean => {
-  return date.getDay() === BOOKING_CONFIG.closedDayOfWeek;
+  return getJstWeekday(date) === BOOKING_CONFIG.closedDayOfWeek;
 };
 
 // キャンセル可能かどうかをチェック
 export const canCancel = (reservationDate: Date): boolean => {
   const now = new Date();
-  const deadline = new Date(reservationDate);
-  deadline.setDate(deadline.getDate() - BOOKING_CONFIG.cancelDeadline.daysBefore);
-
-  const [deadlineHour, deadlineMinute] = BOOKING_CONFIG.cancelDeadline.time.split(":").map(Number);
-  deadline.setHours(deadlineHour, deadlineMinute, 0, 0);
+  const deadlineDate = addDaysToDbDate(
+    reservationDate,
+    -BOOKING_CONFIG.cancelDeadline.daysBefore
+  );
+  const deadline = jstDateTimeStringToInstant(
+    dbDateToJstDateString(deadlineDate),
+    BOOKING_CONFIG.cancelDeadline.time
+  );
 
   return now < deadline;
 };
 
 // 予約可能日かどうかをチェック
 export const isBookableDate = (date: Date): boolean => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0);
+  const today = getJstTodayDbDate();
+  const todayString = dbDateToJstDateString(today);
+  const targetDateString = getJstDateString(date);
 
   // 過去日はNG
-  if (targetDate < today) return false;
+  if (targetDateString < todayString) return false;
 
   // 定休日はNG
-  if (isClosedDay(targetDate)) return false;
+  if (isClosedDay(date)) return false;
 
   // 予約可能期間を超えていたらNG
   const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + BOOKING_CONFIG.bookingAdvanceDays);
-  if (targetDate > maxDate) return false;
+  maxDate.setUTCDate(maxDate.getUTCDate() + BOOKING_CONFIG.bookingAdvanceDays);
+  if (targetDateString > dbDateToJstDateString(maxDate)) return false;
 
   return true;
 };

@@ -2,6 +2,7 @@
 // MONË Salon - クーポン検証共通ロジック
 
 import { prisma } from "@/lib/db";
+import { getJstTimeString, getJstWeekday } from "@/lib/date-utils";
 
 // メニューアイテム情報（部分適用計算用）
 export interface MenuItemForCoupon {
@@ -108,7 +109,7 @@ export async function validateCoupon(
   if (now < coupon.validFrom) {
     return {
       valid: false,
-      error: `このクーポンは${coupon.validFrom.toLocaleDateString("ja-JP")}から有効です`,
+      error: `このクーポンは${coupon.validFrom.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}から有効です`,
     };
   }
 
@@ -206,7 +207,7 @@ export async function validateCoupon(
 
   // 11. 曜日制限チェック
   if (coupon.applicableWeekdays.length > 0) {
-    const currentWeekday = typeof weekday === "number" ? weekday : now.getDay();
+    const currentWeekday = typeof weekday === "number" ? weekday : getJstWeekday(now);
     if (!coupon.applicableWeekdays.includes(currentWeekday)) {
       return {
         valid: false,
@@ -217,7 +218,7 @@ export async function validateCoupon(
 
   // 12. 時間帯制限チェック
   if (coupon.startTime && coupon.endTime) {
-    const currentTime = time || now.toTimeString().slice(0, 5);
+    const currentTime = time || getJstTimeString(now);
     if (currentTime < coupon.startTime || currentTime > coupon.endTime) {
       return {
         valid: false,

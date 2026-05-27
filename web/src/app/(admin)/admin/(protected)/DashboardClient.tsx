@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useState } from 'react';
+import { signOut } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,13 +19,14 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
+import { formatJstDate, getJstDateString } from '@/lib/date-utils';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
 
-interface ReservationItem {
+export interface ReservationItem {
   id: string;
   menuId: string;
   menuName: string;
@@ -35,7 +36,7 @@ interface ReservationItem {
   orderIndex: number;
 }
 
-interface Reservation {
+export interface Reservation {
   id: string;
   totalPrice: number;
   totalDuration: number;
@@ -53,7 +54,7 @@ interface Reservation {
   items: ReservationItem[];
 }
 
-interface Stats {
+export interface Stats {
   todayCount: number;
   weekCount: number;
   totalReservations: number;
@@ -77,7 +78,7 @@ interface ConfirmDialog {
   action: 'CANCELLED' | 'NO_SHOW' | 'CONFIRMED';
 }
 
-interface Holiday {
+export interface Holiday {
   id: string;
   date: string;
   startTime: string | null;
@@ -85,13 +86,20 @@ interface Holiday {
   reason: string | null;
 }
 
-export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+export default function DashboardClient({
+  initialReservations,
+  stats,
+  todayHolidays,
+  adminEmail,
+}: {
+  initialReservations: Reservation[];
+  stats: Stats;
+  todayHolidays: Holiday[];
+  adminEmail?: string | null;
+}) {
   const router = useRouter();
-  const [todayReservations, setTodayReservations] = useState<Reservation[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [todayHolidays, setTodayHolidays] = useState<Holiday[]>([]);
+  const [todayReservations, setTodayReservations] = useState<Reservation[]>(initialReservations);
+  const isLoading = false;
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog>({
     isOpen: false,
     reservationId: '',
@@ -101,13 +109,7 @@ export default function AdminDashboard() {
   });
 
   // 認証チェック - 未ログインまたは管理者でない場合はリダイレクト
-  useEffect(() => {
-    if (status === 'loading') return;
-    if (status === 'unauthenticated' || session?.user?.role !== 'ADMIN') {
-      router.replace('/admin/login');
-    }
-  }, [status, session, router]);
-
+  /*
   useEffect(() => {
     if (status !== 'authenticated' || session?.user?.role !== 'ADMIN') return;
 
@@ -191,6 +193,7 @@ export default function AdminDashboard() {
 
     fetchData();
   }, [status, session]);
+  */
 
   const openConfirmDialog = (
     reservation: Reservation,
@@ -232,7 +235,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const today = new Date();
+  const todayLabel = formatJstDate(new Date(), "jp");
+  const todayDateString = getJstDateString();
 
   // 各メニューアイテムのセグメント位置を計算
   return (
@@ -248,12 +252,11 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-2xl md:text-3xl font-medium">管理画面</h1>
             <p className="text-base md:text-lg text-gray-500">
-              {today.getFullYear()}年{today.getMonth() + 1}月{today.getDate()}日（
-              {WEEKDAYS[today.getDay()]}）
+              {todayLabel}
             </p>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            <span className="text-sm text-gray-500 hidden sm:block">{session?.user?.email}</span>
+            <span className="text-sm text-gray-500 hidden sm:block">{adminEmail}</span>
             <button
               onClick={async () => {
                 await signOut({ redirect: false });
@@ -279,7 +282,7 @@ export default function AdminDashboard() {
               <Calendar className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-accent)]" />
               <span className="text-base md:text-lg text-gray-500">本日の予約</span>
             </div>
-            <p className="text-3xl md:text-4xl font-light">{stats?.todayCount ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats.todayCount}</p>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
@@ -294,7 +297,7 @@ export default function AdminDashboard() {
                 )}
               </span>
             </div>
-            <p className="text-3xl md:text-4xl font-light">{stats?.weekCount ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats.weekCount}</p>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
@@ -302,7 +305,7 @@ export default function AdminDashboard() {
               <Scissors className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-gold)]" />
               <span className="text-base md:text-lg text-gray-500">Webからの予約数</span>
             </div>
-            <p className="text-3xl md:text-4xl font-light">{stats?.totalReservations ?? '-'}</p>
+            <p className="text-3xl md:text-4xl font-light">{stats.totalReservations}</p>
           </div>
         </motion.div>
 
@@ -581,7 +584,7 @@ export default function AdminDashboard() {
                       const totalMin = 660;
                       const left = (startMin / totalMin) * 100;
                       const width = ((endMin - startMin) / totalMin) * 100;
-                      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                      const dateStr = todayDateString;
 
                       return (
                         <button

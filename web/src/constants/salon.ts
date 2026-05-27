@@ -2,6 +2,7 @@
 // MONË / Men's hair MONE - 店舗情報
 
 import HolidayJp from "@holiday-jp/holiday_jp";
+import { getJstDateString, getJstWeekday, jstDateTimeStringToInstant } from "@/lib/date-utils";
 
 export const SALON_INFO = {
   name: "MONË / Men's hair MONE",
@@ -27,11 +28,11 @@ export const SALON_INFO = {
 
 // 曜日が土日または祝日かを判定
 export const isWeekendOrHoliday = (date: Date): boolean => {
-  const dayOfWeek = date.getDay();
+  const dayOfWeek = getJstWeekday(date);
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     return true;
   }
-  return HolidayJp.isHoliday(date);
+  return HolidayJp.isHoliday(jstDateTimeStringToInstant(getJstDateString(date), "12:00"));
 };
 
 // 日付に応じた営業時間を取得

@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { createReservationSchema } from "@/lib/validations";
 import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
-import { parseLocalDate } from "@/lib/date-utils";
+import { addDaysToDbDate, getJstMonthRange, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
 import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
 
@@ -51,9 +51,8 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get("date");
     const month = searchParams.get("month"); // YYYY-MM形式
     if (date) {
-      const targetDate = new Date(date + "T00:00:00");
-      const nextDate = new Date(date + "T00:00:00");
-      nextDate.setDate(nextDate.getDate() + 1);
+      const targetDate = parseLocalDate(date);
+      const nextDate = addDaysToDbDate(targetDate, 1);
       where.date = {
         gte: targetDate,
         lt: nextDate,
@@ -61,8 +60,7 @@ export async function GET(request: NextRequest) {
     } else if (month) {
       // 月全体の予約を取得（カレンダー用）
       const [year, m] = month.split("-").map(Number);
-      const startOfMonth = new Date(year, m - 1, 1);
-      const endOfMonth = new Date(year, m, 1);
+      const { start: startOfMonth, end: endOfMonth } = getJstMonthRange(year, m);
       where.date = {
         gte: startOfMonth,
         lt: endOfMonth,
@@ -177,7 +175,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 定休日チェック
-    if (date.getDay() === CLOSED_DAY) {
+    if (getJstWeekday(date) === CLOSED_DAY) {
       return NextResponse.json(
         { error: "申し訳ございません。定休日のため予約できません" },
         { status: 400 }
@@ -230,7 +228,7 @@ export async function POST(request: NextRequest) {
     const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
       .toString()
       .padStart(2, "0")}`;
-    const weekday = date.getDay();
+    const weekday = getJstWeekday(date);
 
     // クーポン検証（任意）
     let appliedCouponId: string | null = null;

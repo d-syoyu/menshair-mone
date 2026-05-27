@@ -1,10 +1,7 @@
-// src/app/api/holidays/route.ts
-// MONË - Public Holiday API (for booking page)
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { dbDateToJstDateString, getJstMonthRange, getJstYearRange } from "@/lib/date-utils";
 
-// GET /api/holidays?year=2025&month=12 - 公開用不定休・定休日・特別営業日一覧
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -12,98 +9,53 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get("month");
 
     if (!year) {
-      return NextResponse.json(
-        { error: "年を指定してください" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "年を指定してください" }, { status: 400 });
     }
 
-    let where = {};
+    const range = month
+      ? getJstMonthRange(Number(year), Number(month))
+      : getJstYearRange(Number(year));
+    const where = { date: { gte: range.start, lt: range.end } };
 
-    if (month) {
-      // 特定の月
-      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      const endDate = new Date(parseInt(year), parseInt(month), 0);
-      endDate.setHours(23, 59, 59, 999);
-
-      where = {
-        date: {
-          gte: startDate,
-          lte: endDate,
+    const [holidays, closedDaysSetting, specialOpenDays] = await Promise.all([
+      prisma.holiday.findMany({
+        where,
+        select: {
+          date: true,
+          startTime: true,
+          endTime: true,
         },
-      };
-    } else {
-      // 年全体
-      const startDate = new Date(parseInt(year), 0, 1);
-      const endDate = new Date(parseInt(year), 11, 31);
-      endDate.setHours(23, 59, 59, 999);
-
-      where = {
-        date: {
-          gte: startDate,
-          lte: endDate,
+        orderBy: { date: "asc" },
+      }),
+      prisma.settings.findUnique({
+        where: { key: "closed_days" },
+      }),
+      prisma.specialOpenDay.findMany({
+        where,
+        select: {
+          date: true,
         },
-      };
-    }
+        orderBy: { date: "asc" },
+      }),
+    ]);
 
-    // 不定休を取得
-    const holidays = await prisma.holiday.findMany({
-      where,
-      select: {
-        date: true,
-        startTime: true,
-        endTime: true,
-      },
-      orderBy: { date: "asc" },
-    });
-
-    // 定休日設定を取得
-    const closedDaysSetting = await prisma.settings.findUnique({
-      where: { key: "closed_days" },
-    });
     const closedDays: number[] = closedDaysSetting
       ? JSON.parse(closedDaysSetting.value)
-      : [1]; // デフォルトは月曜日
-
-    // 特別営業日を取得
-    const specialOpenDays = await prisma.specialOpenDay.findMany({
-      where,
-      select: {
-        date: true,
-      },
-      orderBy: { date: "asc" },
-    });
-
-    // 日付と時間帯情報を返す
-    const holidayResult = holidays.map((h) => {
-      const d = new Date(h.date);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return {
-        date: `${y}-${m}-${day}`,
-        startTime: h.startTime,
-        endTime: h.endTime,
-      };
-    });
-
-    const specialOpenDaysResult = specialOpenDays.map((s) => {
-      const d = new Date(s.date);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    });
+      : [1];
 
     return NextResponse.json({
-      holidays: holidayResult,
+      holidays: holidays.map((holiday) => ({
+        date: dbDateToJstDateString(holiday.date),
+        startTime: holiday.startTime,
+        endTime: holiday.endTime,
+      })),
       closedDays,
-      specialOpenDays: specialOpenDaysResult,
+      specialOpenDays: specialOpenDays.map((day) => dbDateToJstDateString(day.date)),
     });
   } catch (error) {
     console.error("Get holidays error:", error);
     return NextResponse.json(
-      { error: "不定休の取得に失敗しました" },
+      { error: "休業日の取得に失敗しました" },
       { status: 500 }
     );
   }
