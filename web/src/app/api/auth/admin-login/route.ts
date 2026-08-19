@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
+import { AUTH_SESSION_MAX_AGE } from "@/lib/auth-constants";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -60,11 +61,10 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60, // 90日間
       },
       secret,
       salt: cookieName, // saltはcookie名と一致させる
+      maxAge: AUTH_SESSION_MAX_AGE,
     });
 
     const cookieStore = await cookies();
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       secure: isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 90 * 24 * 60 * 60, // 90日間
+      maxAge: AUTH_SESSION_MAX_AGE,
     });
 
     return NextResponse.json({

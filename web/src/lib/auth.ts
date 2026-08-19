@@ -12,6 +12,7 @@ import type { UserRole } from "@prisma/client";
 import type { Adapter, AdapterAccount } from "next-auth/adapters";
 import { createMagicLinkHtml, createMagicLinkText } from "./email";
 import { Resend as ResendClient } from "resend";
+import { AUTH_SESSION_MAX_AGE } from "./auth-constants";
 
 // カスタムPrismaAdapter - useVerificationTokenの問題を修正
 function CustomPrismaAdapter(): Adapter {
@@ -112,7 +113,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: "jwt",
     // セッション有効期限: 90日間（ブラウザを閉じても維持）
-    maxAge: 90 * 24 * 60 * 60, // 90 days in seconds
+    maxAge: AUTH_SESSION_MAX_AGE,
     // セッション更新間隔: 1日ごとに延長
     updateAge: 24 * 60 * 60, // 24 hours in seconds
   },

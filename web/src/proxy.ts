@@ -1,18 +1,27 @@
 // src/proxy.ts
 // MONË - Route Protection Proxy
-// Simple token-based check for Edge Runtime compatibility
+// Validate the Auth.js JWT before treating a request as authenticated.
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check for session token (NextAuth.js stores it in cookies)
-  const sessionToken = request.cookies.get("authjs.session-token")?.value
-    || request.cookies.get("__Secure-authjs.session-token")?.value;
-
-  const isLoggedIn = !!sessionToken;
+  const isProduction = process.env.NODE_ENV === "production";
+  const cookieName = isProduction
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+    salt: cookieName,
+    cookieName,
+    secureCookie: isProduction,
+  });
+  const isLoggedIn = !!token?.sub;
+  const isAdmin = isLoggedIn && token.role === "ADMIN";
 
   // 認証ページ（顧客用ログイン・登録）
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
@@ -34,8 +43,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/mypage", request.url));
   }
 
-  // スタッフログインページにアクセス時、既にログインしていればリダイレクト
-  if (isAdminLoginPage && isLoggedIn) {
+  // スタッフログインページにアクセス時、管理者としてログイン済みならリダイレクト
+  if (isAdminLoginPage && isAdmin) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
 
@@ -45,14 +54,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
   }
 
-  // 管理者ページにアクセス時、未ログインならスタッフログインページへ
-  // Note: 管理者権限チェックはページ側で行う
-  if (isAdminPage && !isLoggedIn) {
+  // 管理者ページにアクセス時、未認証または管理者でなければスタッフログインページへ
+  // ページ側でも権限を再確認する
+  if (isAdminPage && !isAdmin) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
-  // 管理者APIにアクセス時、未ログインなら403エラー
-  if (isAdminAPI && !isLoggedIn) {
+  // 管理者APIにアクセス時、未認証または管理者でなければ403エラー
+  if (isAdminAPI && !isAdmin) {
     return NextResponse.json({ error: "権限がありません" }, { status: 403 });
   }
 
