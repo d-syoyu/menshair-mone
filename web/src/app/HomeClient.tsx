@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { BlogPost } from '@/lib/notion';
 import Image from 'next/image';
 import { motion, useInView, type Variants } from 'framer-motion';
-import { ArrowRight, Clock, MapPin, Calendar } from 'lucide-react';
+import { ArrowRight, Clock, MapPin, Calendar, Phone } from 'lucide-react';
 
 // Animation variants
 const fadeInUp: Variants = {
@@ -74,14 +74,14 @@ function LazyGoogleMapCard() {
     >
       {shouldLoadMap ? (
         <iframe
-          src="https://maps.google.com/maps?q=%E5%A4%A7%E9%98%AA%E5%BA%9C%E5%AE%88%E5%8F%A3%E5%B8%82%E5%85%AB%E9%9B%B2%E4%B8%AD%E7%94%BA1-24-1&t=&z=16&ie=UTF8&iwloc=&output=embed"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3278.4479374057114!2d135.56415047574637!3d34.744307472904254!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6000e163c999dd39%3A0xe6cfa343e4fc5f48!2smen's%20hair%20MONE!5e0!3m2!1sja!2sjp!4v1789968354329!5m2!1sja!2sjp"
           width="100%"
           height="100%"
           style={{ border: 0 }}
           allowFullScreen
           loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          title="MONË 店舗所在地"
+          referrerPolicy="strict-origin-when-cross-origin"
+          title="Men's hair MONEのGoogleマップ"
           className="absolute inset-0 grayscale-[30%] contrast-[1.1]"
         />
       ) : (
@@ -97,9 +97,7 @@ function LazyGoogleMapCard() {
         </>
       )}
 
-      <div className="absolute left-6 right-6 bottom-6">
-        <p className="text-xs tracking-[0.2em] text-text-muted uppercase mb-2">Map</p>
-        <p className="text-white text-lg mb-5">大阪府守口市八雲中町1-24-1</p>
+      <div className="absolute right-4 bottom-4">
         <a
           href="https://www.google.com/maps/search/?api=1&query=men's+hair+MONE+大阪府守口市八雲中町1-24-1"
           target="_blank"
@@ -401,6 +399,14 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
               <motion.div variants={fadeInUp} className="divider-line mb-10" />
 
               <motion.div variants={fadeInUp} className="space-y-8">
+                <div>
+                  <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Salon</p>
+                  <p className="text-2xl font-serif text-white">MONË</p>
+                  <p className="mt-1 text-sm tracking-[0.16em] text-text-secondary">
+                    Men&apos;s hair MONE
+                  </p>
+                </div>
+
                 <div className="flex items-start gap-4">
                   <MapPin className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
                   <div>
@@ -409,6 +415,19 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
                       〒570-0036<br />
                       大阪府守口市八雲中町1-24-1
                     </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <Phone className="w-5 h-5 text-accent-light mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Tel</p>
+                    <a
+                      href="tel:06-6908-4859"
+                      className="text-lg text-text-secondary transition-colors hover:text-white"
+                    >
+                      06-6908-4859
+                    </a>
                   </div>
                 </div>
 

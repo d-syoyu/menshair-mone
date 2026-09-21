@@ -200,9 +200,17 @@ const Footer = () => {
       {/* Bottom Bar */}
       <div className="border-t border-glass-border">
         <div className="container-wide py-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-text-muted tracking-wider">
-            &copy; {new Date().getFullYear()} MONË. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-2 text-xs text-text-muted tracking-wider md:flex-row md:gap-4">
+            <p>&copy; {new Date().getFullYear()} MONË. All rights reserved.</p>
+            <a
+              href="https://www.soga.ltd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors duration-300 hover:text-text-secondary"
+            >
+              Powered by SOGA
+            </a>
+          </div>
           <div className="flex gap-6 text-xs text-text-muted">
             <Link href="/privacy" className="transition-colors duration-300 hover:text-text-secondary">
               プライバシーポリシー
