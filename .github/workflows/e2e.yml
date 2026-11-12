@@ -71,9 +71,12 @@ jobs:
         continue-on-error: true
 
       - name: Build application
+        # next/font/google はビルド時に Google Fonts からCSSを取りに行く。
+        # まれに Google が「/l/font?kit=…」形式のURLを返し、Turbopack が
+        # 「next/font/google queries have exactly one entry」で失敗するため、1回だけやり直す。
         run: |
           cd web
-          npm run build
+          npm run build || { echo "::warning::Build failed, retrying once (Google Fonts fetch can be flaky)"; sleep 15; npm run build; }
         env:
           DATABASE_URL: postgresql://test:test@localhost:5433/mone_test
           AUTH_SECRET: test-secret-for-ci-e2e-tests

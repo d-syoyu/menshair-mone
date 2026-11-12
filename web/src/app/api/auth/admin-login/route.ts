@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
 import { ADMIN_SESSION_MAX_AGE, adminTokenClaims } from "@/lib/admin-session";
+import { SESSION_COOKIE_NAME, SESSION_COOKIE_SECURE } from "@/lib/auth-constants";
 import {
   clearLoginFailures,
   clientIp,
@@ -71,11 +72,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 本番環境（HTTPS）では __Secure- プレフィックスが必要
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieName = isProduction
-      ? "__Secure-authjs.session-token"
-      : "authjs.session-token";
+    // 本番環境では __Secure- プレフィックス付き（Auth.js・proxy と同じ規則）
+    const cookieName = SESSION_COOKIE_NAME;
 
     const token = await encode({
       token: {
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     cookieStore.set(cookieName, token, {
       httpOnly: true,
-      secure: isProduction,
+      secure: SESSION_COOKIE_SECURE,
       sameSite: "lax",
       path: "/",
       maxAge: ADMIN_SESSION_MAX_AGE,
