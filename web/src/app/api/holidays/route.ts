@@ -1,57 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { dbDateToJstDateString, getJstMonthRange, getJstYearRange } from "@/lib/date-utils";
+import { getPublicHolidays } from "@/lib/public-holidays";
 
+// 公開カレンダー用。DB を毎回起こさないよう getPublicHolidays（キャッシュ・管理画面の変更で即時破棄）を使う。
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
+    const yearParam = searchParams.get("year");
+    const monthParam = searchParams.get("month");
 
-    if (!year) {
+    if (!yearParam) {
       return NextResponse.json({ error: "年を指定してください" }, { status: 400 });
     }
 
-    const range = month
-      ? getJstMonthRange(Number(year), Number(month))
-      : getJstYearRange(Number(year));
-    const where = { date: { gte: range.start, lt: range.end } };
+    const year = Number(yearParam);
+    const month = monthParam ? Number(monthParam) : null;
+    if (
+      !Number.isInteger(year) || year < 2000 || year > 2100 ||
+      (month !== null && (!Number.isInteger(month) || month < 1 || month > 12))
+    ) {
+      return NextResponse.json({ error: "年月の指定が正しくありません" }, { status: 400 });
+    }
 
-    const [holidays, closedDaysSetting, specialOpenDays] = await Promise.all([
-      prisma.holiday.findMany({
-        where,
-        select: {
-          date: true,
-          startTime: true,
-          endTime: true,
-        },
-        orderBy: { date: "asc" },
-      }),
-      prisma.settings.findUnique({
-        where: { key: "closed_days" },
-      }),
-      prisma.specialOpenDay.findMany({
-        where,
-        select: {
-          date: true,
-        },
-        orderBy: { date: "asc" },
-      }),
-    ]);
-
-    const closedDays: number[] = closedDaysSetting
-      ? JSON.parse(closedDaysSetting.value)
-      : [1];
-
-    return NextResponse.json({
-      holidays: holidays.map((holiday) => ({
-        date: dbDateToJstDateString(holiday.date),
-        startTime: holiday.startTime,
-        endTime: holiday.endTime,
-      })),
-      closedDays,
-      specialOpenDays: specialOpenDays.map((day) => dbDateToJstDateString(day.date)),
-    });
+    return NextResponse.json(await getPublicHolidays(year, month));
   } catch (error) {
     console.error("Get holidays error:", error);
     return NextResponse.json(

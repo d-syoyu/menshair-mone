@@ -86,6 +86,6 @@ export const getCachedMenus = unstable_cache(
   [MENU_CACHE_TAG],
   {
     tags: [MENU_CACHE_TAG],
-    revalidate: 3600, // 1時間ごとに自動再検証（バックアップ）
+    revalidate: 86400, // 変更時はタグで破棄。これは1日ごとの予備
   }
 );

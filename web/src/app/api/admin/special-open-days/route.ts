@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+import { HOLIDAY_CACHE_TAG } from "@/lib/public-holidays";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidateTag(HOLIDAY_CACHE_TAG, { expire: 0 });
     return NextResponse.json(specialOpenDay, { status: 201 });
   } catch (error) {
     console.error("Create special open day error:", error);

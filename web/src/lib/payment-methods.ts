@@ -32,6 +32,6 @@ export const getCachedPaymentMethods = unstable_cache(
   [PAYMENT_METHODS_CACHE_TAG],
   {
     tags: [PAYMENT_METHODS_CACHE_TAG],
-    revalidate: 3600,
+    revalidate: 86400, // 変更時はタグで破棄。DBを起こす回数を減らすため1日
   }
 );

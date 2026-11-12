@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { BUSINESS_SETTINGS_CACHE_TAG } from "@/lib/business-settings";
+import { HOLIDAY_CACHE_TAG } from "@/lib/public-holidays";
 
 // 営業設定更新スキーマ
 const updateBusinessSettingsSchema = z.object({
@@ -73,6 +74,7 @@ export async function PUT(request: NextRequest) {
     });
 
     revalidateTag(BUSINESS_SETTINGS_CACHE_TAG, "max");
+    revalidateTag(HOLIDAY_CACHE_TAG, { expire: 0 });
     revalidatePath("/");
     revalidatePath("/about");
     revalidatePath("/sitemap.xml");

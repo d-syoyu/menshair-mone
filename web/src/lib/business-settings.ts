@@ -27,7 +27,7 @@ export const getClosedDays = unstable_cache(
   ["closed-days"],
   {
     tags: [BUSINESS_SETTINGS_CACHE_TAG],
-    revalidate: 3600,
+    revalidate: 86400, // 変更時はタグで破棄。DBを起こす回数を減らすため1日
   }
 );
 
