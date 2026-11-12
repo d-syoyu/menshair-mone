@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import TermsClient from "./TermsClient";
+import TermsContent from "./TermsContent";
 import { getCachedPaymentMethods } from "@/lib/payment-methods";
 
 export const revalidate = 3600;
@@ -19,5 +19,5 @@ export const metadata: Metadata = {
 export default async function TermsPage() {
   const paymentMethods = await getCachedPaymentMethods();
 
-  return <TermsClient paymentMethods={paymentMethods} />;
+  return <TermsContent paymentMethods={paymentMethods} />;
 }

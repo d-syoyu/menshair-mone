@@ -3,7 +3,7 @@
 
 import { notFound } from "next/navigation";
 import { getNewsBySlug, getAllNewsSlugs, type BlogPostDetail } from "@/lib/notion";
-import NewsDetailClient from "./NewsDetailClient";
+import NewsDetailContent from "./NewsDetailContent";
 import type { Metadata } from "next";
 import { buildArticleJsonLd, renderJsonLd, toIsoDate } from "@/lib/seo";
 
@@ -176,7 +176,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
           __html: renderJsonLd(buildArticleJsonLd(post)),
         }}
       />
-      <NewsDetailClient post={post} />
+      <NewsDetailContent post={post} />
     </>
   );
 }

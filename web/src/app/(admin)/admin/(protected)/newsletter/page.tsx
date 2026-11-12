@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Mail,
@@ -25,11 +24,6 @@ interface NewsItem {
   targets: string[];
   coverImage: string | null;
 }
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 // ステータスのスタイル
 const STATUS_STYLES: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
@@ -117,11 +111,7 @@ export default function NewsletterPage() {
   return (
     <div className="min-h-screen bg-dark pt-24 pb-20">
       <div className="container-narrow">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-        >
+        <div >
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -258,23 +248,16 @@ export default function NewsletterPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* 確認モーダル */}
-      <AnimatePresence>
         {confirmModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
             onClick={() => setConfirmModal(null)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            <div
               className="bg-card rounded-xl p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
@@ -304,18 +287,13 @@ export default function NewsletterPage() {
                   送信する
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* トースト通知 */}
-      <AnimatePresence>
         {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
+          <div
             className={`
               fixed bottom-6 right-6 max-w-sm p-4 rounded-lg shadow-lg z-50
               ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}
@@ -330,9 +308,8 @@ export default function NewsletterPage() {
               )}
               <p className="text-sm">{toast.message}</p>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

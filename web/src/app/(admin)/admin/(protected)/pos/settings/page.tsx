@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   ArrowLeft,
   Check,
@@ -16,11 +15,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
+import { Reorder } from 'framer-motion';
 
 interface PaymentMethod {
   id: string;
@@ -277,12 +272,7 @@ export default function AdminPOSSettingsPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-3xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href="/admin/pos"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -296,41 +286,24 @@ export default function AdminPOSSettingsPage() {
             </div>
             <h1 className="text-2xl font-medium">POS設定</h1>
           </div>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
               <Check className="w-5 h-5" />
               {success}
-            </motion.div>
+            </div>
           )}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               {error}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* Tax Rate Settings Card */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm p-6 sm:p-8 mb-6"
-        >
+        <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 mb-6">
           {isLoading ? (
             <div className="py-12 text-center text-gray-500">読み込み中...</div>
           ) : (
@@ -380,15 +353,10 @@ export default function AdminPOSSettingsPage() {
               </form>
             </>
           )}
-        </motion.div>
+        </div>
 
         {/* Payment Methods Settings Card */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm p-6 sm:p-8 mb-6"
-        >
+        <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-[var(--color-gold)]" />
@@ -531,15 +499,10 @@ export default function AdminPOSSettingsPage() {
               )}
             </>
           )}
-        </motion.div>
+        </div>
 
         {/* Info Section */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="p-6 bg-white rounded-lg shadow-sm"
-        >
+        <div className="p-6 bg-white rounded-lg shadow-sm">
           <h3 className="text-base font-medium mb-3">設定について</h3>
           <div className="text-sm text-gray-600 space-y-3">
             <div>
@@ -560,23 +523,16 @@ export default function AdminPOSSettingsPage() {
               </ul>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* 支払方法追加モーダル */}
-      <AnimatePresence>
         {isAddModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
             onClick={() => setIsAddModalOpen(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+            <div
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
             >
@@ -644,10 +600,9 @@ export default function AdminPOSSettingsPage() {
                   )}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

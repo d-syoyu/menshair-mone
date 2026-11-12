@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { formatJstDate, getJstDateString, getJstTimeString, getJstWeekday } from '@/lib/date-utils';
 import {
   ArrowLeft,
@@ -27,11 +26,6 @@ import {
   Ticket,
   Receipt,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 // ========== 型定義 ==========
 
@@ -813,12 +807,7 @@ export default function NewSalePage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-3xl mx-auto px-4">
         {/* ヘッダー */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6"
-        >
+        <div className="mb-6">
           <Link
             href="/admin/pos/sales"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -827,15 +816,10 @@ export default function NewSalePage() {
             会計履歴に戻る
           </Link>
           <h1 className="text-2xl font-medium mb-2">新規会計登録</h1>
-        </motion.div>
+        </div>
 
         {/* ステッププログレス */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6"
-        >
+        <div className="mb-6">
           <div className="flex items-center justify-between bg-white rounded-xl shadow-sm p-3 sm:p-4 overflow-x-auto">
             {STEPS.map((stepInfo, index) => {
               const Icon = stepInfo.icon;
@@ -878,42 +862,26 @@ export default function NewSalePage() {
               );
             })}
           </div>
-        </motion.div>
+        </div>
 
         {/* 通知 */}
-        <AnimatePresence>
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 flex-shrink-0" />
               {error}
-            </motion.div>
+            </div>
           )}
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
               <Check className="w-5 h-5 flex-shrink-0" />
               {success}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* ステップコンテンツ */}
-        <AnimatePresence mode="wait">
-          <motion.div
+          <div
             key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
+            
           >
             {/* ステップ1: 会計元・日時 */}
             {currentStep === 1 && (
@@ -1185,15 +1153,8 @@ export default function NewSalePage() {
                               />
                             </button>
 
-                            <AnimatePresence>
                               {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="border-t border-gray-200"
-                                >
+                                <div className="border-t border-gray-200">
                                   <div className="p-2 space-y-1 bg-gray-50">
                                     {categoryMenus.map((menu) => (
                                       <label
@@ -1225,9 +1186,8 @@ export default function NewSalePage() {
                                       </label>
                                     ))}
                                   </div>
-                                </motion.div>
+                                </div>
                               )}
-                            </AnimatePresence>
                           </div>
                         );
                       });
@@ -1350,15 +1310,8 @@ export default function NewSalePage() {
                             />
                           </button>
 
-                          <AnimatePresence>
                             {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="border-t border-gray-200"
-                              >
+                              <div className="border-t border-gray-200">
                                 <div className="p-2 space-y-2 bg-gray-50">
                                   {categoryProducts.map((product) => (
                                     <div
@@ -1410,9 +1363,8 @@ export default function NewSalePage() {
                                     </div>
                                   ))}
                                 </div>
-                              </motion.div>
+                              </div>
                             )}
-                          </AnimatePresence>
                         </div>
                       );
                     })}
@@ -1865,24 +1817,16 @@ export default function NewSalePage() {
                 </div>
               </div>
             )}
-          </motion.div>
-        </AnimatePresence>
+          </div>
       </div>
 
       {/* 顧客検索モーダル */}
-      <AnimatePresence>
         {showCustomerSearch && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
             onClick={() => setShowCustomerSearch(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+            <div
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
             >
@@ -1933,10 +1877,9 @@ export default function NewSalePage() {
                   </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

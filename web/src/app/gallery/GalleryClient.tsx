@@ -1,51 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, useInView, AnimatePresence, type Variants } from "framer-motion";
 import { X, ArrowRight, ChevronDown } from "lucide-react";
+import { RevealSection } from "@/components/RevealSection";
+import { revealOrder } from "@/components/reveal-order";
 import type { GalleryItem } from "@/lib/notion";
 
 // 初期表示件数
 const INITIAL_DISPLAY_COUNT = 9;
 const LOAD_MORE_COUNT = 9;
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } },
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
-  },
-};
-
-function AnimatedSection({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
 
 interface GalleryClientProps {
   items: GalleryItem[];
@@ -81,12 +46,7 @@ export default function GalleryClient({ items }: GalleryClientProps) {
     <div className="min-h-screen pt-32">
       {/* Hero */}
       <section className="container-wide pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center"
-        >
+        <div className="enter-up [--enter-y:30px] [--enter-duration:0.8s] text-center">
           <p className="text-subheading mb-4">Gallery</p>
           <h1 className="text-display mb-6">ギャラリー</h1>
           <div className="divider-line mx-auto mb-8" />
@@ -95,18 +55,13 @@ export default function GalleryClient({ items }: GalleryClientProps) {
             <br />
             落ち着いた空間でお過ごしいただけます。
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Category Filter */}
       {categories.length > 1 && (
         <section className="container-wide pb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-3"
-          >
+          <div className="enter-up [--enter-delay:0.3s] flex flex-wrap justify-center gap-3">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -120,12 +75,12 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                 {cat === "all" ? "すべて" : cat}
               </button>
             ))}
-          </motion.div>
+          </div>
         </section>
       )}
 
       {/* Gallery Grid */}
-      <AnimatedSection className="pb-20 section-dark">
+      <section className="pb-20 section-dark">
         <div className="container-wide relative z-10">
           {filteredItems.length === 0 ? (
             <div className="text-center py-20 text-text-muted">
@@ -134,11 +89,14 @@ export default function GalleryClient({ items }: GalleryClientProps) {
           ) : (
             <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {visibleItems.map((item) => (
-                <motion.div
+              {visibleItems.map((item, index) => (
+                <RevealSection
                   key={item.id}
-                  variants={fadeInUp}
-                  className="group relative aspect-[4/3] overflow-hidden cursor-pointer"
+                  as="div"
+                  self
+                  bottomOffset={50}
+                  style={revealOrder(index % LOAD_MORE_COUNT)}
+                  className="group relative aspect-[4/3] overflow-hidden cursor-pointer [--reveal-step:0.1s]"
                   onClick={() => setSelectedImage(item)}
                 >
                   {item.image ? (
@@ -165,17 +123,13 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                     )}
                     <h3 className="text-white font-serif">{item.title}</h3>
                   </div>
-                </motion.div>
+                </RevealSection>
               ))}
             </div>
 
             {/* もっと見るボタン */}
             {hasMore && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-10 text-center"
-              >
+              <div className="enter-fade [--enter-duration:0.4s] mt-10 text-center">
                 <button
                   onClick={handleLoadMore}
                   className="inline-flex items-center gap-2 px-8 py-3 border border-glass-border text-text-secondary hover:text-white hover:border-accent transition-all duration-300 group"
@@ -185,7 +139,7 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                   </span>
                   <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {/* 全件表示時のメッセージ */}
@@ -197,16 +151,12 @@ export default function GalleryClient({ items }: GalleryClientProps) {
             </>
           )}
         </div>
-      </AnimatedSection>
+      </section>
 
       {/* Lightbox */}
-      <AnimatePresence>
         {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-dark/95 p-4"
+          <div
+            className="enter-fade [--enter-duration:0.4s] fixed inset-0 z-50 flex items-center justify-center bg-dark/95 p-4"
             onClick={() => setSelectedImage(null)}
           >
             <button
@@ -215,12 +165,8 @@ export default function GalleryClient({ items }: GalleryClientProps) {
             >
               <X className="w-8 h-8" />
             </button>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative max-w-4xl w-full aspect-[4/3]"
+            <div
+              className="enter-zoom [--enter-scale:0.9] [--enter-duration:0.3s] relative max-w-4xl w-full aspect-[4/3]"
               onClick={(e) => e.stopPropagation()}
             >
               {selectedImage.image && (
@@ -240,10 +186,9 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                 )}
                 <h3 className="text-white text-xl font-serif">{selectedImage.title}</h3>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* CTA */}
       <section className="py-20 relative overflow-hidden">

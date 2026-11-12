@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Edit2,
@@ -20,11 +19,6 @@ import {
   Check,
   X,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface SaleItem {
   id: string;
@@ -241,12 +235,7 @@ export default function SaleDetailPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-4xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href="/admin/pos/sales"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -289,42 +278,25 @@ export default function SaleDetailPage() {
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
               <Check className="w-5 h-5" />
               {success}
-            </motion.div>
+            </div>
           )}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               {error}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         <div className="space-y-6">
           {/* Sale Info Card */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="bg-white rounded-xl shadow-sm p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <Receipt className="w-5 h-5 text-[var(--color-gold)]" />
               会計情報
@@ -345,15 +317,10 @@ export default function SaleDetailPage() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Customer Info Card */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="bg-white rounded-xl shadow-sm p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <User className="w-5 h-5 text-[var(--color-gold)]" />
               顧客情報
@@ -398,15 +365,10 @@ export default function SaleDetailPage() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
 
           {/* Items Card */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="bg-white rounded-xl shadow-sm p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-[var(--color-gold)]" />
               明細
@@ -445,15 +407,10 @@ export default function SaleDetailPage() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
           {/* Payment Summary Card */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="bg-white rounded-xl shadow-sm p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-[var(--color-gold)]" />
               支払情報
@@ -501,54 +458,35 @@ export default function SaleDetailPage() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Note Card */}
           {sale.note && (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeInUp}
-              className="bg-white rounded-xl shadow-sm p-6"
-            >
+            <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-medium mb-4">備考</h2>
               <p className="text-gray-600 whitespace-pre-wrap">{sale.note}</p>
-            </motion.div>
+            </div>
           )}
 
           {/* Metadata */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="text-sm text-gray-400 space-y-1"
-          >
+          <div className="text-sm text-gray-400 space-y-1">
             <p>作成日時: {formatDateTime(sale.createdAt)}</p>
             {sale.createdByUser && (
               <p>作成者: {sale.createdByUser.name || '不明'}</p>
             )}
             <p>更新日時: {formatDateTime(sale.updatedAt)}</p>
-          </motion.div>
+          </div>
         </div>
       </div>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
         {isDeleteModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsDeleteModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4">
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                   <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -572,28 +510,18 @@ export default function SaleDetailPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Status Change Modal */}
-      <AnimatePresence>
         {isStatusModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsStatusModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium">ステータス変更</h3>
@@ -647,10 +575,9 @@ export default function SaleDetailPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

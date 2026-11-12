@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Plus,
@@ -35,11 +34,6 @@ interface DbCategory {
   id: string;
   name: string;
 }
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 // 曜日の定義
 const WEEKDAYS = [
@@ -395,12 +389,7 @@ export default function AdminCouponsPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-5xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href="/admin/pos"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -411,41 +400,24 @@ export default function AdminCouponsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-medium">クーポン管理</h1>
           </div>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
               <Check className="w-5 h-5" />
               {success}
-            </motion.div>
+            </div>
           )}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               {error}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* Add Button */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6"
-        >
+        <div className="mb-6">
           <button
             onClick={() => openCouponModal()}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
@@ -453,15 +425,10 @@ export default function AdminCouponsPage() {
             <Plus className="w-4 h-4" />
             クーポンを追加
           </button>
-        </motion.div>
+        </div>
 
         {/* Content */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm overflow-hidden"
-        >
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center text-gray-500">読み込み中...</div>
           ) : coupons.length === 0 ? (
@@ -541,26 +508,17 @@ export default function AdminCouponsPage() {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Coupon Modal */}
-      <AnimatePresence>
         {isCouponModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsCouponModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-medium">
@@ -907,28 +865,18 @@ export default function AdminCouponsPage() {
                   </div>
                 </form>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
         {isDeleteModalOpen && deletingCoupon && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsDeleteModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4">
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                   <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -954,10 +902,9 @@ export default function AdminCouponsPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

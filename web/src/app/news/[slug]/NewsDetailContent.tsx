@@ -1,8 +1,5 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { Calendar, ArrowLeft, ArrowRight } from "lucide-react";
 import NotionRenderer from "@/components/blog/NotionRenderer";
 import type { BlogPostDetail } from "@/lib/notion";
@@ -13,23 +10,18 @@ const categoryColors: Record<string, string> = {
   'キャンペーン': 'bg-pink-500/20 text-pink-400',
 };
 
-interface NewsDetailClientProps {
+interface NewsDetailContentProps {
   post: BlogPostDetail & { fallbackContent?: string };
 }
 
-export default function NewsDetailClient({ post }: NewsDetailClientProps) {
+export default function NewsDetailContent({ post }: NewsDetailContentProps) {
   const hasNotionContent = post.blocks && post.blocks.length > 0;
 
   return (
     <div className="min-h-screen pt-32">
       {/* Content */}
       <article className="container-narrow pb-6 md:pb-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="glass-card p-8 md:p-12"
-        >
+        <div className="enter-up [--enter-y:30px] [--enter-duration:0.8s] [--enter-delay:0.2s] glass-card p-8 md:p-12">
           {/* Back link */}
           <Link
             href="/news"
@@ -101,7 +93,7 @@ export default function NewsDetailClient({ post }: NewsDetailClientProps) {
               />
             </div>
           )}
-        </motion.div>
+        </div>
       </article>
 
       {/* CTA */}

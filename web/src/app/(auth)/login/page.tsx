@@ -4,7 +4,6 @@ import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { motion } from 'framer-motion';
 import { Mail, ArrowRight } from 'lucide-react';
 
 const STORAGE_KEY = 'customer_login_email';
@@ -37,12 +36,7 @@ function LoginContent() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto"
-    >
+    <div className="enter-up max-w-md mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
         <p className="text-subheading mb-2">Account</p>
@@ -144,7 +138,7 @@ function LoginContent() {
           </p>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

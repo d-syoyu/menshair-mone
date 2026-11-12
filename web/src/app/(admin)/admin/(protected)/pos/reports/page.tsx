@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { motion } from 'framer-motion';
 import { addDaysToDbDate, getJstDateParts, getJstDateString, jstDateStringToDbDate } from '@/lib/date-utils';
 import {
   ArrowLeft,
@@ -34,11 +33,6 @@ const Tooltip = dynamic(() => import('recharts').then((module) => module.Tooltip
 const ResponsiveContainer = dynamic(() => import('recharts').then((module) => module.ResponsiveContainer), { ssr: false });
 const Legend = dynamic(() => import('recharts').then((module) => module.Legend), { ssr: false });
 const CartesianGrid = dynamic(() => import('recharts').then((module) => module.CartesianGrid), { ssr: false });
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: '現金',
@@ -258,16 +252,16 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-6xl mx-auto px-4">
         {/* Header */}
-        <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="mb-6">
+        <div className="mb-6">
           <Link href="/admin/pos" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]">
             <ArrowLeft className="w-5 h-5" />
             POSダッシュボードに戻る
           </Link>
           <h1 className="text-2xl font-medium">売上レポート・分析</h1>
-        </motion.div>
+        </div>
 
         {/* Tabs */}
-        <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="border-b border-gray-200 mb-6">
+        <div className="border-b border-gray-200 mb-6">
           <div className="flex">
             {tabs.map((tab) => (
               <button
@@ -284,11 +278,11 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Daily Tab Controls */}
         {activeTab === 'daily' && (
-          <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-6">
             <button onClick={goToPrevDay} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -305,12 +299,12 @@ export default function ReportsPage() {
             <button onClick={goToNextDay} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={selectedDate === todayDateString}>
               <ChevronRight className="w-5 h-5" />
             </button>
-          </motion.div>
+          </div>
         )}
 
         {/* Monthly Tab Controls */}
         {activeTab === 'monthly' && (
-          <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-6">
             <button onClick={goToPrevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -323,12 +317,12 @@ export default function ReportsPage() {
             <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronRight className="w-5 h-5" />
             </button>
-          </motion.div>
+          </div>
         )}
 
         {/* Analytics Tab Controls */}
         {activeTab === 'analytics' && (
-          <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-gray-400" />
@@ -345,7 +339,7 @@ export default function ReportsPage() {
                 <input type="date" value={analyticsEndDate} onChange={(e) => setAnalyticsEndDate(e.target.value)} max={todayDateString} className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm" />
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Loading / Error */}
@@ -359,7 +353,7 @@ export default function ReportsPage() {
             {activeTab === 'daily' && dailyReport && (
               <div className="space-y-6">
                 {/* Summary */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-white p-6 rounded-xl shadow-sm">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="p-2 bg-[var(--color-gold)]/10 rounded-lg"><TrendingUp className="w-5 h-5 text-[var(--color-gold)]" /></div>
@@ -381,11 +375,11 @@ export default function ReportsPage() {
                     </div>
                     <p className="text-3xl font-light">{formatPrice(dailyReport.summary.averagePerCustomer)}</p>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4">支払方法別</h2>
                     {Object.keys(dailyReport.paymentMethodBreakdown).length > 0 ? (
                       <div className="h-64">
@@ -403,9 +397,9 @@ export default function ReportsPage() {
                         </ResponsiveContainer>
                       </div>
                     ) : <p className="text-gray-500 text-center py-8">データがありません</p>}
-                  </motion.div>
+                  </div>
 
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-gray-400" />時間帯別売上</h2>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
@@ -417,11 +411,11 @@ export default function ReportsPage() {
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
 
                 {/* Sales List */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="bg-white p-6 rounded-xl shadow-sm">
                   <h2 className="text-lg font-medium mb-4">当日の会計一覧</h2>
                   {dailyReport.sales.length > 0 ? (
                     <div className="divide-y divide-gray-100">
@@ -442,7 +436,7 @@ export default function ReportsPage() {
                       ))}
                     </div>
                   ) : <p className="text-gray-500 text-center py-8">会計がありません</p>}
-                </motion.div>
+                </div>
               </div>
             )}
 
@@ -450,7 +444,7 @@ export default function ReportsPage() {
             {activeTab === 'monthly' && monthlyReport && (
               <div className="space-y-6">
                 {/* Summary */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-white p-6 rounded-xl shadow-sm">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="p-2 bg-[var(--color-gold)]/10 rounded-lg"><TrendingUp className="w-5 h-5 text-[var(--color-gold)]" /></div>
@@ -485,10 +479,10 @@ export default function ReportsPage() {
                     </div>
                     <p className="text-3xl font-light">{formatPrice(Math.round(monthlyReport.summary.totalSales / (monthlyReport.dailyData.filter(d => d.amount > 0).length || 1)))}</p>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Daily Trend */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="bg-white p-6 rounded-xl shadow-sm">
                   <h2 className="text-lg font-medium mb-4">日別売上推移</h2>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
@@ -501,11 +495,11 @@ export default function ReportsPage() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4">支払方法別</h2>
                     {Object.keys(monthlyReport.paymentMethodBreakdown).length > 0 ? (
                       <div className="h-64">
@@ -523,9 +517,9 @@ export default function ReportsPage() {
                         </ResponsiveContainer>
                       </div>
                     ) : <p className="text-gray-500 text-center py-8">データがありません</p>}
-                  </motion.div>
+                  </div>
 
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4">曜日別売上</h2>
                     {Object.values(monthlyReport.weekdayBreakdown).some(d => d.amount > 0) ? (
                       <div className="h-64">
@@ -539,7 +533,7 @@ export default function ReportsPage() {
                         </ResponsiveContainer>
                       </div>
                     ) : <p className="text-gray-500 text-center py-8">データがありません</p>}
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}
@@ -548,7 +542,7 @@ export default function ReportsPage() {
             {activeTab === 'analytics' && analyticsData && (
               <div className="space-y-6">
                 {/* Summary */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                     <p className="text-sm text-gray-500 mb-2">総売上（税込）</p>
                     <p className="text-2xl sm:text-3xl font-light text-[var(--color-gold)]">{formatPrice(analyticsData.summary.totalSales)}</p>
@@ -575,10 +569,10 @@ export default function ReportsPage() {
                     <p className="text-sm text-gray-500 mb-2">日平均売上</p>
                     <p className="text-2xl sm:text-3xl font-light">{formatPrice(Math.round(analyticsData.summary.totalSales / (analyticsData.dailyTrend.length || 1)))}</p>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Trend */}
-                <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="bg-white p-6 rounded-xl shadow-sm">
                   <h2 className="text-lg font-medium mb-4">日別売上推移</h2>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
@@ -591,11 +585,11 @@ export default function ReportsPage() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Payment & Category */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-gray-400" />支払方法別</h2>
                     {analyticsData.paymentMethod.sortedList.length > 0 ? (
                       <div className="space-y-3">
@@ -616,9 +610,9 @@ export default function ReportsPage() {
                         ))}
                       </div>
                     ) : <p className="text-gray-500 text-center py-8">データがありません</p>}
-                  </motion.div>
+                  </div>
 
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><Scissors className="w-5 h-5 text-gray-400" />人気メニュー TOP5</h2>
                     {analyticsData.menu.topMenus.length > 0 ? (
                       <div className="space-y-3">
@@ -639,12 +633,12 @@ export default function ReportsPage() {
                         ))}
                       </div>
                     ) : <p className="text-gray-500 text-center py-8">データがありません</p>}
-                  </motion.div>
+                  </div>
                 </div>
 
                 {/* Products */}
                 {analyticsData.product.topProducts.length > 0 && (
-                  <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="bg-white p-6 rounded-xl shadow-sm">
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><Package className="w-5 h-5 text-gray-400" />人気商品 TOP5</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                       {analyticsData.product.topProducts.slice(0, 5).map((item, i) => (
@@ -658,7 +652,7 @@ export default function ReportsPage() {
                         </div>
                       ))}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
               </div>
             )}

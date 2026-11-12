@@ -2,14 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, Scissors, AlertCircle } from 'lucide-react';
 import { canCancelReservation } from '@/constants/booking';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface Reservation {
   id: string;
@@ -118,12 +112,7 @@ export default function ReservationsPage() {
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-wide max-w-2xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="enter-up mb-8">
           <Link
             href="/mypage"
             className="inline-flex items-center gap-2 text-text-muted hover:text-white transition-colors mb-6"
@@ -136,19 +125,14 @@ export default function ReservationsPage() {
             <h1 className="text-heading mb-4">予約履歴</h1>
             <div className="divider-line mx-auto" />
           </div>
-        </motion.div>
+        </div>
 
         {isLoading ? (
           <div className="text-center py-12 text-text-muted">
             読み込み中...
           </div>
         ) : reservations.length === 0 ? (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="text-center py-12"
-          >
+          <div className="enter-up text-center py-12">
             <p className="text-text-muted mb-6">
               予約履歴はありません
             </p>
@@ -158,17 +142,12 @@ export default function ReservationsPage() {
             >
               予約する
             </Link>
-          </motion.div>
+          </div>
         ) : (
           <>
             {/* Upcoming Reservations */}
             {upcomingReservations.length > 0 && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={fadeInUp}
-                className="mb-12"
-              >
+              <div className="enter-up mb-12">
                 <h2 className="text-lg font-medium mb-4 flex items-center gap-2 text-white">
                   <Calendar className="w-5 h-5 text-accent-light" />
                   今後のご予約
@@ -248,16 +227,12 @@ export default function ReservationsPage() {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* Past Reservations */}
             {pastReservations.length > 0 && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={fadeInUp}
-              >
+              <div className="enter-up">
                 <h2 className="text-lg font-medium mb-4 flex items-center gap-2 text-white">
                   <Clock className="w-5 h-5 text-text-muted" />
                   過去のご予約
@@ -313,7 +288,7 @@ export default function ReservationsPage() {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
           </>
         )}
@@ -322,11 +297,7 @@ export default function ReservationsPage() {
       {/* Cancel Confirmation Modal */}
       {showCancelModal && selectedReservation && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-card max-w-md w-full p-6"
-          >
+          <div className="enter-zoom [--enter-duration:0.4s] glass-card max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-6 h-6 text-red-400" />
               <h3 className="text-lg font-medium text-white">予約のキャンセル</h3>
@@ -358,7 +329,7 @@ export default function ReservationsPage() {
                 {cancellingId ? 'キャンセル中...' : 'キャンセルする'}
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>

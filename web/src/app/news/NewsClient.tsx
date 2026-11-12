@@ -1,45 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Calendar, ChevronDown } from 'lucide-react';
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 import type { BlogPost } from '@/lib/notion';
 
 // 初期表示件数
 const INITIAL_DISPLAY_COUNT = 6;
 const LOAD_MORE_COUNT = 6;
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
-  }
-};
-
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
 
 const categoryColors: Record<string, string> = {
   'お知らせ': 'bg-accent/20 text-accent-light',
@@ -81,12 +52,7 @@ export default function NewsClient({ news }: NewsClientProps) {
       {/* Category Filter */}
       {categories.length > 1 && (
         <section className="container-narrow pb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-3"
-          >
+          <div className="enter-up [--enter-delay:0.3s] flex flex-wrap justify-center gap-3">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -100,12 +66,12 @@ export default function NewsClient({ news }: NewsClientProps) {
                 {cat === 'all' ? 'すべて' : cat}
               </button>
             ))}
-          </motion.div>
+          </div>
         </section>
       )}
 
       {/* News List */}
-      <AnimatedSection className="py-20 section-dark">
+      <section className="py-20 section-dark">
         <div className="container-narrow relative z-10">
           {filteredNews.length === 0 ? (
             <div className="text-center py-20 text-text-muted">
@@ -114,10 +80,14 @@ export default function NewsClient({ news }: NewsClientProps) {
           ) : (
             <>
               <div className="space-y-6">
-                {visibleNews.map((item) => (
-                  <motion.article
+                {visibleNews.map((item, index) => (
+                  <RevealSection
                     key={item.id}
-                    variants={fadeInUp}
+                    as="article"
+                    self
+                    bottomOffset={50}
+                    style={revealOrder(index % LOAD_MORE_COUNT)}
+                    className="[--reveal-step:0.1s]"
                   >
                     <Link
                       href={`/news/${item.slug}`}
@@ -166,17 +136,13 @@ export default function NewsClient({ news }: NewsClientProps) {
                         </div>
                       </div>
                     </Link>
-                  </motion.article>
+                  </RevealSection>
                 ))}
               </div>
 
               {/* もっと見るボタン */}
               {hasMore && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-10 text-center"
-                >
+                <div className="enter-fade [--enter-duration:0.4s] mt-10 text-center">
                   <button
                     onClick={handleLoadMore}
                     className="inline-flex items-center gap-2 px-8 py-3 border border-glass-border text-text-secondary hover:text-white hover:border-accent transition-all duration-300 group"
@@ -186,7 +152,7 @@ export default function NewsClient({ news }: NewsClientProps) {
                     </span>
                     <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
                   </button>
-                </motion.div>
+                </div>
               )}
 
               {/* 全件表示時のメッセージ */}
@@ -198,7 +164,7 @@ export default function NewsClient({ news }: NewsClientProps) {
             </>
           )}
         </div>
-      </AnimatedSection>
+      </section>
 
       {/* CTA */}
       <section className="py-20 relative overflow-hidden">

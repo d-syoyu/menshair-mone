@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Shield } from 'lucide-react';
 
 const STORAGE_KEY = 'admin_login_email';
@@ -61,12 +60,7 @@ function AdminLoginContent() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto"
-    >
+    <div className="max-w-md mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-6">
@@ -167,7 +161,7 @@ function AdminLoginContent() {
       <p className="mt-6 text-center text-xs text-gray-500">
         ログイン後、90日間はログイン状態が保持されます
       </p>
-    </motion.div>
+    </div>
   );
 }
 

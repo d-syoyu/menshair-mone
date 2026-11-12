@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Calendar,
@@ -21,7 +20,6 @@ import {
   Check,
   Pencil,
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
 
 // DBメニューの型定義
@@ -49,11 +47,6 @@ interface DbCategory {
   color: string;
   displayOrder: number;
 }
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface ReservationItem {
   id: string;
@@ -707,12 +700,7 @@ function AdminReservationsContent() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6 md:mb-8"
-        >
+        <div className="mb-6 md:mb-8">
           <Link
             href="/admin"
             className="inline-flex items-center gap-2 px-4 py-3 text-base text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 min-h-[48px]"
@@ -750,16 +738,11 @@ function AdminReservationsContent() {
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Calendar Sidebar */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="md:col-span-1"
-          >
+          <div className="md:col-span-1">
             <div className="bg-white rounded-xl shadow-sm">
               {/* Mobile Calendar Toggle */}
               <button
@@ -889,15 +872,10 @@ function AdminReservationsContent() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Reservations List */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="md:col-span-2"
-          >
+          <div className="md:col-span-2">
             {/* Timeline View - 選択された日付がある場合のみ表示 */}
             {selectedDate && (
               <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
@@ -1501,7 +1479,7 @@ function AdminReservationsContent() {
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -1515,11 +1493,7 @@ function AdminReservationsContent() {
           />
 
           {/* ダイアログ */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6"
-          >
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6">
             <button
               onClick={closeConfirmDialog}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
@@ -1590,12 +1564,11 @@ function AdminReservationsContent() {
                       : '無断キャンセルにする'}
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
 
       {/* 予約追加モーダル */}
-      <AnimatePresence>
         {isAddModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -1603,12 +1576,7 @@ function AdminReservationsContent() {
               onClick={() => setIsAddModalOpen(false)}
             />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            >
+            <div className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               {/* Header */}
               <div className="p-6 border-b border-gray-100 flex-shrink-0">
                 <button
@@ -1795,15 +1763,8 @@ function AdminReservationsContent() {
                             </button>
 
                             {/* メニューリスト */}
-                            <AnimatePresence>
                               {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="border-t border-gray-200"
-                                >
+                                <div className="border-t border-gray-200">
                                   <div className="p-2 space-y-1 bg-gray-50">
                                     {categoryMenus.map(menu => {
                                       const isSelected = selectedMenuIds.includes(menu.id);
@@ -1830,9 +1791,8 @@ function AdminReservationsContent() {
                                       );
                                     })}
                                   </div>
-                                </motion.div>
+                                </div>
                               )}
-                            </AnimatePresence>
                           </div>
                         );
                       })}
@@ -1936,13 +1896,11 @@ function AdminReservationsContent() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* 編集モーダル */}
-      <AnimatePresence>
         {isEditModalOpen && editingReservation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -1950,12 +1908,7 @@ function AdminReservationsContent() {
               onClick={() => setIsEditModalOpen(false)}
             />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            >
+            <div className="relative bg-white rounded-xl shadow-xl max-w-lg md:max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               {/* Header */}
               <div className="p-6 border-b border-gray-100 flex-shrink-0">
                 <button
@@ -2100,15 +2053,8 @@ function AdminReservationsContent() {
                               </button>
 
                               {/* メニューリスト */}
-                              <AnimatePresence>
                                 {isExpanded && (
-                                  <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="border-t border-gray-200"
-                                  >
+                                  <div className="border-t border-gray-200">
                                     <div className="p-2 space-y-1 bg-gray-50">
                                       {categoryMenus.map(menu => {
                                         const isSelected = editMenuIds.includes(menu.id);
@@ -2135,9 +2081,8 @@ function AdminReservationsContent() {
                                         );
                                       })}
                                     </div>
-                                  </motion.div>
+                                  </div>
                                 )}
-                              </AnimatePresence>
                             </div>
                           );
                         })}
@@ -2251,10 +2196,9 @@ function AdminReservationsContent() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

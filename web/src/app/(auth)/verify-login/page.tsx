@@ -3,7 +3,6 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { LogIn, ArrowLeft, Shield, Loader2 } from 'lucide-react';
 
 function VerifyLoginContent() {
@@ -37,12 +36,7 @@ function VerifyLoginContent() {
 
   if (!callbackUrl) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-md mx-auto"
-      >
+      <div className="enter-up max-w-md mx-auto">
         <div className="text-center mb-10">
           <p className="text-subheading mb-2">Error</p>
           <h1 className="text-heading text-white mb-4">無効なリンクです</h1>
@@ -61,17 +55,12 @@ function VerifyLoginContent() {
             ログイン画面へ
           </Link>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto"
-    >
+    <div className="enter-up max-w-md mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
         <p className="text-subheading mb-2">Verification</p>
@@ -124,7 +113,7 @@ function VerifyLoginContent() {
           ログイン画面に戻る
         </Link>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
