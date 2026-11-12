@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { adminTokenClaims } from "@/lib/admin-session";
 
 const isTestEnvironment =
   process.env.NODE_ENV === "test" ||
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
+        ...(user.role === "ADMIN" ? adminTokenClaims(user.sessionVersion) : {}),
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24時間
       },

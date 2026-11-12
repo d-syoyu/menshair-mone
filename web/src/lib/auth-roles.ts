@@ -1,6 +1,7 @@
 // src/lib/auth-roles.ts
 // Which role a sign-in may carry. An administrator signs in with the password
-// only: a magic link or LINE proves only that someone reads the mailbox or holds
+// only (/api/auth/admin-login, which issues its token itself): a magic link or
+// LINE proves only that someone reads the mailbox or holds
 // the LINE account, so neither may start an administrator session.
 
 import type { UserRole } from "@prisma/client";

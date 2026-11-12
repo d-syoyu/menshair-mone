@@ -36,12 +36,29 @@ describe("proxy authentication", () => {
   });
 
   it("redirects an authenticated administrator away from the login page", async () => {
-    getTokenMock.mockResolvedValue({ sub: "admin-1", role: "ADMIN" });
+    getTokenMock.mockResolvedValue({ sub: "admin-1", role: "ADMIN", adminAt: Math.floor(Date.now() / 1000), sv: 0 });
 
     const response = await proxy(createRequest("/admin/login"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://example.com/admin");
+  });
+
+  it("does not treat an administrator token older than 12 hours, or one without its sign-in time, as an administrator", async () => {
+    const thirteenHoursAgo = Math.floor(Date.now() / 1000) - 13 * 60 * 60;
+    for (const token of [
+      { sub: "admin-1", role: "ADMIN", adminAt: thirteenHoursAgo, sv: 0 },
+      { sub: "admin-1", role: "ADMIN" },
+    ]) {
+      getTokenMock.mockResolvedValue(token);
+
+      const pageResponse = await proxy(createRequest("/admin"));
+      const apiResponse = await proxy(createRequest("/api/admin/customers"));
+
+      expect(pageResponse.status).toBe(307);
+      expect(pageResponse.headers.get("location")).toBe("https://example.com/admin/login");
+      expect(apiResponse.status).toBe(403);
+    }
   });
 
   it("does not treat a customer session as an administrator", async () => {

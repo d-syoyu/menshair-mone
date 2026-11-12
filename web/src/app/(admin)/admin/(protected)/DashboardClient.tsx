@@ -244,8 +244,23 @@ export default function DashboardClient({
               {todayLabel}
             </p>
           </div>
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">{adminEmail}</span>
+            <button
+              onClick={async () => {
+                if (!window.confirm('この端末を含む、すべての端末で管理画面からログアウトします。よろしいですか？')) return;
+                const response = await fetch('/api/admin/sessions/revoke-all', { method: 'POST', credentials: 'same-origin' });
+                if (!response.ok) {
+                  window.alert('ログアウトできませんでした。もう一度お試しください。');
+                  return;
+                }
+                await signOut({ redirect: false });
+                window.location.replace(`/admin/login?t=${Date.now()}`);
+              }}
+              className="flex items-center gap-2 px-3 py-3 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              すべての端末からログアウト
+            </button>
             <button
               onClick={async () => {
                 await signOut({ redirect: false });
