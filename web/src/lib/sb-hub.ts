@@ -42,7 +42,7 @@ const NOTE_NAME_MAX = 60;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}$/;
 
-export function sbHubConfig(env: NodeJS.ProcessEnv = process.env): SbHubConfig | null {
+export function sbHubConfig(env: Record<string, string | undefined> = process.env): SbHubConfig | null {
   const url = env.SB_HUB_URL?.trim();
   const apiKey = env.SB_HUB_API_KEY?.trim();
   const shopId = env.SB_HUB_SHOP_ID?.trim();
