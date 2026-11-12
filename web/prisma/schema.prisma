@@ -21,6 +21,7 @@ model User {
   image            String?
   phone            String?
   password         String?   // 管理者用
+  sessionVersion   Int       @default(0) // 管理者のログインの版。上げると、それより前のログインが使えなくなる
   role             UserRole  @default(CUSTOMER)
   newsletterOptOut Boolean   @default(false) // ニュースレター配信停止
   createdAt        DateTime  @default(now())

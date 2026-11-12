@@ -49,6 +49,9 @@ function AdminLoginContent() {
 
       if (response.ok && data.success) {
         window.location.replace('/admin');
+      } else if (response.status === 429) {
+        setIsLoading(false);
+        window.location.replace('/admin/login?error=TooManyAttempts');
       } else {
         setIsLoading(false);
         window.location.replace('/admin/login?error=CredentialsSignin');
@@ -79,7 +82,9 @@ function AdminLoginContent() {
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-6 text-sm">
           {error === 'CredentialsSignin'
             ? 'メールアドレスまたはパスワードが正しくありません'
-            : 'ログインに失敗しました'}
+            : error === 'TooManyAttempts'
+              ? 'ログインの失敗が続いたため、しばらく受け付けを止めています。15分ほどたってからお試しください'
+              : 'ログインに失敗しました'}
         </div>
       )}
 

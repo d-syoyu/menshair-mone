@@ -3,11 +3,10 @@
 
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import Credentials from "next-auth/providers/credentials";
 import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
-import bcrypt from "bcryptjs";
 import { prisma } from "./db";
+import { adminTokenFresh, adminTokenMatches } from "./admin-session";
 import type { UserRole } from "@prisma/client";
 import type { Adapter, AdapterAccount } from "next-auth/adapters";
 import { createMagicLinkHtml, createMagicLinkText } from "./email";
@@ -105,6 +104,10 @@ declare module "next-auth" {
 declare module "@auth/core/jwt" {
   interface JWT {
     role: UserRole;
+    /** 管理者がパスワードでログインした時刻（秒）。管理者のトークンだけが持つ */
+    adminAt?: number;
+    /** そのときの User.sessionVersion */
+    sv?: number;
   }
 }
 
@@ -155,69 +158,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
 
-    // Credentials (管理者向け)
-    Credentials({
-      id: "credentials",
-      name: "credentials",
-      credentials: {
-        email: { label: "メールアドレス", type: "email" },
-        password: { label: "パスワード", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const email = credentials.email as string;
-        const password = credentials.password as string;
-
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (!user || !user.password) {
-          return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
-      },
-    }),
+    // 管理者のパスワードでのログインは /api/auth/admin-login が受け持つ
+    // （回数制限・送信元の確認・12時間の期限つき）。ここには置かない。
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // 初回サインイン時（userが存在する場合）
+      // 初回サインイン時（LINE/メールのリンク）。ここで管理者になることはない
       if (user) {
-        // Credentialsプロバイダーの場合、userオブジェクトに直接roleが含まれている
-        if (user.role) {
-          token.sub = user.id;
-          token.role = sessionRoleFor(account?.provider, user.role);
-        } else {
-          // LINE/Emailプロバイダーの場合、データベースからroleを取得
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email! },
-            select: { id: true, role: true },
-          });
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          select: { id: true, role: true },
+        });
 
-          if (dbUser) {
-            token.sub = dbUser.id;
-            token.role = sessionRoleFor(account?.provider, dbUser.role);
-          } else {
-            // フォールバック
-            token.role = "CUSTOMER";
-            token.sub = user.id;
-          }
+        if (dbUser) {
+          token.sub = dbUser.id;
+          token.role = sessionRoleFor(account?.provider, dbUser.role);
+        } else {
+          // フォールバック
+          token.role = "CUSTOMER";
+          token.sub = user.id;
         }
+        return token;
+      }
+
+      // 管理者のセッションは、12時間たつか、管理者でなくなるか、
+      // 「すべての端末からログアウト」で版が上がったら、その場で無効にする
+      if (token.role === "ADMIN") {
+        if (!adminTokenFresh(token) || !token.sub) return null;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, sessionVersion: true },
+        });
+        if (!adminTokenMatches(token, dbUser)) return null;
       }
       return token;
     },

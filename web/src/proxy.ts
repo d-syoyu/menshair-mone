@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { adminTokenFresh } from "@/lib/admin-session";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -21,7 +22,8 @@ export async function proxy(request: NextRequest) {
     secureCookie: isProduction,
   });
   const isLoggedIn = !!token?.sub;
-  const isAdmin = isLoggedIn && token.role === "ADMIN";
+  // 管理者のログインは12時間まで。DBでの確認（取り消し・権限の変更）は各ページ・APIの auth() で行う
+  const isAdmin = isLoggedIn && adminTokenFresh(token);
 
   // 認証ページ（顧客用ログイン・登録）
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
