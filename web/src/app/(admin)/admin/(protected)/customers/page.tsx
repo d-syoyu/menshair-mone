@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -47,7 +47,7 @@ interface Customer {
   email: string | null;
   phone: string | null;
   createdAt: string;
-  reservations: Reservation[];
+  totalRevenue: number;
   _count: {
     reservations: number;
     completedReservations: number;
@@ -90,69 +90,57 @@ export default function AdminCustomersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [page]);
+  // 施術履歴は行を開いたときにだけ読む（以前は一覧のために予約200件を明細ごと取っていた）
+  const [historyById, setHistoryById] = useState<Record<string, Reservation[] | 'loading' | 'error'>>({});
 
-  const fetchCustomers = async () => {
+  // 検索は入力が止まってからサーバーで行う
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchCustomers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/reservations?limit=200');
-      const data = await res.json();
-
-      // ユニークな顧客を抽出し、予約履歴も保持
-      const customerMap = new Map<string, Customer>();
-      data.reservations?.forEach((r: Reservation & { user: { id: string; name: string | null; email: string | null; phone: string | null; } }) => {
-        if (!customerMap.has(r.user.id)) {
-          customerMap.set(r.user.id, {
-            ...r.user,
-            createdAt: new Date().toISOString(),
-            reservations: [r],
-            _count: {
-              reservations: 1,
-              completedReservations: r.status === 'COMPLETED' ? 1 : 0,
-            },
-          });
-        } else {
-          const existing = customerMap.get(r.user.id)!;
-          existing.reservations.push(r);
-          existing._count.reservations += 1;
-          if (r.status === 'COMPLETED') {
-            existing._count.completedReservations += 1;
-          }
-        }
-      });
-
-      // 各顧客の予約を日付順（新しい順）にソート
-      customerMap.forEach((customer) => {
-        customer.reservations.sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          if (dateA.getTime() !== dateB.getTime()) {
-            return dateB.getTime() - dateA.getTime();
-          }
-          return b.startTime.localeCompare(a.startTime);
-        });
-      });
-
-      setCustomers(Array.from(customerMap.values()));
-      setTotalPages(1);
+      const params = new URLSearchParams({ page: String(page) });
+      if (debouncedQuery) params.append('q', debouncedQuery);
+      const res = await fetch(`/api/admin/customers?${params.toString()}`);
+      if (!res.ok) throw new Error(`Failed to fetch customers: ${res.status}`);
+      const data: { customers: Customer[]; totalPages: number } = await res.json();
+      setCustomers(data.customers);
+      setTotalPages(data.totalPages);
     } catch (error) {
       console.error('Failed to fetch customers:', error);
     } finally {
       setIsLoading(false);
     }
+  }, [page, debouncedQuery]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const loadHistory = async (customerId: string) => {
+    setHistoryById((prev) => ({ ...prev, [customerId]: 'loading' }));
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}?include=reservations`);
+      if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
+      const data: { reservations: Reservation[] } = await res.json();
+      setHistoryById((prev) => ({ ...prev, [customerId]: data.reservations }));
+    } catch (error) {
+      console.error('Failed to fetch customer history:', error);
+      setHistoryById((prev) => ({ ...prev, [customerId]: 'error' }));
+    }
   };
 
-  const filteredCustomers = customers.filter((c) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(query) ||
-      c.email?.toLowerCase().includes(query) ||
-      c.phone?.includes(query)
-    );
-  });
+  const getHistory = (customerId: string): Reservation[] => {
+    const history = historyById[customerId];
+    return Array.isArray(history) ? history : [];
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -165,6 +153,10 @@ export default function AdminCustomersPage() {
       setExpandedCustomerId(null);
     } else {
       setExpandedCustomerId(customerId);
+      const history = historyById[customerId];
+      if (history === undefined || history === 'error') {
+        loadHistory(customerId);
+      }
       // 初回展開時は初期表示件数をセット
       if (!visibleCounts[customerId]) {
         setVisibleCounts(prev => ({ ...prev, [customerId]: INITIAL_VISIBLE }));
@@ -181,19 +173,7 @@ export default function AdminCustomersPage() {
 
   const getVisibleReservations = (customer: Customer) => {
     const count = visibleCounts[customer.id] || INITIAL_VISIBLE;
-    return customer.reservations.slice(0, count);
-  };
-
-  // 完了した予約のみをカウント（キャンセル・無断キャンセル以外）
-  const getCompletedCount = (reservations: Reservation[]) => {
-    return reservations.filter(r => r.status !== 'CANCELLED' && r.status !== 'NO_SHOW').length;
-  };
-
-  // 合計売上を計算
-  const getTotalRevenue = (reservations: Reservation[]) => {
-    return reservations
-      .filter(r => r.status !== 'CANCELLED' && r.status !== 'NO_SHOW')
-      .reduce((sum, r) => sum + r.totalPrice, 0);
+    return getHistory(customer.id).slice(0, count);
   };
 
   // 顧客追加
@@ -223,7 +203,7 @@ export default function AdminCustomersPage() {
       // 成功したら顧客リストを更新
       setCustomers(prev => [{
         ...data,
-        reservations: [],
+        totalRevenue: 0,
         _count: { reservations: 0, completedReservations: 0 },
       }, ...prev]);
 
@@ -380,17 +360,17 @@ export default function AdminCustomersPage() {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center text-gray-500">読み込み中...</div>
-          ) : filteredCustomers.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               顧客が見つかりません
             </div>
           ) : (
             <>
               <div className="divide-y divide-gray-100">
-                {filteredCustomers.map((customer) => {
+                {customers.map((customer) => {
                   const isExpanded = expandedCustomerId === customer.id;
-                  const completedCount = getCompletedCount(customer.reservations);
-                  const totalRevenue = getTotalRevenue(customer.reservations);
+                  const history = historyById[customer.id];
+                  const reservations = getHistory(customer.id);
 
                   return (
                     <div key={customer.id}>
@@ -491,13 +471,13 @@ export default function AdminCustomersPage() {
                                 <div>
                                   <p className="text-xs text-gray-500">累計売上</p>
                                   <p className="text-lg sm:text-xl font-medium text-[var(--color-gold)]">
-                                    ¥{totalRevenue.toLocaleString()}
+                                    ¥{customer.totalRevenue.toLocaleString()}
                                   </p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-gray-500">予約総数</p>
                                   <p className="text-lg sm:text-xl font-medium">
-                                    {customer.reservations.length}<span className="text-sm text-gray-400">件</span>
+                                    {customer._count.reservations}<span className="text-sm text-gray-400">件</span>
                                   </p>
                                 </div>
                               </div>
@@ -506,7 +486,7 @@ export default function AdminCustomersPage() {
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-sm font-medium text-gray-700">施術履歴</h4>
                                 <span className="text-xs text-gray-500">
-                                  {customer.reservations.length}件
+                                  {customer._count.reservations}件
                                 </span>
                               </div>
 
@@ -570,17 +550,23 @@ export default function AdminCustomersPage() {
                                 })}
                               </div>
 
-                              {customer.reservations.length === 0 && (
+                              {history === 'loading' && (
+                                <p className="text-center text-gray-500 py-4">読み込み中...</p>
+                              )}
+                              {history === 'error' && (
+                                <p className="text-center text-red-500 py-4">履歴を読み込めませんでした</p>
+                              )}
+                              {Array.isArray(history) && reservations.length === 0 && (
                                 <p className="text-center text-gray-500 py-4">履歴がありません</p>
                               )}
 
                               {/* Load More Button */}
-                              {customer.reservations.length > (visibleCounts[customer.id] || INITIAL_VISIBLE) && (
+                              {reservations.length > (visibleCounts[customer.id] || INITIAL_VISIBLE) && (
                                 <button
                                   onClick={() => loadMoreReservations(customer.id)}
                                   className="w-full mt-3 py-2.5 text-sm text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 rounded-lg transition-colors border border-[var(--color-accent)]/30"
                                 >
-                                  もっと見る（残り {customer.reservations.length - (visibleCounts[customer.id] || INITIAL_VISIBLE)}件）
+                                  もっと見る（残り {reservations.length - (visibleCounts[customer.id] || INITIAL_VISIBLE)}件）
                                 </button>
                               )}
                             </div>

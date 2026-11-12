@@ -29,20 +29,33 @@ export async function GET(request: NextRequest) {
       ? parseLocalDate(startDateParam)
       : addDaysToDbDate(endExclusive, -30);
 
-    // 会計データを取得
-    const sales = await prisma.sale.findMany({
-      where: {
-        saleDate: {
-          gte: startDate,
-          lt: endExclusive,
+    // 会計データと不定休を同時に取得する（以前は会計の取得を待ってから不定休を取っていた）
+    const [sales, holidays] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          saleDate: {
+            gte: startDate,
+            lt: endExclusive,
+          },
+          paymentStatus: "PAID",
         },
-        paymentStatus: "PAID",
-      },
-      include: {
-        items: true,
-        payments: true,
-      },
-    });
+        include: {
+          items: true,
+          payments: true,
+        },
+      }),
+      // 不定休（終日休業のみ。時間帯休業は営業日としてカウント）
+      prisma.holiday.findMany({
+        where: {
+          date: {
+            gte: startDate,
+            lt: endExclusive,
+          },
+          startTime: null,
+        },
+        select: { date: true },
+      }),
+    ]);
 
     // 基本統計
     const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
@@ -199,17 +212,6 @@ export async function GET(request: NextRequest) {
     }
 
     // 営業日数を計算（定休日・不定休を除外）
-    // 不定休（終日休業）を取得
-    const holidays = await prisma.holiday.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lt: endExclusive,
-        },
-        startTime: null, // 終日休業のみ（時間帯休業は営業日としてカウント）
-      },
-      select: { date: true },
-    });
     const holidayDates = new Set(
       holidays.map((h) => dbDateToJstDateString(h.date))
     );

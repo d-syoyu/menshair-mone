@@ -124,16 +124,22 @@ export default function AdminBusinessPage() {
     }
   }, [currentMonth]);
 
-  // 全データを取得
-  const fetchAllData = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([fetchBusinessSettings(), fetchHolidays(), fetchSpecialOpenDays()]);
-    setIsLoading(false);
-  }, [fetchBusinessSettings, fetchHolidays, fetchSpecialOpenDays]);
-
+  // 定休日の設定は月をまたいでも変わらないので、最初に1回だけ取得する
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+    fetchBusinessSettings();
+  }, [fetchBusinessSettings]);
+
+  // 月を切り替えたら、その月の不定休と特別営業日だけを取り直す
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    Promise.all([fetchHolidays(), fetchSpecialOpenDays()]).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchHolidays, fetchSpecialOpenDays]);
 
   const showSuccess = (message: string) => {
     setSuccess(message);

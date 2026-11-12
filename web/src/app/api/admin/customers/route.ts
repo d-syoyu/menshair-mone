@@ -9,6 +9,8 @@ const createCustomerSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません").optional().nullable(),
 });
 
+const CUSTOMER_PAGE_SIZE = 30;
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -18,52 +20,74 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get("q");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+    const query = searchParams.get("q")?.trim() || null;
+    // page を付けると顧客管理画面向けのページ単位の応答（件数・累計売上つき）を返す。
+    // 付けない場合は従来どおり、予約・会計画面の顧客検索向けに配列を返す。
+    const pageParam = searchParams.get("page");
+    const paged = pageParam !== null;
+    const page = Math.max(parseInt(pageParam || "1", 10) || 1, 1);
+    const limit = paged
+      ? CUSTOMER_PAGE_SIZE
+      : Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 100);
 
-    const where = query
-      ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" as const } },
-            { phone: { contains: query } },
-            { email: { contains: query, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    const where = {
+      role: "CUSTOMER" as const,
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" as const } },
+              { phone: { contains: query } },
+              { email: { contains: query, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    };
 
-    const customers = await prisma.user.findMany({
-      where: {
-        ...where,
-        role: "CUSTOMER",
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        createdAt: true,
-        _count: {
-          select: {
-            reservations: true,
+    const [customers, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          _count: {
+            select: {
+              reservations: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+        orderBy: { createdAt: "desc" },
+        skip: paged ? (page - 1) * limit : 0,
+        take: limit,
+      }),
+      paged ? prisma.user.count({ where }) : Promise.resolve(0),
+    ]);
 
-    const completedCounts = customers.length
-      ? await prisma.reservation.groupBy({
-          by: ["userId"],
-          where: {
-            userId: { in: customers.map((customer) => customer.id) },
-            status: "COMPLETED",
-          },
-          _count: { _all: true },
-        })
-      : [];
+    // 表示中の顧客分だけ、完了回数と累計売上を SQL でまとめて数える
+    const customerIds = customers.map((customer) => customer.id);
+    const [completedCounts, revenueRows] = customerIds.length
+      ? await Promise.all([
+          prisma.reservation.groupBy({
+            by: ["userId"],
+            where: { userId: { in: customerIds }, status: "COMPLETED" },
+            _count: { _all: true },
+          }),
+          paged
+            ? prisma.reservation.groupBy({
+                by: ["userId"],
+                where: { userId: { in: customerIds }, status: { notIn: ["CANCELLED", "NO_SHOW"] } },
+                _sum: { totalPrice: true },
+              })
+            : Promise.resolve([]),
+        ])
+      : [[], []];
     const completedCountByUserId = new Map(
       completedCounts.map((row) => [row.userId, row._count._all])
+    );
+    const revenueByUserId = new Map(
+      revenueRows.map((row) => [row.userId, row._sum.totalPrice ?? 0])
     );
 
     const customersWithCounts = customers.map((customer) => ({
@@ -76,8 +100,17 @@ export async function GET(request: NextRequest) {
         reservations: customer._count.reservations,
         completedReservations: completedCountByUserId.get(customer.id) ?? 0,
       },
+      ...(paged ? { totalRevenue: revenueByUserId.get(customer.id) ?? 0 } : {}),
     }));
 
+    if (paged) {
+      return NextResponse.json({
+        customers: customersWithCounts,
+        page,
+        totalPages: Math.max(Math.ceil(total / limit), 1),
+        total,
+      });
+    }
     return NextResponse.json(customersWithCounts);
   } catch (error) {
     console.error("Get customers error:", error);

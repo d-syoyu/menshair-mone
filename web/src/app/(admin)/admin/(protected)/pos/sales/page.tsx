@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -79,6 +79,8 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'キャンセル',
 };
 
+const PAGE_SIZE = 50;
+
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-700',
   PAID: 'bg-green-100 text-green-700',
@@ -106,36 +108,49 @@ export default function SalesListPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingSale, setDeletingSale] = useState<{ id: string; saleNumber: string } | null>(null);
 
+  // 顧客名は入力が止まってから検索する（以前は1文字ごとに全件を取り直していた）
+  const [debouncedCustomerName, setDebouncedCustomerName] = useState('');
   useEffect(() => {
-    fetchSales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, customerName, paymentMethod, paymentStatus]);
+    const timer = setTimeout(() => setDebouncedCustomerName(customerName.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [customerName]);
 
-  const fetchSales = async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      if (customerName) params.append('customerName', customerName);
-      if (paymentMethod) params.append('paymentMethod', paymentMethod);
-      if (paymentStatus) params.append('paymentStatus', paymentStatus);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-      const url = `/api/admin/sales${params.toString() ? `?${params.toString()}` : ''}`;
-      const res = await fetch(url);
+  const fetchSales = useCallback(
+    async (offset = 0) => {
+      if (offset === 0) setIsLoading(true);
+      else setIsLoadingMore(true);
+      try {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (debouncedCustomerName) params.append('customerName', debouncedCustomerName);
+        if (paymentMethod) params.append('paymentMethod', paymentMethod);
+        if (paymentStatus) params.append('paymentStatus', paymentStatus);
 
-      if (!res.ok) {
-        throw new Error('データの取得に失敗しました');
+        const res = await fetch(`/api/admin/sales?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error('データの取得に失敗しました');
+        }
+
+        const data: { sales: Sale[]; hasMore: boolean } = await res.json();
+        setSales((prev) => (offset === 0 ? data.sales : [...prev, ...data.sales]));
+        setHasMore(data.hasMore);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
       }
+    },
+    [startDate, endDate, debouncedCustomerName, paymentMethod, paymentStatus]
+  );
 
-      const data = await res.json();
-      setSales(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'エラーが発生しました');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchSales(0);
+  }, [fetchSales]);
 
   const showSuccess = (message: string) => {
     setSuccess(message);
@@ -178,8 +193,9 @@ export default function SalesListPage() {
       }
 
       setIsDeleteModalOpen(false);
+      // 一覧を取り直さず、削除した1件だけ外す
+      setSales((prev) => prev.filter((sale) => sale.id !== deletingSale.id));
       setDeletingSale(null);
-      fetchSales();
       showSuccess('会計を削除しました');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -476,6 +492,18 @@ export default function SalesListPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {!isLoading && hasMore && (
+            <div className="p-4 text-center border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => fetchSales(sales.length)}
+                disabled={isLoadingMore}
+                className="px-6 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {isLoadingMore ? '読み込み中...' : 'さらに表示'}
+              </button>
             </div>
           )}
         </div>

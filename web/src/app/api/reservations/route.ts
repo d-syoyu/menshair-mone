@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { createReservationSchema } from "@/lib/validations";
 import { CLOSED_DAY, getBusinessHours } from "@/constants/salon";
 import { isWithinBookingWindow } from "@/constants/booking";
-import { addDaysToDbDate, getJstMonthRange, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
+import { addDaysToDbDate, dbDateToJstDateString, getJstMonthRange, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
 import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
 
@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const page = parseInt(searchParams.get("page") || "1", 10);
+    // 上限を設ける（以前は limit=1000 なども、そのまま明細・顧客つきで返していた）
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10", 10) || 10, 1), 100);
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
 
     const where: Record<string, unknown> = {};
     if (session.user.role !== "ADMIN") {
@@ -65,6 +66,21 @@ export async function GET(request: NextRequest) {
         gte: startOfMonth,
         lt: endOfMonth,
       };
+    }
+
+    // 管理画面のカレンダーは日ごとの件数だけ使うので、予約本体ではなく件数を返す
+    if (searchParams.get("view") === "calendar" && session.user.role === "ADMIN" && month) {
+      const rows = await prisma.reservation.groupBy({
+        by: ["date"],
+        where: { date: where.date as { gte: Date; lt: Date }, status: "CONFIRMED" },
+        _count: { _all: true },
+      });
+      const counts: Record<string, number> = {};
+      for (const row of rows) {
+        const key = dbDateToJstDateString(row.date);
+        counts[key] = (counts[key] ?? 0) + row._count._all;
+      }
+      return NextResponse.json({ counts });
     }
 
     const [reservations, total] = await Promise.all([
