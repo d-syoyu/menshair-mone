@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const navItems = [
   { name: 'Menu', href: '/menu', nameJa: 'メニュー' },
@@ -40,13 +39,18 @@ const Header = () => {
     return null;
   }
 
+  // モバイルメニューの項目：開くときだけ順に表示（閉じるときは一斉に消す）
+  const menuItemClass = `transition-all duration-500 ${
+    mobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+  }`;
+  const menuItemDelay = (seconds: number) => ({
+    transitionDelay: mobileMenuOpen ? `${seconds}s` : '0s',
+  });
+
   return (
     <>
-      <motion.header
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      <header
+        className={`header-enter fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
             ? 'bg-dark/95 backdrop-blur-md py-4 shadow-lg shadow-black/20'
             : 'bg-transparent py-6'
@@ -105,46 +109,35 @@ const Header = () => {
             aria-label="メニューを開く"
           >
             <div className="relative w-6 h-4">
-              <motion.span
-                animate={{
-                  top: mobileMenuOpen ? '50%' : '0%',
-                  rotate: mobileMenuOpen ? 45 : 0,
-                  translateY: mobileMenuOpen ? '-50%' : '0%',
-                }}
-                transition={{ duration: 0.3 }}
-                className="absolute left-0 w-full h-[1px] bg-white"
+              <span
+                className={`absolute left-0 w-full h-[1px] bg-white transition-all duration-300 ${
+                  mobileMenuOpen ? 'top-1/2 -translate-y-1/2 rotate-45' : 'top-0'
+                }`}
               />
-              <motion.span
-                animate={{
-                  opacity: mobileMenuOpen ? 0 : 1,
-                }}
-                transition={{ duration: 0.2 }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[1px] bg-white"
+              <span
+                className={`absolute left-0 top-1/2 -translate-y-1/2 w-full h-[1px] bg-white transition-opacity duration-200 ${
+                  mobileMenuOpen ? 'opacity-0' : 'opacity-100'
+                }`}
               />
-              <motion.span
-                animate={{
-                  bottom: mobileMenuOpen ? '50%' : '0%',
-                  rotate: mobileMenuOpen ? -45 : 0,
-                  translateY: mobileMenuOpen ? '50%' : '0%',
-                }}
-                transition={{ duration: 0.3 }}
-                className="absolute left-0 bottom-0 w-full h-[1px] bg-white"
+              <span
+                className={`absolute left-0 w-full h-[1px] bg-white transition-all duration-300 ${
+                  mobileMenuOpen ? 'bottom-1/2 translate-y-1/2 -rotate-45' : 'bottom-0'
+                }`}
               />
             </div>
           </button>
         </div>
-      </motion.header>
+      </header>
 
       {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-40 bg-dark lg:hidden"
-          >
+      {/* 閉じるときもフェードアウトさせるため常に描画し、閉じている間は見えず触れない状態にする */}
+      <div
+        aria-hidden={!mobileMenuOpen}
+        inert={!mobileMenuOpen}
+        className={`fixed inset-0 z-40 bg-dark lg:hidden transition-[opacity,visibility] duration-300 ${
+          mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'
+        }`}
+      >
             {/* Decorative background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute top-1/4 right-0 w-[200px] h-[200px] rounded-full bg-accent opacity-5 blur-3xl translate-x-1/2" />
@@ -154,12 +147,10 @@ const Header = () => {
             <nav className="relative h-full flex flex-col items-center justify-between pt-24 pb-8">
               <ul className="flex flex-col items-center gap-6">
                 {navItems.map((item, index) => (
-                  <motion.li
+                  <li
                     key={item.name}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    transition={{ delay: 0.1 + index * 0.1 }}
+                    className={menuItemClass}
+                    style={menuItemDelay(0.1 + index * 0.1)}
                   >
                     <Link
                       href={item.href}
@@ -173,14 +164,9 @@ const Header = () => {
                         {item.name}
                       </span>
                     </Link>
-                  </motion.li>
+                  </li>
                 ))}
-                <motion.li
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ delay: 0.5 }}
-                >
+                <li className={menuItemClass} style={menuItemDelay(0.5)}>
                   <Link
                     href="/booking"
                     className="mt-2 px-8 py-4 bg-accent text-white text-sm tracking-[0.15em] uppercase"
@@ -188,16 +174,13 @@ const Header = () => {
                   >
                     ご予約はこちら
                   </Link>
-                </motion.li>
+                </li>
               </ul>
 
               {/* Contact info */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 0.6 }}
-                className="text-center"
+              <div
+                className={`text-center transition-opacity duration-500 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                style={menuItemDelay(0.6)}
               >
                 <p className="text-xs tracking-[0.2em] text-text-muted mb-2">
                   RESERVATION
@@ -208,11 +191,9 @@ const Header = () => {
                 >
                   06-6908-4859
                 </a>
-              </motion.div>
+              </div>
             </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </>
   );
 };

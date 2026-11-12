@@ -815,3 +815,55 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gray);
 }
+
+/* ============================================
+   Scroll reveal（RevealSection）
+   画面に入ったら data-reveal の要素を順にフェードイン。Framer Motion の
+   fadeInUp（0.8秒・40px）と staggerChildren（0.15秒・開始0.2秒）に合わせている。
+   ============================================ */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: calc(0.2s + var(--reveal-index, 0) * 0.15s);
+}
+
+[data-reveal='fade'] {
+  transform: none;
+  transition-duration: 1s;
+}
+
+.reveal-section[data-revealed='true'] [data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ヘッダーの登場（以前は Framer Motion の y: -100 → 0, 0.6秒） */
+@keyframes header-enter {
+  from {
+    transform: translateY(-100px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.header-enter {
+  animation: header-enter 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-enter {
+    animation: none;
+  }
+}

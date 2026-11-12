@@ -1,85 +1,49 @@
-'use client';
-
-import { useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, Clock, Calendar, Sparkles, CreditCard } from 'lucide-react';
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 }
-  }
-};
-
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 
 interface PaymentMethod {
   code: string;
   displayName: string;
 }
 
-interface AboutClientProps {
+interface AboutContentProps {
   paymentMethods: PaymentMethod[];
   closedDaysText: string;
 }
 
-export default function AboutClient({ paymentMethods, closedDaysText }: AboutClientProps) {
+// 店舗情報ページの本体（サーバー部品）。ブラウザで動くのは表示アニメーション（RevealSection）だけ。
+export default function AboutContent({ paymentMethods, closedDaysText }: AboutContentProps) {
 
   return (
     <div className="min-h-screen pt-32">
       {/* Hero */}
       <section className="container-wide pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center"
-        >
+        <div className="text-center hero-enter">
           <p className="text-subheading mb-4">About</p>
           <h1 className="text-display mb-6">店舗情報</h1>
           <div className="divider-line mx-auto" />
-        </motion.div>
+        </div>
       </section>
 
       {/* Concept Section */}
-      <AnimatedSection className="py-12 section-dark">
+      <RevealSection className="py-12 section-dark">
         <div className="container-wide relative z-10">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <motion.p variants={fadeInUp} className="text-subheading mb-4">
+              <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
                 Concept
-              </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-heading mb-8">
+              </p>
+              <h2 data-reveal="up" style={revealOrder(1)} className="text-heading mb-8">
                 一人一人の男性に<br />
                 <span className="text-gold">「光」</span>と<span style={{ color: '#3A7058' }}>「印象」</span>を…
-              </motion.h2>
-              <motion.div variants={fadeInUp} className="divider-line mx-auto mb-8" />
+              </h2>
+              <div data-reveal="up" style={revealOrder(2)} className="divider-line mx-auto mb-8" />
             </div>
 
-            <motion.div variants={fadeInUp} className="text-body text-center space-y-6 mb-8">
+            <div data-reveal="up" style={revealOrder(3)} className="text-body text-center space-y-6 mb-8">
               <p>
                 柔らかな「光」が差すプライベート空間で<br />
                 一人のスタッフが最初から最後まで丁寧にお客様と向き合い<br />
@@ -90,10 +54,10 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                 日々忙しい大人の男性にカット、シェービング、ヘッドスパなど<br />
                 様々なメニューを通じ「上質な休息」をご提供します。
               </p>
-            </motion.div>
+            </div>
 
             {/* Entrance Image */}
-            <motion.div variants={fadeInUp} className="mb-4 max-w-3xl mx-auto">
+            <div data-reveal="up" style={revealOrder(4)} className="mb-4 max-w-3xl mx-auto">
               <div className="relative aspect-[4/3] rounded overflow-hidden border border-glass-border">
                 <Image
                   src="/entrance.webp"
@@ -104,10 +68,10 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   quality={90}
                 />
               </div>
-            </motion.div>
+            </div>
 
             {/* Name Origin */}
-            <motion.div variants={fadeInUp} className="glass-card p-8 md:p-12 text-center">
+            <div data-reveal="up" style={revealOrder(5)} className="glass-card p-8 md:p-12 text-center">
               <p className="text-xs tracking-[0.2em] text-gold uppercase mb-4">Name Origin</p>
               <h3 className="text-2xl font-serif mb-6">サロン名の由来</h3>
               <p className="text-body">
@@ -115,17 +79,17 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                 印象派の中で最も名が知られた光の画家、<br />
                 クロード・モネから取りました。
               </p>
-            </motion.div>
+            </div>
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Featured Services */}
-      <AnimatedSection className="py-12 section-gradient">
+      <RevealSection className="py-12 section-gradient">
         <div className="container-wide">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Head Spa */}
-            <motion.div variants={fadeInUp} className="glass-card overflow-hidden">
+            <div data-reveal="up" style={revealOrder(0)} className="glass-card overflow-hidden">
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
@@ -155,10 +119,10 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Shaving */}
-            <motion.div variants={fadeInUp} className="glass-card overflow-hidden">
+            <div data-reveal="up" style={revealOrder(1)} className="glass-card overflow-hidden">
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
@@ -188,26 +152,26 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Stylist Section */}
-      <AnimatedSection className="py-12 section-dark">
+      <RevealSection className="py-12 section-dark">
         <div className="container-wide relative z-10">
           <div className="text-center mb-10">
-            <motion.p variants={fadeInUp} className="text-subheading mb-4">
+            <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
               Stylist
-            </motion.p>
-            <motion.h2 variants={fadeInUp} className="text-heading mb-6">
+            </p>
+            <h2 data-reveal="up" style={revealOrder(1)} className="text-heading mb-6">
               スタイリスト紹介
-            </motion.h2>
-            <motion.div variants={fadeInUp} className="divider-line mx-auto" />
+            </h2>
+            <div data-reveal="up" style={revealOrder(2)} className="divider-line mx-auto" />
           </div>
 
           <div className="max-w-2xl mx-auto">
-            <motion.div variants={fadeInUp} className="glass-card p-8 md:p-12">
+            <div data-reveal="up" style={revealOrder(3)} className="glass-card p-8 md:p-12">
               <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                 {/* Stylist Photo */}
                 <div className="w-48 h-48 md:w-56 md:h-56 rounded-full flex-shrink-0 border border-glass-border overflow-hidden relative">
@@ -253,27 +217,27 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Access Section */}
-      <AnimatedSection className="py-12 section-gradient">
+      <RevealSection className="py-12 section-gradient">
         <div className="container-wide">
           <div className="text-center mb-10">
-            <motion.p variants={fadeInUp} className="text-subheading mb-4">
+            <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
               Access
-            </motion.p>
-            <motion.h2 variants={fadeInUp} className="text-heading mb-6">
+            </p>
+            <h2 data-reveal="up" style={revealOrder(1)} className="text-heading mb-6">
               アクセス
-            </motion.h2>
-            <motion.div variants={fadeInUp} className="divider-line mx-auto" />
+            </h2>
+            <div data-reveal="up" style={revealOrder(2)} className="divider-line mx-auto" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             {/* Info */}
-            <motion.div variants={fadeInUp} className="space-y-6">
+            <div data-reveal="up" style={revealOrder(3)} className="space-y-6">
               <div>
                 <h3 className="text-2xl font-serif mb-6">MONË</h3>
                 <p className="text-xs tracking-[0.2em] text-text-muted uppercase mb-2">
@@ -349,10 +313,10 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
 
             {/* Google Maps Embed */}
-            <motion.div variants={fadeInUp} className="w-full">
+            <div data-reveal="up" style={revealOrder(4)} className="w-full">
               <div className="w-full aspect-square lg:aspect-[4/3] glass-card overflow-hidden relative">
                 <iframe
                   src="https://maps.google.com/maps?q=%E5%A4%A7%E9%98%AA%E5%BA%9C%E5%AE%88%E5%8F%A3%E5%B8%82%E5%85%AB%E9%9B%B2%E4%B8%AD%E7%94%BA1-24-1&t=&z=16&ie=UTF8&iwloc=&output=embed"
@@ -377,10 +341,10 @@ export default function AboutClient({ paymentMethods, closedDaysText }: AboutCli
                   </a>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* CTA */}
       <section className="py-12 relative overflow-hidden">
