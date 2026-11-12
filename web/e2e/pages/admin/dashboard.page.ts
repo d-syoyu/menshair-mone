@@ -23,7 +23,8 @@ export class AdminDashboardPage extends BasePage {
     this.totalReservationsCount = page.locator('[data-stat="total"]');
     this.quickLinks = page.locator('[data-section="quick-links"], .quick-links');
     this.reservationTimeline = page.locator('[data-section="timeline"], .timeline');
-    this.logoutButton = page.locator('button:has-text("ログアウト"), a:has-text("ログアウト")');
+    // 「すべての端末からログアウト」と区別するため、名前が完全に一致するものだけを選ぶ
+    this.logoutButton = page.getByRole('button', { name: 'ログアウト', exact: true });
   }
 
   /**
