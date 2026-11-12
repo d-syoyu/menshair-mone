@@ -6,6 +6,7 @@ import { getNewsPageById, updateNewsPageStatus, getNewsletterTargets } from "@/l
 import { sendEmail, createNewsletterHtml, createNewsletterText } from "@/lib/email";
 import { filterCustomersByTargets } from "@/lib/customer-filter";
 import { revalidatePath } from "next/cache";
+import { revalidateHomeNews } from "@/lib/notion-public-revalidation";
 
 // ステータス定数
 const STATUS = {
@@ -16,7 +17,7 @@ const STATUS = {
 } as const;
 
 function revalidatePublicNews(slug?: string) {
-  revalidatePath("/");
+  revalidateHomeNews();
   revalidatePath("/news");
   revalidatePath("/sitemap.xml");
   if (slug) {

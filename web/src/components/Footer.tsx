@@ -1,36 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Instagram, MapPin, Phone, Clock } from 'lucide-react';
-import { getJstDateParts } from '@/lib/date-utils';
 
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+interface FooterProps {
+  // 定休日の表示テキスト。ルートレイアウトでキャッシュ（タグ business-settings）から渡す。
+  // 以前はページ表示のたびに /api/holidays を呼んでいた（関数起動＋DB 起動の原因）。
+  closedDaysText: string;
+}
 
-const Footer = () => {
+const Footer = ({ closedDaysText }: FooterProps) => {
   const pathname = usePathname();
-  const [closedDaysText, setClosedDaysText] = useState('毎週月曜日（不定休あり）');
-
-  useEffect(() => {
-    const fetchClosedDays = async () => {
-      try {
-        const { year, month } = getJstDateParts();
-        const res = await fetch(`/api/holidays?year=${year}&month=${month}`);
-        const data = await res.json();
-        const closedDays: number[] = data.closedDays || [1];
-        if (closedDays.length === 0) {
-          setClosedDaysText('不定休');
-        } else {
-          const dayNames = closedDays.map(d => WEEKDAYS[d]).join('・');
-          setClosedDaysText(`毎週${dayNames}曜日（不定休あり）`);
-        }
-      } catch (error) {
-        console.error('Failed to fetch closed days:', error);
-      }
-    };
-    fetchClosedDays();
-  }, []);
 
   // 管理画面では表示しない
   if (pathname?.startsWith('/admin')) {

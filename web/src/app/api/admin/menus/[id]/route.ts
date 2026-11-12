@@ -129,7 +129,7 @@ export async function PUT(
     });
 
     // メニューキャッシュを無効化
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     return NextResponse.json(menu);
   } catch (error) {
@@ -172,7 +172,7 @@ export async function DELETE(
     });
 
     // メニューキャッシュを無効化
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     return NextResponse.json({ message: "メニューを削除しました" });
   } catch (error) {

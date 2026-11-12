@@ -2,10 +2,11 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { BlogPost } from '@/lib/notion';
+import type { HomeNewsItem } from '@/lib/home-news';
 import Image from 'next/image';
 import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Clock, MapPin, Calendar, Phone } from 'lucide-react';
+import HeroBackground from './HeroBackground';
 
 // Animation variants
 const fadeInUp: Variants = {
@@ -142,7 +143,7 @@ const featuredMenus = [
 
 
 interface HomeClientProps {
-  initialNewsItems: BlogPost[];
+  initialNewsItems: HomeNewsItem[];
   closedDaysText: string;
 }
 
@@ -156,15 +157,7 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
       <section className="relative min-h-[70vh] md:min-h-screen md:h-screen flex items-center justify-center overflow-hidden overflow-x-clip pt-24 pb-12 md:pt-0 md:pb-0">
         {/* Hero Background Image */}
         <div className="absolute inset-0 z-0 overflow-hidden overflow-x-clip">
-          <Image
-            src="/image1.webp"
-            alt=""
-            fill
-            priority
-            fetchPriority="high"
-            sizes="100vw"
-            className="object-cover"
-          />
+          <HeroBackground />
 
           {/* Overlay for text readability - darker for white background areas, stronger on mobile */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/60 to-black/70 md:from-black/55 md:via-black/50 md:to-black/60" />

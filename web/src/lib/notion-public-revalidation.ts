@@ -1,8 +1,15 @@
-import { revalidatePath } from "next/cache";
-import { getNews } from "@/lib/notion";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { getNews, type BlogPost } from "@/lib/notion";
+import {
+  HOME_NEWS_CACHE_TAG,
+  getCachedHomeNewsOrNull,
+  isSameHomeNews,
+  selectLatestHomeNews,
+} from "@/lib/home-news";
 
+// トップページ（/）はここに入れない。お知らせが変わったときだけ HOME_NEWS_CACHE_TAG で更新する。
+// 以下のページは Notion の署名付き画像 URL（約1時間で失効）を含むため、定期的に作り直す。
 const NOTION_PUBLIC_PAGE_PATHS = [
-  "/",
   "/news",
   "/gallery",
   "/products",
@@ -72,8 +79,21 @@ export async function revalidateNotionPublicContent(options?: { origin?: string;
     revalidatedPaths.add(path);
   }
 
+  let news: BlogPost[] | null = null;
   try {
-    const news = await getNews();
+    news = await getNews();
+  } catch (error) {
+    console.error("[Notion Public Revalidation] Failed to fetch news:", error);
+  }
+
+  const homeNewsChanged = await revalidateHomeNewsIfChanged(news);
+  if (homeNewsChanged) {
+    revalidatedPaths.add("/");
+    warmupPaths.add("/");
+  }
+
+  try {
+    if (!news) throw new Error("news unavailable");
     const warmNewsLimit = Number(process.env.NOTION_REVALIDATE_WARM_NEWS_LIMIT ?? 20);
 
     for (const post of news) {
@@ -97,6 +117,35 @@ export async function revalidateNotionPublicContent(options?: { origin?: string;
 
   return {
     revalidatedPaths: Array.from(revalidatedPaths),
+    homeNewsChanged,
     ...warmup,
   };
+}
+
+/**
+ * トップページのお知らせ（最新3件）が Notion の最新と違うときだけタグを破棄する。
+ * 取得に失敗した（空の）ときは、表示中の内容を消さないよう何もしない。
+ */
+async function revalidateHomeNewsIfChanged(news: BlogPost[] | null): Promise<boolean> {
+  if (!news || news.length === 0) {
+    return false;
+  }
+
+  const latest = selectLatestHomeNews(news);
+  const cached = await getCachedHomeNewsOrNull();
+
+  if (cached && isSameHomeNews(cached, latest)) {
+    return false;
+  }
+
+  // データキャッシュを即時に破棄（'max' だと再生成時に古いお知らせを再利用してしまう）。
+  // その直後に warm でトップを再生成するので、訪問者が待たされることはない。
+  revalidateHomeNews();
+  return true;
+}
+
+/** Notion のボタン（webhook）など、確実に変わったと分かっているとき用 */
+export function revalidateHomeNews() {
+  revalidateTag(HOME_NEWS_CACHE_TAG, { expire: 0 });
+  revalidatePath("/");
 }
