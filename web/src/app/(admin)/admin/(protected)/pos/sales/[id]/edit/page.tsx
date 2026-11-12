@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Save,
@@ -16,11 +15,6 @@ import {
   Trash2,
   ChevronDown,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface SaleItem {
   id?: string;
@@ -488,12 +482,7 @@ export default function EditSalePage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-4xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href={`/admin/pos/sales/${saleId}`}
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -505,29 +494,17 @@ export default function EditSalePage() {
           <p className="text-gray-600">
             {sale.saleNumber} - {formatDate(sale.saleDate)} {sale.saleTime}
           </p>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               {error}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           {/* Customer Info (Read-only) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium mb-4">顧客情報</h2>
@@ -597,15 +574,8 @@ export default function EditSalePage() {
                       </button>
 
                       {/* メニューリスト（展開時のみ表示） */}
-                      <AnimatePresence>
                         {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="border-t border-gray-200"
-                          >
+                          <div className="border-t border-gray-200">
                             <div className="p-2 space-y-1 bg-gray-50">
                               {categoryMenus.map((menu) => (
                                 <label
@@ -637,9 +607,8 @@ export default function EditSalePage() {
                                 </label>
                               ))}
                             </div>
-                          </motion.div>
+                          </div>
                         )}
-                      </AnimatePresence>
                     </div>
                   );
                 });
@@ -911,7 +880,7 @@ export default function EditSalePage() {
               <Save className="w-4 h-4" />
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

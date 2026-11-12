@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Plus,
@@ -18,11 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface SaleItem {
   id: string;
@@ -217,12 +211,7 @@ export default function SalesListPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide max-w-6xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href="/admin/pos"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -240,41 +229,24 @@ export default function SalesListPage() {
               新規会計登録
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
               <Check className="w-5 h-5" />
               {success}
-            </motion.div>
+            </div>
           )}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"
-            >
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               {error}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* Filters */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6"
-        >
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">開始日</label>
@@ -338,15 +310,10 @@ export default function SalesListPage() {
               </select>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Sales List */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-lg shadow-sm overflow-hidden"
-        >
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center text-gray-500">読み込み中...</div>
           ) : sales.length === 0 ? (
@@ -439,12 +406,7 @@ export default function SalesListPage() {
 
                     {/* Expanded View */}
                     {isExpanded && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="px-4 sm:px-6 pb-4 border-t border-gray-100"
-                      >
+                      <div className="px-4 sm:px-6 pb-4 border-t border-gray-100">
                         <div className="pt-4 space-y-3">
                           {/* Items */}
                           <div>
@@ -509,33 +471,24 @@ export default function SalesListPage() {
                             </div>
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
         {isDeleteModalOpen && deletingSale && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsDeleteModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm md:max-w-md mx-4">
               <div className="p-6">
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                   <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -559,10 +512,9 @@ export default function SalesListPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

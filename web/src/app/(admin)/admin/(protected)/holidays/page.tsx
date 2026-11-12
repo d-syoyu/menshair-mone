@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -16,11 +15,6 @@ import {
   Settings,
   Plus,
 } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -486,12 +480,7 @@ export default function AdminBusinessPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-20 sm:pt-24 pb-16 sm:pb-20">
       <div className="container-wide max-w-5xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6 sm:mb-8"
-        >
+        <div className="mb-6 sm:mb-8">
           <Link
             href="/admin"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -505,41 +494,24 @@ export default function AdminBusinessPage() {
           <p className="mt-2 text-gray-500 text-xs sm:text-sm">
             定休日、不定休、特別営業日を設定できます。
           </p>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <AnimatePresence>
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-3 sm:mb-4 p-3 sm:p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2 text-xs sm:text-sm"
-            >
+            <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2 text-xs sm:text-sm">
               <Check className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
               <span>{success}</span>
-            </motion.div>
+            </div>
           )}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-3 sm:mb-4 p-3 sm:p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2 text-xs sm:text-sm"
-            >
+            <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2 text-xs sm:text-sm">
               <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
               <span>{error}</span>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* 定休日設定 */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-6 bg-white rounded-lg shadow-sm p-4 sm:p-6"
-        >
+        <div className="mb-6 bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Settings className="w-5 h-5 text-gray-600" />
             <h2 className="text-base sm:text-lg font-medium">定休日設定</h2>
@@ -574,16 +546,11 @@ export default function AdminBusinessPage() {
           >
             {isSavingClosedDays ? '保存中...' : '定休日を保存'}
           </button>
-        </motion.div>
+        </div>
 
         <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Calendar */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="lg:col-span-2 bg-white rounded-lg shadow-sm p-4 sm:p-6"
-          >
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-4 sm:p-6">
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <button
@@ -733,15 +700,10 @@ export default function AdminBusinessPage() {
               定休日をタップ → 特別営業日として設定<br />
               通常日をタップ → 不定休として設定
             </p>
-          </motion.div>
+          </div>
 
           {/* Right Panel: Lists */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="space-y-4 lg:space-y-6"
-          >
+          <div className="space-y-4 lg:space-y-6">
             {/* Holiday List */}
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center gap-2">
@@ -849,27 +811,18 @@ export default function AdminBusinessPage() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
       {/* Add Modal */}
-      <AnimatePresence>
         {isAddModalOpen && selectedDate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsAddModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h2 className="text-base sm:text-lg font-medium">
@@ -1174,28 +1127,18 @@ export default function AdminBusinessPage() {
                   </div>
                 </form>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Delete Holiday Modal */}
-      <AnimatePresence>
         {isDeleteModalOpen && deletingHoliday && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsDeleteModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 bg-red-100 rounded-full">
                   <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
@@ -1234,28 +1177,18 @@ export default function AdminBusinessPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Delete Special Open Day Modal */}
-      <AnimatePresence>
         {isDeleteModalOpen && deletingSpecialOpenDay && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setIsDeleteModalOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4"
-            >
+             />
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 bg-green-100 rounded-full">
                   <CalendarCheck className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
@@ -1299,10 +1232,9 @@ export default function AdminBusinessPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

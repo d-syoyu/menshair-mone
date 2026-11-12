@@ -1,41 +1,23 @@
-'use client';
-
-import { motion } from 'framer-motion';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-};
-
 interface PaymentMethod {
   code: string;
   displayName: string;
 }
 
-interface TermsClientProps {
+interface TermsContentProps {
   paymentMethods: PaymentMethod[];
 }
 
-export default function TermsClient({ paymentMethods }: TermsClientProps) {
+export default function TermsContent({ paymentMethods }: TermsContentProps) {
   return (
     <div className="min-h-screen pt-32 pb-20">
       <div className="container-narrow">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-        >
+        <div className="enter-up">
           <p className="text-subheading mb-4">Terms of Service</p>
           <h1 className="text-heading mb-8">利用規約</h1>
           <div className="divider-line mb-12" />
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="prose prose-invert max-w-none"
-        >
+        <div className="enter-up prose prose-invert max-w-none">
           <div className="space-y-10 text-text-secondary">
             <section>
               <h2 className="text-xl font-serif text-text-primary mb-4">第1条（適用）</h2>
@@ -155,7 +137,7 @@ export default function TermsClient({ paymentMethods }: TermsClientProps) {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

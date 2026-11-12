@@ -3,7 +3,6 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 
 const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
@@ -32,12 +31,7 @@ function AuthErrorContent() {
   const errorInfo = ERROR_MESSAGES[error] || ERROR_MESSAGES.Default;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-md mx-auto"
-    >
+    <div className="enter-up max-w-md mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
         <p className="text-subheading mb-2">Error</p>
@@ -79,7 +73,7 @@ function AuthErrorContent() {
       <p className="mt-6 text-center text-xs text-text-muted">
         問題が解決しない場合は、お電話（06-6908-4859）でお問い合わせください
       </p>
-    </motion.div>
+    </div>
   );
 }
 

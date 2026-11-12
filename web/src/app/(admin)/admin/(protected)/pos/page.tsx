@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -19,11 +18,6 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { formatJstDate } from '@/lib/date-utils';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface SaleItem {
   itemType: 'MENU' | 'PRODUCT';
@@ -174,12 +168,7 @@ export default function POSDashboard() {
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <Link
             href="/admin"
             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-4 px-3 py-2 -ml-3 min-h-[44px]"
@@ -195,15 +184,10 @@ export default function POSDashboard() {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Stats */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <Banknote className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-gold)]" />
@@ -236,15 +220,10 @@ export default function POSDashboard() {
               {stats ? formatPrice(stats.monthSales) : '-'}
             </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Quick Actions - Row 1 */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
           <Link
             href="/admin/pos/sales/new"
             className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
@@ -296,15 +275,10 @@ export default function POSDashboard() {
               <p className="text-xs text-gray-500 hidden sm:block">店販商品</p>
             </div>
           </Link>
-        </motion.div>
+        </div>
 
         {/* Quick Actions - Row 2 */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <Link
             href="/admin/pos/discounts"
             className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
@@ -345,15 +319,10 @@ export default function POSDashboard() {
           </Link>
 
           <div className="hidden sm:block" />
-        </motion.div>
+        </div>
 
         {/* Today's Sales */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-xl shadow-sm overflow-hidden"
-        >
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="p-4 sm:p-6 border-b border-gray-100">
             <h2 className="text-lg md:text-xl font-medium">本日の会計履歴</h2>
           </div>
@@ -421,7 +390,7 @@ export default function POSDashboard() {
               </Link>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
     </div>
   );

@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { motion } from 'framer-motion';
 import { Calendar, User, LogOut, ArrowRight, Clock, Scissors, Edit2, Save, X, Phone } from 'lucide-react';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 interface Reservation {
   id: string;
@@ -20,7 +14,6 @@ interface Reservation {
   endTime: string;
   status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
 }
-
 
 // ユーザープロフィールの型
 interface UserProfile {
@@ -148,24 +141,14 @@ export default function MyPage() {
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-wide max-w-2xl mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="text-center mb-12"
-        >
+        <div className="enter-up text-center mb-12">
           <p className="text-subheading mb-2">My Page</p>
           <h1 className="text-heading mb-4 text-white">マイページ</h1>
           <div className="divider-line mx-auto" />
-        </motion.div>
+        </div>
 
         {/* User Info */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="glass-card p-6 mb-8"
-        >
+        <div className="enter-up glass-card p-6 mb-8">
           {saveSuccess && (
             <div className="bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded mb-4 text-sm">
               プロフィールを更新しました
@@ -232,15 +215,10 @@ export default function MyPage() {
               </button>
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Quick Actions */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
-        >
+        <div className="enter-up grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <Link
             href="/booking"
             className="flex items-center gap-4 p-6 bg-accent text-white rounded hover:bg-accent-light transition-colors"
@@ -266,15 +244,10 @@ export default function MyPage() {
             </div>
             <ArrowRight className="w-5 h-5 text-text-muted" />
           </Link>
-        </motion.div>
+        </div>
 
         {/* Upcoming Reservations */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="glass-card p-6 mb-8"
-        >
+        <div className="enter-up glass-card p-6 mb-8">
           <div className="mb-6">
             <h2 className="text-lg font-medium text-white">直近の予約</h2>
           </div>
@@ -323,15 +296,10 @@ export default function MyPage() {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Sign Out */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="text-center"
-        >
+        <div className="enter-up text-center">
           <button
             onClick={handleSignOut}
             className="inline-flex items-center gap-2 px-4 py-2 text-text-muted hover:text-red-400 border border-transparent hover:border-red-400/30 hover:bg-red-400/10 rounded transition-all duration-300 cursor-pointer"
@@ -339,7 +307,7 @@ export default function MyPage() {
             <LogOut className="w-4 h-4" />
             ログアウト
           </button>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

@@ -823,11 +823,12 @@ h1, h2, h3, h4, h5, h6 {
    ============================================ */
 [data-reveal] {
   opacity: 0;
-  transform: translateY(40px);
-  transition:
-    opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-delay: calc(0.2s + var(--reveal-index, 0) * 0.15s);
+  transform: translateY(var(--reveal-y, 40px));
+  transition-property: opacity, transform;
+  transition-duration: var(--reveal-duration, 0.8s);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  /* 一覧ごとに [--reveal-base:0s] [--reveal-step:0.1s] [--reveal-y:20px] [--reveal-duration:0.6s] で調整できる */
+  transition-delay: calc(var(--reveal-base, 0.2s) + var(--reveal-index, 0) * var(--reveal-step, 0.15s));
 }
 
 [data-reveal='fade'] {
@@ -835,7 +836,8 @@ h1, h2, h3, h4, h5, h6 {
   transition-duration: 1s;
 }
 
-.reveal-section[data-revealed='true'] [data-reveal] {
+.reveal-section[data-revealed='true'] [data-reveal],
+.reveal-section[data-revealed='true'][data-reveal] {
   opacity: 1;
   transform: none;
 }
@@ -864,6 +866,79 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (prefers-reduced-motion: reduce) {
   .header-enter {
+    animation: none;
+  }
+}
+
+/* ============================================
+   マウント時の登場アニメーション（以前は Framer Motion の initial → animate）
+   変化量・時間・遅れは CSS 変数で調整する：
+   [--enter-y:30px] [--enter-duration:0.8s] [--enter-delay:0.2s] [--enter-scale:0.9]
+   ============================================ */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-y, 20px));
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes enter-zoom {
+  from {
+    opacity: 0;
+    transform: scale(var(--enter-scale, 0.95));
+  }
+}
+
+/* 予約完了のチェックマーク（以前は spring で 0 → 1。少し行き過ぎて戻る動き） */
+@keyframes enter-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.enter-up,
+.enter-fade,
+.enter-zoom,
+.enter-pop {
+  animation-duration: var(--enter-duration, 0.6s);
+  animation-delay: var(--enter-delay, 0s);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.enter-up {
+  animation-name: enter-up;
+}
+
+.enter-fade {
+  animation-name: enter-fade;
+}
+
+.enter-zoom {
+  animation-name: enter-zoom;
+}
+
+.enter-pop {
+  animation-name: enter-pop;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-up,
+  .enter-fade,
+  .enter-zoom,
+  .enter-pop {
     animation: none;
   }
 }

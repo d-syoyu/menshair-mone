@@ -2,7 +2,6 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { MailX, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -100,12 +99,7 @@ export default function UnsubscribePage() {
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-narrow">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
-        >
+        <div className="enter-up max-w-md mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
             <p className="text-subheading mb-2">Newsletter</p>
@@ -121,7 +115,7 @@ export default function UnsubscribePage() {
           }>
             <UnsubscribeContent />
           </Suspense>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

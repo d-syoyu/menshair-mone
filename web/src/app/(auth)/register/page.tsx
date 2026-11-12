@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { motion } from 'framer-motion';
 import { Mail, ArrowRight, CheckCircle, User, Phone } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -50,12 +49,7 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen bg-dark pt-32 pb-20">
         <div className="container-narrow">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-md mx-auto text-center"
-          >
+          <div className="enter-up max-w-md mx-auto text-center">
             <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
@@ -68,7 +62,7 @@ export default function RegisterPage() {
             <p className="text-sm text-text-muted">
               メールが届かない場合は、迷惑メールフォルダをご確認ください。
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -77,12 +71,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-narrow">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
-        >
+        <div className="enter-up max-w-md mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
             <p className="text-subheading mb-2">Sign Up</p>
@@ -208,7 +197,7 @@ export default function RegisterPage() {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

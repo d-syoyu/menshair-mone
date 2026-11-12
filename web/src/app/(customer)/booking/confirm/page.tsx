@@ -3,14 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Calendar, Clock, Scissors, ArrowLeft, Check, User, Phone, Ticket, X, Loader2 } from 'lucide-react';
 import { SALON_INFO } from '@/constants/salon';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -32,7 +26,6 @@ interface DbMenu {
     displayOrder: number;
   };
 }
-
 
 // ユーザー情報の型
 interface UserProfile {
@@ -334,16 +327,11 @@ function BookingConfirmContent() {
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-narrow max-w-lg mx-auto px-4">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="text-center mb-12"
-        >
+        <div className="enter-up text-center mb-12">
           <p className="text-subheading mb-2">Confirmation</p>
           <h1 className="text-heading text-white mb-4">予約内容の確認</h1>
           <div className="divider-line mx-auto" />
-        </motion.div>
+        </div>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-12">
@@ -378,12 +366,7 @@ function BookingConfirmContent() {
         )}
 
         {/* Reservation Details */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
-        >
+        <div className="enter-up bg-dark-lighter border border-glass-border rounded p-6 mb-6">
           <h2 className="text-lg font-medium mb-6 text-white">ご予約内容</h2>
 
           <div className="space-y-4">
@@ -483,15 +466,10 @@ function BookingConfirmContent() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Customer Information */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
-        >
+        <div className="enter-up bg-dark-lighter border border-glass-border rounded p-6 mb-6">
           <h2 className="text-lg font-medium mb-6 text-white">お客様情報</h2>
           
           <div className="space-y-4">
@@ -539,15 +517,10 @@ function BookingConfirmContent() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Coupon */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
-        >
+        <div className="enter-up bg-dark-lighter border border-glass-border rounded p-6 mb-6">
           <h2 className="text-lg font-medium mb-4 text-white flex items-center gap-2">
             <Ticket className="w-5 h-5 text-accent-light" />
             クーポン
@@ -630,15 +603,10 @@ function BookingConfirmContent() {
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Note */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-dark-lighter border border-glass-border rounded p-6 mb-6"
-        >
+        <div className="enter-up bg-dark-lighter border border-glass-border rounded p-6 mb-6">
           <label
             htmlFor="note"
             className="block text-xs tracking-wider text-text-muted uppercase mb-2"
@@ -657,15 +625,10 @@ function BookingConfirmContent() {
           <p className="text-xs text-text-muted mt-1 text-right">
             {note.length}/500
           </p>
-        </motion.div>
+        </div>
 
         {/* Salon Info */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-glass-light p-6 rounded mb-8 border border-glass-border"
-        >
+        <div className="enter-up bg-glass-light p-6 rounded mb-8 border border-glass-border">
           <p className="text-sm text-text-muted mb-2">
             ご予約店舗
           </p>
@@ -676,15 +639,10 @@ function BookingConfirmContent() {
           <p className="text-sm text-text-secondary">
             TEL: {SALON_INFO.phone}
           </p>
-        </motion.div>
+        </div>
 
         {/* Cancellation Policy */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="text-sm text-text-muted mb-8"
-        >
+        <div className="enter-up text-sm text-text-muted mb-8">
           <p className="mb-2">【キャンセルポリシー】</p>
           <ul className="space-y-1 list-disc list-inside">
             <li>オンラインでのキャンセル・変更は前日19:00までにお願いいたします。</li>
@@ -692,7 +650,7 @@ function BookingConfirmContent() {
             <li>ご連絡無く10分経過致しましたら無断キャンセル扱いとさせていただきます。</li>
             <li>無断キャンセル及び当日キャンセルに対しキャンセル料をお支払いいただく事もございますのでご注意ください。</li>
           </ul>
-        </motion.div>
+        </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">

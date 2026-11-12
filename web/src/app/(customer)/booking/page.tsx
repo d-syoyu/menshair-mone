@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence, useInView, type Variants } from 'framer-motion';
 import {
   Calendar,
   Clock,
@@ -12,24 +11,8 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 }
-  }
-};
-
-const cardVariant: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-};
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 
 // DBから取得するメニューの型
 interface DbMenu {
@@ -101,23 +84,6 @@ const getCategoryTextColor = (categoryName: string): string => {
   };
   return textColors[categoryName] || "#FFFFFF";
 };
-
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-
-  return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 export default function BookingPage() {
   const router = useRouter();
@@ -355,19 +321,14 @@ export default function BookingPage() {
     <div className="min-h-screen bg-dark pt-24 md:pt-32">
       {/* Hero Header */}
       <section className="container-wide pb-8 md:pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center"
-        >
+        <div className="enter-up [--enter-y:30px] [--enter-duration:0.8s] text-center">
           <p className="text-subheading mb-2 md:mb-4">Reservation</p>
           <h1 className="text-2xl md:text-display text-white mb-4 md:mb-6">ご予約</h1>
           <div className="divider-line mx-auto mb-4 md:mb-8" />
           <p className="text-sm md:text-base text-text-secondary max-w-lg mx-auto px-4">
             複数のメニューを組み合わせてご予約いただけます。
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Progress Steps */}
@@ -407,10 +368,10 @@ export default function BookingPage() {
 
       {/* Step 1: Menu Selection */}
       {step === 1 && (
-        <AnimatedSection className="container-wide pb-12 md:pb-20">
+        <RevealSection as="div" bottomOffset={50} className="container-wide pb-12 md:pb-20 [--reveal-base:0.1s] [--reveal-step:0.1s]">
           {/* Category Tile Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8 md:mb-12">
-            {categories.map((category) => {
+            {categories.map((category, categoryIndex) => {
               const categoryItems = menus.filter(item => item.categoryId === category.id);
               const categoryColor = category.color || '#888';
               const selectedMenu = getSelectedMenuInCategory(category.id);
@@ -418,7 +379,12 @@ export default function BookingPage() {
               const hasSelection = !!selectedMenu;
 
               return (
-                <motion.div key={category.id} variants={cardVariant} className="relative overflow-visible">
+                <div
+                  key={category.id}
+                  data-reveal="up"
+                  style={revealOrder(categoryIndex)}
+                  className="relative overflow-visible [--reveal-y:20px] [--reveal-duration:0.5s]"
+                >
                   {/* Category Tile */}
                   <button
                     onClick={() => handleCategoryClick(category.id)}
@@ -481,15 +447,8 @@ export default function BookingPage() {
                   </button>
 
                   {/* Expanded Menu List */}
-                  <AnimatePresence>
                     {isExpanded && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute left-0 right-0 top-full z-20 mt-1 sm:mt-2"
-                      >
+                      <div className="enter-up [--enter-y:-10px] [--enter-duration:0.2s] absolute left-0 right-0 top-full z-20 mt-1 sm:mt-2">
                         <div className="bg-dark-lighter border border-glass-border shadow-xl rounded overflow-hidden max-h-[60vh] overflow-y-auto">
                           {categoryItems.map((menu, idx) => {
                             const isSelected = selectedMenuIds.includes(menu.id);
@@ -530,23 +489,16 @@ export default function BookingPage() {
                             );
                           })}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </motion.div>
+                </div>
               );
             })}
           </div>
 
           {/* Selected Summary */}
-          <AnimatePresence>
             {selectedMenuIds.length > 0 && totals && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
-                className="bg-dark-lighter border border-accent/50 rounded p-4 sm:p-6 md:p-8 mb-8 md:mb-12"
-              >
+              <div className="enter-up [--enter-y:30px] [--enter-duration:0.4s] bg-dark-lighter border border-accent/50 rounded p-4 sm:p-6 md:p-8 mb-8 md:mb-12">
                 <div className="flex justify-between items-start sm:items-center mb-4 sm:mb-6">
                   <div>
                     <p className="text-[10px] sm:text-xs text-text-muted uppercase tracking-wider mb-0.5 sm:mb-1">
@@ -618,9 +570,8 @@ export default function BookingPage() {
                     </p>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
           {/* Next Button */}
           <div className="flex justify-center">
@@ -633,15 +584,16 @@ export default function BookingPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </AnimatedSection>
+        </RevealSection>
       )}
 
       {/* Step 2: Date & Time Selection */}
       {step === 2 && selectedMenuIds.length > 0 && totals && (
-        <AnimatedSection className="container-narrow pb-12 md:pb-20">
+        <RevealSection as="div" bottomOffset={50} className="container-narrow pb-12 md:pb-20 [--reveal-base:0.1s] [--reveal-step:0.1s]">
           {/* Selected Menu Summary */}
-          <motion.div
-            variants={fadeInUp}
+          <div
+            data-reveal="up"
+            style={revealOrder(0)}
             className="bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 mb-6 sm:mb-8"
           >
             <div className="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -680,11 +632,12 @@ export default function BookingPage() {
                 メニューを変更
               </button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Calendar */}
-          <motion.div
-            variants={fadeInUp}
+          <div
+            data-reveal="up"
+            style={revealOrder(1)}
             className="bg-dark-lighter border border-glass-border rounded p-3 sm:p-4 mb-4 sm:mb-6 max-w-sm mx-auto"
           >
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -779,15 +732,11 @@ export default function BookingPage() {
                 ※ {closedDays.map(d => WEEKDAYS[d]).join('・')}曜日は定休日です
               </p>
             )}
-          </motion.div>
+          </div>
 
           {/* Time Slots */}
           {selectedDate && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 md:p-8"
-            >
+            <div className="enter-up [--enter-duration:0.4s] bg-dark-lighter border border-glass-border rounded p-4 sm:p-6 md:p-8">
               <div className="text-sm sm:text-lg font-medium mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 text-white">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-accent-light" />
                 <span>
@@ -855,7 +804,7 @@ export default function BookingPage() {
                   })()}
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
 
           {/* Action Buttons */}
@@ -875,7 +824,7 @@ export default function BookingPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </AnimatedSection>
+        </RevealSection>
       )}
     </div>
   );

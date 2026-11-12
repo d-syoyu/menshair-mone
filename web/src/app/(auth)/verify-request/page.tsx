@@ -1,19 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export default function VerifyRequestPage() {
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="container-narrow">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto"
-        >
+        <div className="enter-up max-w-md mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
             <p className="text-subheading mb-2">Email Sent</p>
@@ -66,7 +60,7 @@ export default function VerifyRequestPage() {
           <p className="mt-6 text-center text-xs text-text-muted">
             リンクは24時間有効です
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

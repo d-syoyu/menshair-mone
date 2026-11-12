@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,11 +19,6 @@ import {
 } from 'lucide-react';
 import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
 import { formatJstDate, getJstDateString } from '@/lib/date-utils';
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
 
 export interface ReservationItem {
   id: string;
@@ -243,12 +237,7 @@ export default function DashboardClient({
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide">
         {/* Header */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
-        >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-medium">管理画面</h1>
             <p className="text-base md:text-lg text-gray-500">
@@ -268,15 +257,10 @@ export default function DashboardClient({
               ログアウト
             </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* Stats */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
           <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <Calendar className="w-6 h-6 md:w-7 md:h-7 text-[var(--color-accent)]" />
@@ -307,15 +291,10 @@ export default function DashboardClient({
             </div>
             <p className="text-3xl md:text-4xl font-light">{stats.totalReservations}</p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Quick Links */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8"
-        >
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
           <Link
             href="/admin/reservations"
             className="flex items-center gap-3 p-3 sm:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
@@ -380,15 +359,10 @@ export default function DashboardClient({
               <p className="text-xs text-gray-500 hidden sm:block">POS・レポート</p>
             </div>
           </Link>
-        </motion.div>
+        </div>
 
         {/* Today's Reservations - Timeline View */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-          className="bg-white rounded-xl shadow-sm"
-        >
+        <div className="bg-white rounded-xl shadow-sm">
           <div className="p-6 md:p-8 border-b border-gray-100">
             <h2 className="text-lg md:text-xl font-medium">本日のご予約</h2>
           </div>
@@ -729,7 +703,7 @@ export default function DashboardClient({
               </div>
             </>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* 確認ダイアログ */}
@@ -740,11 +714,7 @@ export default function DashboardClient({
             onClick={closeConfirmDialog}
           />
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6"
-          >
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md md:max-w-lg w-full p-6">
             <button
               onClick={closeConfirmDialog}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-lg"
@@ -805,7 +775,7 @@ export default function DashboardClient({
                     : '無断キャンセルにする'}
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>

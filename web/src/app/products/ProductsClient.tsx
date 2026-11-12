@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 import type { Product } from '@/lib/notion';
 
 interface ProductsClientProps {
@@ -44,12 +45,7 @@ export default function ProductsClient({ products }: ProductsClientProps) {
       <div className="container-wide">
         {/* Category Filter */}
         {categories.length > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-wrap justify-center gap-3 mb-10"
-          >
+          <div className="enter-up flex flex-wrap justify-center gap-3 mb-10">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -63,7 +59,7 @@ export default function ProductsClient({ products }: ProductsClientProps) {
                 {cat === 'all' ? 'すべて' : cat}
               </button>
             ))}
-          </motion.div>
+          </div>
         )}
 
         {filteredProducts.length === 0 ? (
@@ -74,13 +70,14 @@ export default function ProductsClient({ products }: ProductsClientProps) {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {visibleProducts.map((product, index) => (
-                <motion.div
+                <RevealSection
                   key={product.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="glass-card overflow-hidden group"
+                  as="div"
+                  self
+                  bottomOffset={0}
+                  // 追加読み込み分も含め、遅れは表示単位ごとに 0〜0.7 秒に収める
+                  style={revealOrder(index % LOAD_MORE_COUNT)}
+                  className="glass-card overflow-hidden group [--reveal-base:0s] [--reveal-step:0.1s] [--reveal-y:20px] [--reveal-duration:0.6s]"
                 >
                   {/* Product Image */}
                   <div className="relative aspect-square overflow-hidden bg-dark-lighter">
@@ -121,17 +118,13 @@ export default function ProductsClient({ products }: ProductsClientProps) {
                       </p>
                     )}
                   </div>
-                </motion.div>
+                </RevealSection>
               ))}
             </div>
 
             {/* もっと見るボタン */}
             {hasMore && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-10 text-center"
-              >
+              <div className="enter-fade [--enter-duration:0.4s] mt-10 text-center">
                 <button
                   onClick={handleLoadMore}
                   className="inline-flex items-center gap-2 px-8 py-3 border border-glass-border text-text-secondary hover:text-white hover:border-accent transition-all duration-300 group"
@@ -141,7 +134,7 @@ export default function ProductsClient({ products }: ProductsClientProps) {
                   </span>
                   <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {/* 全件表示時のメッセージ */}

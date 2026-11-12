@@ -1,8 +1,6 @@
-'use client';
-
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { RevealSection } from '@/components/RevealSection';
 import type { CachedCategory, CachedMenu } from '@/lib/menu-cache';
 
 interface MenuContentProps {
@@ -24,12 +22,7 @@ export default function MenuContent({ menus, categories }: MenuContentProps) {
     <div className="min-h-screen pt-32">
       {/* Hero */}
       <section className="container-wide pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center"
-        >
+        <div className="enter-up [--enter-y:30px] [--enter-duration:0.8s] text-center">
           <p className="text-subheading mb-4">Price List</p>
           <h1 className="text-display mb-6">Menu</h1>
           <div className="divider-line mx-auto mb-8" />
@@ -37,7 +30,7 @@ export default function MenuContent({ menus, categories }: MenuContentProps) {
             すべての施術はプライベート空間で<br />
             丁寧にご提供いたします。
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Menu List */}
@@ -48,13 +41,12 @@ export default function MenuContent({ menus, categories }: MenuContentProps) {
           ) : (
             <div className="space-y-10 md:space-y-12">
               {menusByCategory.map(({ category, items }) => (
-                <motion.div
+                <RevealSection
                   key={category.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  viewport={{ once: true }}
-                  className="space-y-4"
+                  as="div"
+                  self
+                  bottomOffset={0}
+                  className="space-y-4 [--reveal-base:0s] [--reveal-y:20px] [--reveal-duration:0.6s]"
                 >
                   <div className="border-b border-glass-border pb-3">
                     <h2 className="text-xl md:text-2xl font-serif text-white">{category.nameEn}</h2>
@@ -75,7 +67,7 @@ export default function MenuContent({ menus, categories }: MenuContentProps) {
                       </div>
                     ))}
                   </div>
-                </motion.div>
+                </RevealSection>
               ))}
             </div>
           )}

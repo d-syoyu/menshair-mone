@@ -1,40 +1,8 @@
-'use client';
-
-import { useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Instagram } from 'lucide-react';
-
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 }
-  }
-};
-
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 
 const staffMembers = [
   {
@@ -55,12 +23,7 @@ export default function StaffPage() {
     <div className="min-h-screen bg-[var(--color-cream)] pt-32">
       {/* Hero */}
       <section className="container-wide pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center"
-        >
+        <div className="enter-up [--enter-y:30px] [--enter-duration:0.8s] text-center">
           <p className="text-subheading mb-4">Our Team</p>
           <h1 className="text-display mb-6">Staff</h1>
           <div className="divider-line mx-auto mb-8" />
@@ -68,17 +31,18 @@ export default function StaffPage() {
             経験豊富なスタイリストが<br />
             あなたの「なりたい」を叶えます
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Staff List */}
-      <AnimatedSection className="pb-32">
+      <RevealSection className="pb-32" bottomOffset={50}>
         <div className="container-wide">
           <div className="space-y-32">
             {staffMembers.map((staff, index) => (
-              <motion.div
+              <div
                 key={staff.id}
-                variants={fadeInUp}
+                data-reveal="up"
+                style={revealOrder(index)}
                 className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center ${
                   index % 2 === 1 ? '' : ''
                 }`}
@@ -143,11 +107,11 @@ export default function StaffPage() {
                     <span className="text-sm">{staff.instagram}</span>
                   </a>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Recruitment */}
       <section className="py-32 bg-[var(--color-cream-dark)]">
