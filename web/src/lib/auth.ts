@@ -13,6 +13,7 @@ import type { Adapter, AdapterAccount } from "next-auth/adapters";
 import { createMagicLinkHtml, createMagicLinkText } from "./email";
 import { Resend as ResendClient } from "resend";
 import { AUTH_SESSION_MAX_AGE } from "./auth-constants";
+import { sessionRoleFor, signInAllowedForRole } from "./auth-roles";
 
 // カスタムPrismaAdapter - useVerificationTokenの問題を修正
 function CustomPrismaAdapter(): Adapter {
@@ -194,13 +195,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       // 初回サインイン時（userが存在する場合）
       if (user) {
         // Credentialsプロバイダーの場合、userオブジェクトに直接roleが含まれている
         if (user.role) {
           token.sub = user.id;
-          token.role = user.role;
+          token.role = sessionRoleFor(account?.provider, user.role);
         } else {
           // LINE/Emailプロバイダーの場合、データベースからroleを取得
           const dbUser = await prisma.user.findUnique({
@@ -210,7 +211,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (dbUser) {
             token.sub = dbUser.id;
-            token.role = dbUser.role;
+            token.role = sessionRoleFor(account?.provider, dbUser.role);
           } else {
             // フォールバック
             token.role = "CUSTOMER";
@@ -233,6 +234,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email! },
         });
+
+        // 管理者はパスワードでのみログインする。メールのリンク送信もここで止まる。
+        if (!signInAllowedForRole(account.provider, existingUser?.role)) {
+          return false;
+        }
 
         if (!existingUser) {
           await prisma.user.create({
