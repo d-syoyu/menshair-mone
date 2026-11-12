@@ -21,6 +21,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { CATEGORY_COLORS, getCategoryTextColor } from '@/constants/menu';
+import SbHubPanel, { SB_STATE_LABELS } from '@/components/admin/SbHubPanel';
 
 // DBメニューの型定義
 interface DbMenu {
@@ -60,6 +61,8 @@ interface ReservationItem {
 
 interface Reservation {
   id: string;
+  sbState?: string;
+  sbRequested?: boolean;
   totalPrice: number;
   totalDuration: number;
   menuSummary: string;
@@ -706,6 +709,7 @@ function AdminReservationsContent() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pt-24 pb-20">
       <div className="container-wide">
+        <SbHubPanel />
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <Link
@@ -1202,11 +1206,16 @@ function AdminReservationsContent() {
                                 {reservation.startTime} - {reservation.endTime}
                               </p>
                             </div>
-                            <span
-                              className={`px-3 py-1.5 text-sm rounded ${STATUS_STYLES[reservation.status]}`}
-                            >
-                              {STATUS_LABELS[reservation.status]}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span
+                                className={`px-3 py-1.5 text-sm rounded ${STATUS_STYLES[reservation.status]}`}
+                              >
+                                {reservation.sbRequested && reservation.status === 'CONFIRMED' ? '申込（確定待ち）' : STATUS_LABELS[reservation.status]}
+                              </span>
+                              {reservation.sbState && SB_STATE_LABELS[reservation.sbState] && (
+                                <span className="text-xs text-gray-500">{SB_STATE_LABELS[reservation.sbState]}</span>
+                              )}
+                            </div>
                           </div>
 
                           {/* メニュー詳細 */}

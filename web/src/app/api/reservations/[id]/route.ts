@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { canCancelReservation } from "@/constants/booking";
 import { sendReservationCancellationEmail, sendAdminCancellationEmail } from "@/lib/email";
+import { cancelReservationOnSb, syncReservationToSb } from "@/lib/sb-hub-sync";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -110,6 +111,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    // SB連携：状態の変更（確定・取り消し）をSOGAに伝える
+    if (status !== reservation.status) await syncReservationToSb(id, "ADMIN");
+
     return NextResponse.json({
       message: "予約ステータスを更新しました",
       reservation: updatedReservation,
@@ -197,6 +201,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: { status: "CANCELLED" },
     });
+
+    // SB連携：SOGAにも取り消しを伝える
+    await cancelReservationOnSb(id);
 
     // キャンセル確認メール送信（非同期・エラー時もAPIは成功扱い）
     if (reservation.user?.email) {

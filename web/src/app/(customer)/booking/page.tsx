@@ -54,6 +54,8 @@ interface AvailabilityData {
   slots: TimeSlot[];
   totalDuration?: number;
   totalPrice?: number;
+  // SB連携でその日の空きを確かめられない時のお知らせ
+  sbNotice?: string;
 }
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -171,7 +173,7 @@ export default function BookingPage() {
     setSelectedTime(null);
     try {
       const dateStr = formatDateLocal(date);
-      const res = await fetch(`/api/availability?date=${dateStr}&menuIds=${menuIds.join(',')}`);
+      const res = await fetch(`/api/availability?date=${dateStr}&menuIds=${menuIds.join(',')}&demand=1`);
       const data = await res.json();
       setAvailability(data);
     } catch (error) {
@@ -753,6 +755,10 @@ export default function BookingPage() {
               ) : availability?.isClosed ? (
                 <div className="text-center py-8 sm:py-12 text-text-muted text-sm sm:text-base">
                   定休日です
+                </div>
+              ) : availability?.sbNotice ? (
+                <div className="text-center py-8 sm:py-12 text-text-muted text-sm sm:text-base">
+                  {availability.sbNotice}
                 </div>
               ) : availability?.slots.length === 0 ? (
                 <div className="text-center py-8 sm:py-12 text-text-muted text-sm sm:text-base">

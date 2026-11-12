@@ -10,6 +10,14 @@ import { isWithinBookingWindow } from "@/constants/booking";
 import { addDaysToDbDate, dbDateToJstDateString, getJstMonthRange, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import { validateCoupon } from "@/lib/coupon-validation";
 import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
+import { admitPublicReservation, withdrawReservationFromSb } from "@/lib/sb-hub-sync";
+
+// SOGA（SB連携）が受けなかった時にお客様へ返す答え（設計 3-2-1）
+const SB_REFUSALS = {
+  CONFLICT: { status: 409, error: "申し訳ございません。この時間帯は既に予約が入っています" },
+  PAUSED: { status: 503, error: "ただいまWeb予約を停止しています。お手数ですが、お店にご連絡ください" },
+  UNREACHABLE: { status: 503, error: "ただいまWeb予約を受け付けられません。お手数ですが、お店にご連絡ください" },
+} as const;
 
 // DB Menuの型定義
 interface DbMenu {
@@ -390,10 +398,25 @@ export async function POST(request: NextRequest) {
       });
     });
 
+    // SB連携：SOGAに枠を押さえてもらう。受けなかった時は、MONËの予約も残さない。
+    const sbAnswer = reservation ? await admitPublicReservation(reservation.id) : "DISABLED";
+    if (reservation && sbAnswer !== "DISABLED" && sbAnswer !== "CONFIRMED" && sbAnswer !== "REQUESTED") {
+      // 時間切れの時は、SOGAが受けていたかもしれないので取り消しを送る。
+      if (sbAnswer === "UNREACHABLE") await withdrawReservationFromSb(reservation.id, 1, "PENDING");
+      await prisma.$transaction([
+        prisma.reservationItem.deleteMany({ where: { reservationId: reservation.id } }),
+        prisma.reservation.delete({ where: { id: reservation.id } }),
+      ]);
+      const refusal = SB_REFUSALS[sbAnswer];
+      return NextResponse.json({ error: refusal.error, sb: sbAnswer }, { status: refusal.status });
+    }
+    // 申込（SBで確かめてから確定する）：確定のメールは、確定してから送る。
+    const sbRequested = sbAnswer === "REQUESTED";
+
     // 予約完了メール送信（並列で実行し、完了を待つ）
     const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
 
-    if (reservation?.user?.email) {
+    if (reservation?.user?.email && !sbRequested) {
       emailPromises.push(
         sendReservationConfirmationEmail(reservation.user.email, {
           reservationId: reservation.id,
@@ -427,7 +450,7 @@ export async function POST(request: NextRequest) {
           totalPrice: reservation.totalPrice,
           couponCode: reservation.couponCode,
           couponDiscount: reservation.couponDiscount,
-          note: reservation.note,
+          note: sbRequested ? `【SBの確認待ちの申込】${reservation.note ?? ""}` : reservation.note,
           isPhoneReservation: false,
         }).catch((err) => {
           console.error('Failed to send admin notification email:', err);
@@ -441,7 +464,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: "予約が完了しました",
+        message: sbRequested
+          ? "ご予約の申込を受け付けました。確定しましたらメールでお知らせします"
+          : "予約が完了しました",
+        requested: sbRequested,
         reservation,
       },
       { status: 201 }

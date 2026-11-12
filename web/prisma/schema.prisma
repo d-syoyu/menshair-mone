@@ -99,6 +99,13 @@ model Reservation {
   endTime       String            // "11:30"
   status        ReservationStatus @default(CONFIRMED)
   note          String?
+  // SALON BOARD連携（SOGAの共通窓口、docs/salonboard-hub-design-2026-11-12.md 5-2・10章）。
+  // 連携を使わない間は NONE のまま。
+  sbState         SbSyncState @default(NONE)
+  sbVersion       Int         @default(0)     // SOGAに送った版。変えるたびに1つ上げる
+  sbReservationNo String?                     // SBの予約番号（SOGAから届く）
+  sbRequested     Boolean     @default(false) // SOGAの答えが「申込」（確定待ち）
+  sbNeedsReview   Boolean     @default(false) // SB上で手で変えられた・SOGAに送れなかった
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -113,6 +120,7 @@ model Reservation {
   @@index([date, status]) // Compound index for reservation queries
   @@index([status, date, startTime])
   @@index([couponId])
+  @@index([sbNeedsReview])
 }
 
 // 予約アイテム（複数メニュー対応）
@@ -130,6 +138,15 @@ model ReservationItem {
 
   @@index([reservationId])
   @@unique([reservationId, orderIndex])
+}
+
+// SBへの反映の状態（SOGAの外部予約の同期の状態と同じ）
+enum SbSyncState {
+  NONE            // 連携していない
+  PENDING         // SOGAが受け、SBへの書込を待っている
+  APPLIED         // SBに書いて照合できた
+  VERIFY_REQUIRED // SBの予約と重なった可能性がある（要確認）
+  MANUAL_REQUIRED // SBへ手で入れる必要がある
 }
 
 enum ReservationStatus {
@@ -504,4 +521,13 @@ enum SaleItemType {
 enum DiscountType {
   PERCENTAGE  // パーセンテージ割引
   FIXED       // 固定額割引
+}
+
+// SOGAの共通窓口から受け取ったWebhookのイベント（重複を除くためだけ。本文は保存しない）
+model SbHubEvent {
+  id         String   @id // SOGAのイベントID
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
 }

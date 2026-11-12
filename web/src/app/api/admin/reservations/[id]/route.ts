@@ -11,6 +11,7 @@ import {
   sendReservationCancellationEmail,
   sendAdminCancellationEmail
 } from "@/lib/email";
+import { syncReservationToSb, withdrawReservationFromSb } from "@/lib/sb-hub-sync";
 
 // DB Menuの型定義
 interface DbMenu {
@@ -206,6 +207,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
+
+    // SB連携：行を消す前に、SOGAにある予約を取り消す。取り消せない時は消さない（SBに残ったままになるため）。
+    const sbRow = await prisma.reservation.findUnique({ where: { id }, select: { sbVersion: true, sbState: true } });
+    if (sbRow && !(await withdrawReservationFromSb(id, sbRow.sbVersion, sbRow.sbState))) {
+      return NextResponse.json(
+        { error: "SB連携の予約を取り消せなかったため、削除していません。少し時間をおいてもう一度お試しください" },
+        { status: 503 }
+      );
+    }
 
     // トランザクションで予約とアイテムを削除
     // 存在確認もトランザクション内で行い、TOCTOU競合を防止
@@ -521,6 +531,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         },
       });
     });
+
+    // SB連携：確定・取り消し・日時の変更をSOGAに伝える（受け口 ADMIN）
+    if (
+      updatedReservation.status !== existingReservation.status ||
+      updatedReservation.date.getTime() !== new Date(existingReservation.date).getTime() ||
+      updatedReservation.startTime !== existingReservation.startTime ||
+      updatedReservation.endTime !== existingReservation.endTime
+    ) {
+      await syncReservationToSb(id, "ADMIN");
+    }
 
     // メール送信処理
     const customerEmail = updatedReservation.user?.email;

@@ -309,7 +309,7 @@ function BookingConfirmContent() {
       }
 
       // 成功時は完了ページへ
-      router.push(`/booking/complete?id=${data.reservation.id}`);
+      router.push(`/booking/complete?id=${data.reservation.id}${data.requested ? '&requested=1' : ''}`);
     } catch {
       setError('予約の作成に失敗しました');
       setIsSubmitting(false);
