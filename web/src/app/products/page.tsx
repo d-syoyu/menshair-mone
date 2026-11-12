@@ -1,10 +1,10 @@
 import { Phone, Instagram } from 'lucide-react';
-import { getProducts } from '@/lib/notion';
+import { getCachedProducts } from '@/lib/notion-public-cache';
 import ProductsClient from './ProductsClient';
 import type { Metadata } from 'next';
 import { buildProductsJsonLd, renderJsonLd } from '@/lib/seo';
 
-export const revalidate = 3600;
+export const revalidate = 86400; // 内容の変更は cron / webhook のタグ破棄で即時に反映。これは1日ごとの予備
 
 export const metadata: Metadata = {
   title: '商品紹介',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default async function ProductsPage() {
   // Notionから商品を取得
-  const productsRaw = await getProducts();
+  const productsRaw = await getCachedProducts();
 
   // 作成日の降順（新しい順）にソート（左から新しい順）
   const products = [...productsRaw].sort((a, b) => {

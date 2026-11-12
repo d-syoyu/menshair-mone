@@ -1,7 +1,7 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Calendar, ArrowLeft, ArrowRight } from "lucide-react";
 import NotionRenderer from "@/components/blog/NotionRenderer";
@@ -92,10 +92,12 @@ export default function NewsDetailClient({ post }: NewsDetailClientProps) {
           {/* Cover Image (if exists) */}
           {post.coverImage && (
             <div className="relative w-full aspect-[16/9] mt-10 overflow-hidden rounded-lg shadow-xl">
-              <img
+              <Image
                 src={post.coverImage}
                 alt={post.title}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                fill
+                sizes="(min-width: 1024px) 1024px, 100vw"
+                className="object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
           )}

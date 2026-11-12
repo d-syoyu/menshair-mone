@@ -1,8 +1,8 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Calendar, ChevronDown } from 'lucide-react';
 import type { BlogPost } from '@/lib/notion';
@@ -127,10 +127,12 @@ export default function NewsClient({ news }: NewsClientProps) {
                         {/* Image */}
                         {item.coverImage && (
                           <div className="relative w-full md:w-80 h-56 md:h-auto md:aspect-[4/3] flex-shrink-0 overflow-hidden">
-                            <img
+                            <Image
                               src={item.coverImage}
                               alt={item.title}
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              fill
+                              sizes="(min-width: 768px) 320px, 100vw"
+                              className="object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                           </div>
                         )}

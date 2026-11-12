@@ -1,8 +1,8 @@
-import { getNews } from '@/lib/notion';
+import { getCachedNews } from '@/lib/notion-public-cache';
 import NewsClient from './NewsClient';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600;
+export const revalidate = 86400; // 内容の変更は cron / webhook のタグ破棄で即時に反映。これは1日ごとの予備
 
 export const metadata: Metadata = {
   title: 'お知らせ',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 
 export default async function NewsPage() {
   // Notionからニュースを取得
-  const news = await getNews();
+  const news = await getCachedNews();
 
   // 公開日の降順（新しい順）にソート
   // publishedAtがない場合はcreatedAtでソート
