@@ -3,6 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { getStableBlockImageUrl } from "@/lib/notion-image-url";
 import type {
   BlockObjectResponse,
   RichTextItemResponse,
@@ -136,8 +137,8 @@ function Block({ block }: { block: BlockObjectResponse & { children?: BlockObjec
 
     case "image": {
       const { image } = block;
-      const src =
-        image.type === "external" ? image.external.url : image.file.url;
+      // 署名付きURL（約1時間で失効）ではなく、変わらない配信URLにして縮小・WebP化する
+      const src = getStableBlockImageUrl(block);
       const caption =
         image.caption.length > 0
           ? image.caption.map((c) => c.plain_text).join("")
@@ -150,8 +151,8 @@ function Block({ block }: { block: BlockObjectResponse & { children?: BlockObjec
               src={src}
               alt={caption || "Blog image"}
               fill
+              sizes="(min-width: 1024px) 1024px, 100vw"
               className="object-cover"
-              unoptimized // Notion images have signed URLs that expire
             />
           </div>
           {caption && (

@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { getNewsBySlug } from "@/lib/notion";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 interface RouteParams {
   params: Promise<{ slug: string }>;

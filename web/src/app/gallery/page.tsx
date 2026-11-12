@@ -1,12 +1,12 @@
 // src/app/gallery/page.tsx
 // Gallery page - Server Component with Notion integration
 
-import { getGalleryItems } from "@/lib/notion";
+import { getCachedGalleryItems } from "@/lib/notion-public-cache";
 import GalleryClient from "./GalleryClient";
 import type { Metadata } from "next";
 import { buildGalleryJsonLd, renderJsonLd } from "@/lib/seo";
 
-export const revalidate = 3600;
+export const revalidate = 86400; // 内容の変更は cron / webhook のタグ破棄で即時に反映。これは1日ごとの予備
 
 export const metadata: Metadata = {
   title: "ギャラリー",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default async function GalleryPage() {
   // Fetch items from Notion
-  const items = await getGalleryItems();
+  const items = await getCachedGalleryItems();
 
   // 作成日の降順（新しい順）にソート（左から新しい順）
   const sortedItems = [...items].sort((a, b) => {
