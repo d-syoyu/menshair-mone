@@ -10,8 +10,7 @@ import {
 } from "@/lib/notion";
 import { sendEmail, createNewsletterHtml, createNewsletterText } from "@/lib/email";
 import { filterCustomersByTargets } from "@/lib/customer-filter";
-import { revalidatePath } from "next/cache";
-import { revalidateHomeNews } from "@/lib/notion-public-revalidation";
+import { revalidatePublicNews } from "@/lib/notion-public-revalidation";
 
 // ステータス定数
 const STATUS = {
@@ -20,14 +19,6 @@ const STATUS = {
   FAILED: "送信失敗",
 } as const;
 
-function revalidatePublicNews(slug?: string) {
-  revalidateHomeNews();
-  revalidatePath("/news");
-  revalidatePath("/sitemap.xml");
-  if (slug) {
-    revalidatePath(`/news/${slug}`);
-  }
-}
 
 // GET /api/cron/newsletter
 // Vercel Cron Jobから5分ごとに呼び出される

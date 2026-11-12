@@ -9,6 +9,7 @@ import type {
   DatabaseObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { getProxiedImageUrl } from "./image-proxy";
+import { buildNotionImageUrl } from "./notion-image-url";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 // Notion Client - only create if API key is set
@@ -222,26 +223,9 @@ function extractPageProperties(page: PageObjectResponse): BlogPost | null {
       ? extractRichText(subtitleProp.rich_text)
       : "";
 
-  // サムネイル (Cover Image) - filesプロパティまたはページカバーから取得
-  let coverImage: string | null = null;
-  const thumbnailProp = properties["サムネイル"];
-  if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
-    const file = thumbnailProp.files[0];
-    if (file.type === "external") {
-      coverImage = file.external.url;
-    } else if (file.type === "file") {
-      coverImage = file.file.url;
-    }
-  } else if (page.cover) {
-    if (page.cover.type === "external") {
-      coverImage = page.cover.external.url;
-    } else if (page.cover.type === "file") {
-      coverImage = page.cover.file.url;
-    }
-  }
-
-  // プロキシURLに変換
-  coverImage = getProxiedImageUrl(coverImage);
+  // サムネイル（filesプロパティまたはページカバー）。署名付きURLは期限があるので、
+  // 変わらない配信URL（/api/notion-image/...）に置き換える
+  const coverImage = getStablePageImageUrl(page);
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";
@@ -438,24 +422,8 @@ export async function getBlogPostBySlug(
         ? extractRichText(subtitleProp.rich_text)
         : undefined;
 
-    // サムネイル
-    let coverImage: string | null = null;
-    const thumbnailProp = properties["サムネイル"];
-    if (thumbnailProp?.type === "files" && thumbnailProp.files.length > 0) {
-      const file = thumbnailProp.files[0];
-      if (file.type === "external") {
-        coverImage = file.external.url;
-      } else if (file.type === "file") {
-        coverImage = file.file.url;
-      }
-    } else if (matchedPage.cover) {
-      if (matchedPage.cover.type === "external") {
-        coverImage = matchedPage.cover.external.url;
-      } else if (matchedPage.cover.type === "file") {
-        coverImage = matchedPage.cover.file.url;
-      }
-    }
-    coverImage = getProxiedImageUrl(coverImage);
+    // サムネイル（変わらない配信URLにする）
+    const coverImage = getStablePageImageUrl(matchedPage);
 
     // 作成日時を取得
     const createdAt = matchedPage.created_time || "";
@@ -543,6 +511,111 @@ async function getPageBlocks(pageId: string): Promise<BlockObjectResponse[]> {
 export async function getAllBlogSlugs(): Promise<string[]> {
   const posts = await getBlogPosts();
   return posts.map((post) => post.slug);
+}
+
+// ============================================
+// 公開画像（変わらない配信URL）
+// ============================================
+// Notion の画像URLは署名付きで約1時間で失効し、取得するたびに変わる。そのままページに埋め込むと
+// CDN や next/image のキャッシュが効かず、ページも定期的に作り直す必要がある。
+// そこでページやブロックの ID と最終更新日時から決まるURLを使い、配信時（/api/notion-image）に
+// サーバーが最新の署名付きURLを取り直す。内容が変わると最終更新日時が変わり、URLも変わる。
+
+const PUBLIC_IMAGE_FILE_PROPERTIES = ["サムネイル", "画像"] as const;
+
+/** ページの代表画像の元URL（ニュースのサムネイル、ギャラリー・商品の画像、ページカバー） */
+function extractPageImageUrl(page: PageObjectResponse): string | null {
+  const properties = page.properties;
+
+  for (const name of PUBLIC_IMAGE_FILE_PROPERTIES) {
+    const prop = properties[name];
+    if (prop?.type === "files" && prop.files.length > 0) {
+      const file = prop.files[0];
+      if (file.type === "external") return file.external.url;
+      if (file.type === "file") return file.file.url;
+    }
+  }
+
+  // ギャラリーの「画像URL」（テキストでURLを指定）
+  const imageUrlProp = properties["画像URL"];
+  if (imageUrlProp?.type === "rich_text") {
+    return extractRichText(imageUrlProp.rich_text) || null;
+  }
+
+  if (page.cover?.type === "external") return page.cover.external.url;
+  if (page.cover?.type === "file") return page.cover.file.url;
+  return null;
+}
+
+function getStablePageImageUrl(page: PageObjectResponse): string | null {
+  if (!extractPageImageUrl(page)) return null;
+  return buildNotionImageUrl("page", page.id, page.last_edited_time);
+}
+
+function normalizeNotionId(id: string | undefined | null) {
+  return id ? id.replace(/-/g, "").toLowerCase() : "";
+}
+
+const PUBLIC_IMAGE_DATABASE_IDS = new Set(
+  [newsDatabaseId, galleryDatabaseId, productsDatabaseId].map(normalizeNotionId).filter(Boolean)
+);
+
+/** 公開中のニュース・ギャラリー・商品のページか（下書きや他のページの画像は返さない） */
+function isPublicImagePage(page: PageObjectResponse): boolean {
+  const parent = page.parent as { database_id?: string };
+  if (!PUBLIC_IMAGE_DATABASE_IDS.has(normalizeNotionId(parent.database_id))) return false;
+
+  const publishedProp =
+    page.properties["web公開"] || page.properties["公開"] || page.properties["Published"];
+  if (publishedProp?.type === "checkbox" && !publishedProp.checkbox) return false;
+
+  return !page.archived && !page.in_trash;
+}
+
+async function retrievePublicImagePage(pageId: string): Promise<PageObjectResponse | null> {
+  if (!notion) return null;
+  const page = await withRetry(
+    () => notion.pages.retrieve({ page_id: pageId }),
+    "resolveImage:page"
+  );
+  if (!("properties" in page)) return null;
+  const fullPage = page as PageObjectResponse;
+  return isPublicImagePage(fullPage) ? fullPage : null;
+}
+
+/** /api/notion-image 用：公開ページの代表画像の、いま有効な元URL */
+export async function resolvePublicPageImageUrl(pageId: string): Promise<string | null> {
+  const page = await retrievePublicImagePage(pageId);
+  return page ? extractPageImageUrl(page) : null;
+}
+
+/** /api/notion-image 用：公開ページ内の画像ブロックの、いま有効な元URL */
+export async function resolvePublicBlockImageUrl(blockId: string): Promise<string | null> {
+  if (!notion) return null;
+
+  const block = await withRetry(
+    () => notion.blocks.retrieve({ block_id: blockId }),
+    "resolveImage:block"
+  );
+  if (!("type" in block) || block.type !== "image" || block.archived || block.in_trash) return null;
+
+  // 列・トグルなどの中にある画像もあるので、親ページまで最大5段たどる
+  let parent = block.parent;
+  for (let depth = 0; depth < 5; depth++) {
+    if (parent.type === "page_id") {
+      const page = await retrievePublicImagePage(parent.page_id);
+      if (!page) return null;
+      return block.image.type === "external" ? block.image.external.url : block.image.file.url;
+    }
+    if (parent.type !== "block_id") return null;
+    const parentBlock = await withRetry(
+      () => notion.blocks.retrieve({ block_id: parent.type === "block_id" ? parent.block_id : "" }),
+      "resolveImage:parentBlock"
+    );
+    if (!("parent" in parentBlock)) return null;
+    parent = parentBlock.parent;
+  }
+  return null;
 }
 
 // ============================================
@@ -775,30 +848,8 @@ function extractGalleryProperties(page: PageObjectResponse): GalleryItem | null 
       ? orderProp.number
       : 0;
 
-  // 画像 (Image) - filesプロパティ、画像URL、またはページカバーから取得
-  let image: string | null = null;
-  const imageProp = properties["画像"];
-  const imageUrlProp = properties["画像URL"];
-
-  if (imageProp?.type === "files" && imageProp.files.length > 0) {
-    const file = imageProp.files[0];
-    if (file.type === "external") {
-      image = file.external.url;
-    } else if (file.type === "file") {
-      image = file.file.url;
-    }
-  } else if (imageUrlProp?.type === "rich_text") {
-    image = extractRichText(imageUrlProp.rich_text) || null;
-  } else if (page.cover) {
-    if (page.cover.type === "external") {
-      image = page.cover.external.url;
-    } else if (page.cover.type === "file") {
-      image = page.cover.file.url;
-    }
-  }
-
-  // プロキシURLに変換
-  image = getProxiedImageUrl(image);
+  // 画像（filesプロパティ、画像URL、またはページカバー）。変わらない配信URLにする
+  const image = getStablePageImageUrl(page);
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";
@@ -955,26 +1006,8 @@ function extractProductProperties(page: PageObjectResponse): Product | null {
       ? orderProp.number
       : 0;
 
-  // 画像 (Image) - filesプロパティまたはページカバーから取得
-  let image: string | null = null;
-  const imageProp = properties["画像"];
-  if (imageProp?.type === "files" && imageProp.files.length > 0) {
-    const file = imageProp.files[0];
-    if (file.type === "external") {
-      image = file.external.url;
-    } else if (file.type === "file") {
-      image = file.file.url;
-    }
-  } else if (page.cover) {
-    if (page.cover.type === "external") {
-      image = page.cover.external.url;
-    } else if (page.cover.type === "file") {
-      image = page.cover.file.url;
-    }
-  }
-
-  // プロキシURLに変換
-  image = getProxiedImageUrl(image);
+  // 画像（filesプロパティまたはページカバー）。変わらない配信URLにする
+  const image = getStablePageImageUrl(page);
 
   // 作成日時を取得（ソート用）
   const createdAt = page.created_time || "";

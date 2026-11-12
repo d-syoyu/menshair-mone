@@ -7,7 +7,7 @@ import NewsDetailClient from "./NewsDetailClient";
 import type { Metadata } from "next";
 import { buildArticleJsonLd, renderJsonLd, toIsoDate } from "@/lib/seo";
 
-export const revalidate = 3600;
+export const revalidate = 86400; // 記事が変わると cron / webhook がこのパスを作り直す。これは1日ごとの予備
 export const dynamicParams = true;
 
 // Fallback data when Notion is not configured

@@ -1,26 +1,26 @@
 import { revalidatePath, revalidateTag } from "next/cache";
-import { getNews, type BlogPost } from "@/lib/notion";
+import {
+  getGalleryItems,
+  getNews,
+  getProducts,
+  type BlogPost,
+} from "@/lib/notion";
 import {
   HOME_NEWS_CACHE_TAG,
   getCachedHomeNewsOrNull,
   isSameHomeNews,
   selectLatestHomeNews,
 } from "@/lib/home-news";
+import { NOTION_CACHE_TAGS, cachedGallery, cachedNews, cachedProducts } from "@/lib/notion-public-cache";
 
-// トップページ（/）はここに入れない。お知らせが変わったときだけ HOME_NEWS_CACHE_TAG で更新する。
-// 以下のページは Notion の署名付き画像 URL（約1時間で失効）を含むため、定期的に作り直す。
-const NOTION_PUBLIC_PAGE_PATHS = [
-  "/news",
-  "/gallery",
-  "/products",
-  "/sitemap.xml",
-];
+// Notion の内容をページに反映する（15分ごとの cron から呼ばれる）。
+// 画像は変わらない配信URLなので、以前のように毎回すべてのページを作り直す必要はない。
+// Notion の最新とキャッシュを比べ、変わったものだけタグとパスを破棄して作り直す。
+// Notion しか読まないので DB は起こさない。
 
-const NOTION_PUBLIC_API_PATHS = [
-  "/api/news",
-  "/api/gallery",
-  "/api/products",
-];
+function isSameList(a: unknown[], b: unknown[]) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 type WarmupResult = {
   warmedPaths: string[];
@@ -72,43 +72,70 @@ async function warmRevalidatedPaths(origin: string | undefined, paths: string[])
 
 export async function revalidateNotionPublicContent(options?: { origin?: string; warm?: boolean }) {
   const revalidatedPaths = new Set<string>();
-  const warmupPaths = new Set<string>(NOTION_PUBLIC_PAGE_PATHS);
+  const warmupPaths = new Set<string>();
+  const changed: string[] = [];
 
-  for (const path of [...NOTION_PUBLIC_PAGE_PATHS, ...NOTION_PUBLIC_API_PATHS]) {
+  const revalidate = (path: string, warm = true) => {
     revalidatePath(path);
     revalidatedPaths.add(path);
-  }
+    if (warm && !path.startsWith("/api/")) warmupPaths.add(path);
+  };
 
-  let news: BlogPost[] | null = null;
-  try {
-    news = await getNews();
-  } catch (error) {
-    console.error("[Notion Public Revalidation] Failed to fetch news:", error);
-  }
+  const [freshNews, freshGallery, freshProducts] = await Promise.all([
+    getNews().catch(() => [] as BlogPost[]),
+    getGalleryItems().catch(() => []),
+    getProducts().catch(() => []),
+  ]);
 
-  const homeNewsChanged = await revalidateHomeNewsIfChanged(news);
-  if (homeNewsChanged) {
-    revalidatedPaths.add("/");
-    warmupPaths.add("/");
-  }
+  // お知らせ：一覧・サイトマップと、変わった記事の詳細ページ
+  // 取得に失敗した（空の）ときは、表示中の内容を消さないよう何もしない
+  if (freshNews.length > 0) {
+    const cached = await cachedNews.getOrNull();
+    if (!cached || !isSameList(cached, freshNews)) {
+      revalidateTag(NOTION_CACHE_TAGS.news, { expire: 0 });
+      changed.push("news");
+      revalidate("/news");
+      revalidate("/sitemap.xml");
+      revalidate("/api/news");
 
-  try {
-    if (!news) throw new Error("news unavailable");
-    const warmNewsLimit = Number(process.env.NOTION_REVALIDATE_WARM_NEWS_LIMIT ?? 20);
-
-    for (const post of news) {
-      const path = `/news/${post.slug}`;
-      revalidatePath(path);
-      revalidatePath(`/api/news/${post.slug}`);
-      revalidatedPaths.add(path);
-      revalidatedPaths.add(`/api/news/${post.slug}`);
-
-      if (warmupPaths.size < NOTION_PUBLIC_PAGE_PATHS.length + warmNewsLimit) {
-        warmupPaths.add(path);
+      const before = new Map((cached ?? []).map((post) => [post.slug, JSON.stringify(post)]));
+      const after = new Map(freshNews.map((post) => [post.slug, JSON.stringify(post)]));
+      const warmNewsLimit = Number(process.env.NOTION_REVALIDATE_WARM_NEWS_LIMIT ?? 20);
+      let warmed = 0;
+      for (const slug of new Set([...before.keys(), ...after.keys()])) {
+        if (before.get(slug) === after.get(slug)) continue;
+        const stillPublished = after.has(slug);
+        revalidate(`/news/${slug}`, stillPublished && warmed++ < warmNewsLimit);
+        revalidate(`/api/news/${slug}`, false);
       }
     }
-  } catch (error) {
-    console.error("[Notion Public Revalidation] Failed to fetch news slugs:", error);
+  }
+
+  if (freshGallery.length > 0) {
+    const cached = await cachedGallery.getOrNull();
+    if (!cached || !isSameList(cached, freshGallery)) {
+      revalidateTag(NOTION_CACHE_TAGS.gallery, { expire: 0 });
+      changed.push("gallery");
+      revalidate("/gallery");
+      revalidate("/api/gallery");
+    }
+  }
+
+  if (freshProducts.length > 0) {
+    const cached = await cachedProducts.getOrNull();
+    if (!cached || !isSameList(cached, freshProducts)) {
+      revalidateTag(NOTION_CACHE_TAGS.products, { expire: 0 });
+      changed.push("products");
+      revalidate("/products");
+      revalidate("/api/products");
+    }
+  }
+
+  const homeNewsChanged = await revalidateHomeNewsIfChanged(freshNews);
+  if (homeNewsChanged) {
+    changed.push("home");
+    revalidatedPaths.add("/");
+    warmupPaths.add("/");
   }
 
   const warmup = options?.warm
@@ -116,6 +143,7 @@ export async function revalidateNotionPublicContent(options?: { origin?: string;
     : { warmedPaths: [], failedWarmups: [] };
 
   return {
+    changed,
     revalidatedPaths: Array.from(revalidatedPaths),
     homeNewsChanged,
     ...warmup,
@@ -126,8 +154,8 @@ export async function revalidateNotionPublicContent(options?: { origin?: string;
  * トップページのお知らせ（最新3件）が Notion の最新と違うときだけタグを破棄する。
  * 取得に失敗した（空の）ときは、表示中の内容を消さないよう何もしない。
  */
-async function revalidateHomeNewsIfChanged(news: BlogPost[] | null): Promise<boolean> {
-  if (!news || news.length === 0) {
+async function revalidateHomeNewsIfChanged(news: BlogPost[]): Promise<boolean> {
+  if (news.length === 0) {
     return false;
   }
 
@@ -144,8 +172,21 @@ async function revalidateHomeNewsIfChanged(news: BlogPost[] | null): Promise<boo
   return true;
 }
 
-/** Notion のボタン（webhook）など、確実に変わったと分かっているとき用 */
+/** トップのお知らせを作り直す */
 export function revalidateHomeNews() {
   revalidateTag(HOME_NEWS_CACHE_TAG, { expire: 0 });
   revalidatePath("/");
+}
+
+/** Notion のボタン（webhook）など、お知らせが確実に変わったと分かっているとき用 */
+export function revalidatePublicNews(slug?: string) {
+  revalidateHomeNews();
+  revalidateTag(NOTION_CACHE_TAGS.news, { expire: 0 });
+  revalidatePath("/news");
+  revalidatePath("/sitemap.xml");
+  revalidatePath("/api/news");
+  if (slug) {
+    revalidatePath(`/news/${slug}`);
+    revalidatePath(`/api/news/${slug}`);
+  }
 }

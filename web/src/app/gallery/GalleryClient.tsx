@@ -1,8 +1,8 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useInView, AnimatePresence, type Variants } from "framer-motion";
 import { X, ArrowRight, ChevronDown } from "lucide-react";
 import type { GalleryItem } from "@/lib/notion";
@@ -142,10 +142,12 @@ export default function GalleryClient({ items }: GalleryClientProps) {
                   onClick={() => setSelectedImage(item)}
                 >
                   {item.image ? (
-                    <img
+                    <Image
                       src={item.image}
                       alt={[item.category, item.title, "Men's hair MONE"].filter(Boolean).join(" - ")}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
                     <div className="w-full h-full bg-glass flex items-center justify-center">
@@ -222,10 +224,12 @@ export default function GalleryClient({ items }: GalleryClientProps) {
               onClick={(e) => e.stopPropagation()}
             >
               {selectedImage.image && (
-                <img
-                src={selectedImage.image}
-                alt={[selectedImage.category, selectedImage.title, "Men's hair MONE"].filter(Boolean).join(" - ")}
-                  className="absolute inset-0 w-full h-full object-contain"
+                <Image
+                  src={selectedImage.image}
+                  alt={[selectedImage.category, selectedImage.title, "Men's hair MONE"].filter(Boolean).join(" - ")}
+                  fill
+                  sizes="(min-width: 896px) 896px, 100vw"
+                  className="object-contain"
                 />
               )}
               <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-dark to-transparent">

@@ -2,13 +2,13 @@
 // News list API
 
 import { NextResponse } from "next/server";
-import { getNews } from "@/lib/notion";
+import { getCachedNews } from "@/lib/notion-public-cache";
 
-export const revalidate = 3600;
+export const revalidate = 86400; // 内容の変更は cron / webhook のタグ破棄で即時に反映。これは1日ごとの予備
 
 export async function GET() {
   try {
-    const news = await getNews();
+    const news = await getCachedNews();
     return NextResponse.json(news);
   } catch (error) {
     console.error("Error fetching news:", error);

@@ -2,11 +2,11 @@
 // MONË - 動的サイトマップ生成
 
 import { MetadataRoute } from "next";
-import { getNews } from "@/lib/notion";
+import { getCachedNews } from "@/lib/notion-public-cache";
 import { SITE_URL, toIsoDate } from "@/lib/seo";
 
 const BASE_URL = SITE_URL;
-export const revalidate = 3600;
+export const revalidate = 86400; // 内容の変更は cron / webhook のタグ破棄で即時に反映。これは1日ごとの予備
 
 function toSitemapDate(value: string | null | undefined): Date {
   const iso = toIsoDate(value);
@@ -75,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ニュース記事を動的に取得（Notion APIから）
   let newsPages: MetadataRoute.Sitemap = [];
   try {
-    const news = await getNews();
+    const news = await getCachedNews();
     newsPages = news.map((post) => ({
       url: `${BASE_URL}/news/${post.slug}`,
       lastModified: toSitemapDate(post.updatedAt || post.createdAt || post.publishedAt),
