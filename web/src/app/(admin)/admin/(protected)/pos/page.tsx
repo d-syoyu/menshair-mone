@@ -72,14 +72,6 @@ export default function POSDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ローカルタイムゾーンでYYYY-MM-DD形式の日付文字列を生成
-  const formatLocalDate = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   const fetchData = async () => {
     try {
       const dashboardRes = await fetch('/api/admin/pos/dashboard');
@@ -89,53 +81,6 @@ export default function POSDashboard() {
       const dashboardData = await dashboardRes.json();
       setTodaySales(Array.isArray(dashboardData.todaySales) ? dashboardData.todaySales : []);
       setStats(dashboardData.stats);
-      return;
-
-      // 今日の日付
-      const today = new Date();
-      const todayStr = formatLocalDate(today);
-
-      // 今週の開始日（月曜日）
-      const weekStart = new Date(today);
-      const dayOfWeek = today.getDay();
-      const daysToMonday = dayOfWeek === 0 ? -6 : -(dayOfWeek - 1);
-      weekStart.setDate(weekStart.getDate() + daysToMonday);
-      const weekStartStr = formatLocalDate(weekStart);
-
-      // 今月の開始日
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthStartStr = formatLocalDate(monthStart);
-
-      // 本日の会計を取得
-      const todayRes = await fetch(`/api/admin/sales?startDate=${todayStr}&endDate=${todayStr}`);
-      let todayData: Sale[] = [];
-      if (!todayRes.ok) {
-        console.error('Today sales fetch failed:', todayRes.status, await todayRes.text());
-      } else {
-        const data = await todayRes.json();
-        todayData = Array.isArray(data) ? data : [];
-      }
-      setTodaySales(todayData.slice(0, 10));
-
-      // 今週の会計を取得
-      const weekRes = await fetch(`/api/admin/sales?startDate=${weekStartStr}`);
-      const weekData: Sale[] = weekRes.ok ? await weekRes.json() : [];
-
-      // 今月の会計を取得
-      const monthRes = await fetch(`/api/admin/sales?startDate=${monthStartStr}`);
-      const monthData: Sale[] = monthRes.ok ? await monthRes.json() : [];
-
-      // 統計を計算
-      const todaySalesTotal = todayData.reduce((sum, sale) => sum + sale.totalAmount, 0);
-      const weekSalesTotal = weekData.reduce((sum, sale) => sum + sale.totalAmount, 0);
-      const monthSalesTotal = monthData.reduce((sum, sale) => sum + sale.totalAmount, 0);
-
-      setStats({
-        todaySales: todaySalesTotal,
-        todayCount: todayData.length,
-        weekSales: weekSalesTotal,
-        monthSales: monthSalesTotal,
-      });
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setStats({

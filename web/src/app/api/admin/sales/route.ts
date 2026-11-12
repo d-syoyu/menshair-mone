@@ -72,6 +72,9 @@ async function generateSaleNumber(saleDate: Date): Promise<string> {
   return `${prefix}${sequence.toString().padStart(3, "0")}`;
 }
 
+const SALES_PAGE_SIZE = 50;
+const SALES_MAX_PAGE_SIZE = 200;
+
 // GET /api/admin/sales - 会計履歴一覧取得
 export async function GET(request: NextRequest) {
   try {
@@ -85,6 +88,9 @@ export async function GET(request: NextRequest) {
     const customerName = searchParams.get("customerName");
     const paymentMethod = searchParams.get("paymentMethod");
     const paymentStatus = searchParams.get("paymentStatus");
+    // 一覧は件数を区切って返す（以前は条件なしだと全期間の会計を明細・支払いごと返していた）
+    const limit = Math.min(Math.max(Number(searchParams.get("limit")) || SALES_PAGE_SIZE, 1), SALES_MAX_PAGE_SIZE);
+    const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
 
     const where: Record<string, unknown> = {};
 
@@ -103,8 +109,8 @@ export async function GET(request: NextRequest) {
     // 顧客名検索
     if (customerName) {
       where.OR = [
-        { customerName: { contains: customerName } },
-        { user: { name: { contains: customerName } } },
+        { customerName: { contains: customerName, mode: "insensitive" } },
+        { user: { name: { contains: customerName, mode: "insensitive" } } },
       ];
     }
 
@@ -142,10 +148,14 @@ export async function GET(request: NextRequest) {
           orderBy: { orderIndex: "asc" },
         },
       },
-      orderBy: [{ saleDate: "desc" }, { saleTime: "desc" }],
+      orderBy: [{ saleDate: "desc" }, { saleTime: "desc" }, { id: "desc" }],
+      skip: offset,
+      // 1件多く取り、続きがあるかを判定する
+      take: limit + 1,
     });
 
-    return NextResponse.json(sales);
+    const hasMore = sales.length > limit;
+    return NextResponse.json({ sales: hasMore ? sales.slice(0, limit) : sales, hasMore });
   } catch (error) {
     console.error("Get sales error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);

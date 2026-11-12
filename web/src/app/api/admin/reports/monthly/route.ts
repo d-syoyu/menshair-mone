@@ -30,32 +30,35 @@ export async function GET(request: NextRequest) {
     const prevYear = month === 1 ? year - 1 : year;
     const { start: prevStartDate, end: prevEndDate } = getJstMonthRange(prevYear, prevMonth);
 
-    // 当月の会計データを取得
-    const sales = await prisma.sale.findMany({
-      where: {
-        saleDate: {
-          gte: startDate,
-          lt: endDate,
+    // 当月の明細と、前月の合計・件数を同時に取得する
+    // （前月分は合計と件数しか使わないので、行ではなく SQL の集計で取る）
+    const [sales, prevAggregate] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          saleDate: {
+            gte: startDate,
+            lt: endDate,
+          },
+          paymentStatus: "PAID",
         },
-        paymentStatus: "PAID",
-      },
-      include: {
-        items: true,
-        payments: true,
-      },
-      orderBy: { saleDate: "asc" },
-    });
-
-    // 前月の会計データを取得
-    const prevSales = await prisma.sale.findMany({
-      where: {
-        saleDate: {
-          gte: prevStartDate,
-          lt: prevEndDate,
+        include: {
+          items: true,
+          payments: true,
         },
-        paymentStatus: "PAID",
-      },
-    });
+        orderBy: { saleDate: "asc" },
+      }),
+      prisma.sale.aggregate({
+        where: {
+          saleDate: {
+            gte: prevStartDate,
+            lt: prevEndDate,
+          },
+          paymentStatus: "PAID",
+        },
+        _sum: { totalAmount: true },
+        _count: { _all: true },
+      }),
+    ]);
 
     // 基本統計
     const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
@@ -63,8 +66,8 @@ export async function GET(request: NextRequest) {
     const averagePerCustomer = saleCount > 0 ? Math.round(totalSales / saleCount) : 0;
 
     // 前月統計
-    const prevTotalSales = prevSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const prevSaleCount = prevSales.length;
+    const prevTotalSales = prevAggregate._sum.totalAmount ?? 0;
+    const prevSaleCount = prevAggregate._count._all;
     const prevAveragePerCustomer = prevSaleCount > 0 ? Math.round(prevTotalSales / prevSaleCount) : 0;
 
     // 前月比計算

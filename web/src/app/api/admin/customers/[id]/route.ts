@@ -17,6 +17,8 @@ const updateCustomerSchema = z.object({
   email: z.string().email("メールアドレスの形式が正しくありません").optional().nullable(),
 });
 
+const CUSTOMER_HISTORY_LIMIT = 200;
+
 // GET /api/admin/customers/[id] - 顧客詳細取得
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -27,22 +29,44 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
+    // ?include=reservations で施術履歴も返す（顧客管理画面で行を開いたときだけ読む）
+    const includeReservations = request.nextUrl.searchParams.get("include") === "reservations";
 
-    const customer = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        createdAt: true,
-        reservations: {
-          select: {
-            status: true,
-          },
+    const [customer, completedReservations, reservations] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          _count: { select: { reservations: true } },
         },
-      },
-    });
+      }),
+      prisma.reservation.count({ where: { userId: id, status: "COMPLETED" } }),
+      includeReservations
+        ? prisma.reservation.findMany({
+            where: { userId: id },
+            select: {
+              id: true,
+              date: true,
+              startTime: true,
+              endTime: true,
+              totalPrice: true,
+              totalDuration: true,
+              menuSummary: true,
+              status: true,
+              items: {
+                select: { id: true, menuName: true, category: true, price: true, duration: true },
+                orderBy: { orderIndex: "asc" },
+              },
+            },
+            orderBy: [{ date: "desc" }, { startTime: "desc" }],
+            take: CUSTOMER_HISTORY_LIMIT,
+          })
+        : Promise.resolve(undefined),
+    ]);
 
     if (!customer) {
       return NextResponse.json(
@@ -51,23 +75,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 予約回数と完了回数を計算
-    const totalReservations = customer.reservations.length;
-    const completedReservations = customer.reservations.filter(
-      (r) => r.status === "COMPLETED"
-    ).length;
-
-    // reservationsは返さない
-    const { reservations: _, ...rest } = customer;
-    const customerWithCounts = {
-      ...rest,
+    return NextResponse.json({
+      ...customer,
       _count: {
-        reservations: totalReservations,
-        completedReservations: completedReservations,
+        reservations: customer._count.reservations,
+        completedReservations,
       },
-    };
-
-    return NextResponse.json(customerWithCounts);
+      ...(reservations ? { reservations } : {}),
+    });
   } catch (error) {
     console.error("Get customer error:", error);
     return NextResponse.json(

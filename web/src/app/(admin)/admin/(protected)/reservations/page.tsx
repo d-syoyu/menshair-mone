@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -171,7 +171,7 @@ function AdminReservationsContent() {
   };
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [calendarReservations, setCalendarReservations] = useState<Reservation[]>([]); // カレンダー用
+  const [calendarCounts, setCalendarCounts] = useState<Record<string, number>>({}); // カレンダー用（日ごとの確定予約数）
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -249,21 +249,23 @@ function AdminReservationsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page, selectedDate]);
 
-  // カレンダー用の月全体の予約を取得
-  useEffect(() => {
-    const fetchCalendarReservations = async () => {
-      try {
-        const year = currentMonth.getFullYear();
-        const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-        const res = await fetch(`/api/reservations?month=${year}-${month}&limit=1000`);
-        const data = await res.json();
-        setCalendarReservations(data.reservations || []);
-      } catch (error) {
-        console.error('Failed to fetch calendar reservations:', error);
-      }
-    };
-    fetchCalendarReservations();
+  // カレンダー用に、月内の日ごとの確定予約数だけを取得する
+  // （以前は月内の予約を最大1000件、明細・顧客つきで取っていた）
+  const fetchCalendarCounts = useCallback(async () => {
+    try {
+      const year = currentMonth.getFullYear();
+      const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+      const res = await fetch(`/api/reservations?view=calendar&month=${year}-${month}`);
+      const data = await res.json();
+      setCalendarCounts(data.counts || {});
+    } catch (error) {
+      console.error('Failed to fetch calendar counts:', error);
+    }
   }, [currentMonth]);
+
+  useEffect(() => {
+    fetchCalendarCounts();
+  }, [fetchCalendarCounts]);
 
   // ハイライトされた予約までスクロール
   useEffect(() => {
@@ -276,6 +278,8 @@ function AdminReservationsContent() {
       }
     }
   }, [highlightId, isLoading]);
+
+  const holidaysByMonthRef = useRef(new Map<string, Holiday[]>());
 
   // 選択した日付の不定休を取得
   useEffect(() => {
@@ -291,9 +295,15 @@ function AdminReservationsContent() {
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
       try {
-        const res = await fetch(`/api/admin/holidays?year=${year}&month=${month}`);
-        const data = await res.json();
-        const holidaysArray = Array.isArray(data) ? data : (data.holidays || []);
+        // 同じ月の不定休は1回だけ取得し、日付を変えても使い回す
+        const monthKey = `${year}-${month}`;
+        let holidaysArray = holidaysByMonthRef.current.get(monthKey);
+        if (!holidaysArray) {
+          const res = await fetch(`/api/admin/holidays?year=${year}&month=${month}`);
+          const data = await res.json();
+          holidaysArray = (Array.isArray(data) ? data : (data.holidays || [])) as Holiday[];
+          holidaysByMonthRef.current.set(monthKey, holidaysArray);
+        }
         const dateHolidays = holidaysArray.filter((h: Holiday) => {
           const holidayDateStr = typeof h.date === 'string' ? h.date.slice(0, 10) : '';
           return holidayDateStr === dateStr;
@@ -505,6 +515,7 @@ function AdminReservationsContent() {
 
       // 成功したら予約リストを更新してモーダルを閉じる
       fetchReservations();
+      fetchCalendarCounts();
       setIsAddModalOpen(false);
     } catch {
       setAddError('予約の作成に失敗しました');
@@ -620,6 +631,7 @@ function AdminReservationsContent() {
 
       // 成功したら予約リストを更新してモーダルを閉じる
       fetchReservations();
+      fetchCalendarCounts();
       setIsEditModalOpen(false);
     } catch {
       setEditError('予約情報の更新に失敗しました');
@@ -685,15 +697,10 @@ function AdminReservationsContent() {
     return days;
   };
 
-  // その日の予約数を取得（カレンダー用データから）
+  // その日の確定予約数を取得（カレンダー用データから）
   const getReservationCount = (date: Date) => {
-    return calendarReservations.filter((r) => {
-      const resDate = new Date(r.date);
-      return (
-        resDate.toDateString() === date.toDateString() &&
-        r.status === 'CONFIRMED'
-      );
-    }).length;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return calendarCounts[key] ?? 0;
   };
 
   return (
