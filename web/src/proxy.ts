@@ -5,21 +5,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { SESSION_COOKIE_NAME, SESSION_COOKIE_SECURE } from "@/lib/auth-constants";
 import { adminTokenFresh } from "@/lib/admin-session";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isProduction = process.env.NODE_ENV === "production";
-  const cookieName = isProduction
-    ? "__Secure-authjs.session-token"
-    : "authjs.session-token";
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
-    salt: cookieName,
-    cookieName,
-    secureCookie: isProduction,
+    salt: SESSION_COOKIE_NAME,
+    cookieName: SESSION_COOKIE_NAME,
+    secureCookie: SESSION_COOKIE_SECURE,
   });
   const isLoggedIn = !!token?.sub;
   // 管理者のログインは12時間まで。DBでの確認（取り消し・権限の変更）は各ページ・APIの auth() で行う

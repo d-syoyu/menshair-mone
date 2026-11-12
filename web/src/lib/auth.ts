@@ -11,7 +11,7 @@ import type { UserRole } from "@prisma/client";
 import type { Adapter, AdapterAccount } from "next-auth/adapters";
 import { createMagicLinkHtml, createMagicLinkText } from "./email";
 import { Resend as ResendClient } from "resend";
-import { AUTH_SESSION_MAX_AGE } from "./auth-constants";
+import { AUTH_SESSION_MAX_AGE, SESSION_COOKIE_SECURE } from "./auth-constants";
 import { sessionRoleFor, signInAllowedForRole } from "./auth-roles";
 
 // カスタムPrismaAdapter - useVerificationTokenの問題を修正
@@ -114,6 +114,8 @@ declare module "@auth/core/jwt" {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: CustomPrismaAdapter(),
   trustHost: true,
+  // proxy・管理者ログインAPIと同じ規則でCookie名を決める（auth-constants.ts）
+  useSecureCookies: SESSION_COOKIE_SECURE,
   session: {
     strategy: "jwt",
     // セッション有効期限: 90日間（ブラウザを閉じても維持）

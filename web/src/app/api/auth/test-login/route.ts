@@ -8,6 +8,7 @@ import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { adminTokenClaims } from "@/lib/admin-session";
+import { SESSION_COOKIE_NAME, SESSION_COOKIE_SECURE } from "@/lib/auth-constants";
 
 const isTestEnvironment =
   process.env.NODE_ENV === "test" ||
@@ -82,14 +83,14 @@ export async function POST(request: Request) {
         exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24時間
       },
       secret,
-      salt: "authjs.session-token",
+      salt: SESSION_COOKIE_NAME,
     });
 
     // セッションCookieを設定
     const cookieStore = await cookies();
-    cookieStore.set("authjs.session-token", token, {
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: SESSION_COOKIE_SECURE,
       sameSite: "lax",
       path: "/",
       maxAge: 24 * 60 * 60, // 24時間
