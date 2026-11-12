@@ -86,8 +86,9 @@ export class HomePage extends BasePage {
     await this.expectHeaderVisible();
 
     // ナビゲーションリンクの確認
-    await expect(this.page.locator('nav, header').locator('a[href="/menu"]')).toBeVisible();
-    await expect(this.page.locator('nav, header').locator('a[href="/news"]')).toBeVisible();
+    // ヘッダーには閉じたスマホメニュー（非表示）にも同じリンクがあるため、見えているものだけを対象にする
+    await expect(this.page.locator('nav, header').locator('a[href="/menu"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(this.page.locator('nav, header').locator('a[href="/news"]').filter({ visible: true }).first()).toBeVisible();
   }
 }
 
