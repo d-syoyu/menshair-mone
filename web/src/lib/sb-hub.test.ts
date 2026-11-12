@@ -31,15 +31,16 @@ beforeEach(() => {
 });
 
 describe("sbHubConfig", () => {
-  it("is off until the URL, key and shop are all set", () => {
+  it("is off until the URL, key, shop and staff are all set", () => {
     expect(sbHubConfig({})).toBeNull();
     expect(sbHubConfig({ SB_HUB_URL: "https://x", SB_HUB_API_KEY: "k" })).toBeNull();
-    expect(sbHubConfig({ SB_HUB_URL: "https://x/", SB_HUB_API_KEY: "k", SB_HUB_SHOP_ID: "s" }))
-      .toEqual({ url: "https://x", apiKey: "k", shopId: "s", staffId: null });
+    expect(sbHubConfig({ SB_HUB_URL: "https://x/", SB_HUB_API_KEY: "k", SB_HUB_SHOP_ID: "s" })).toBeNull();
+    expect(sbHubConfig({ SB_HUB_URL: "https://x/", SB_HUB_API_KEY: "k", SB_HUB_SHOP_ID: "s", SB_HUB_STAFF_ID: "t" }))
+      .toEqual({ url: "https://x", apiKey: "k", shopId: "s", staffId: "t" });
   });
 
   it("never sends the key over plain HTTP", () => {
-    expect(sbHubConfig({ SB_HUB_URL: "http://x", SB_HUB_API_KEY: "k", SB_HUB_SHOP_ID: "s" })).toBeNull();
+    expect(sbHubConfig({ SB_HUB_URL: "http://x", SB_HUB_API_KEY: "k", SB_HUB_SHOP_ID: "s", SB_HUB_STAFF_ID: "t" })).toBeNull();
   });
 });
 

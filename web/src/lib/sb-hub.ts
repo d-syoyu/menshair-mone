@@ -27,8 +27,8 @@ export interface SbHubConfig {
   url: string;
   apiKey: string;
   shopId: string;
-  /** SOGAでのMONËの担当ID。MONËはスタイリスト1名なので1つだけ持つ。 */
-  staffId: string | null;
+  /** SOGAでのMONËの担当ID。MONËはスタイリスト1名なので1つだけ持つ。SOGAは予約に担当を必ず求める。 */
+  staffId: string;
 }
 
 /** 呼び出しの時間切れ。枠を押さえる時はSOGAが約20秒待つことがあるので30秒（設計 3-2-1）。 */
@@ -46,10 +46,12 @@ export function sbHubConfig(env: Record<string, string | undefined> = process.en
   const url = env.SB_HUB_URL?.trim();
   const apiKey = env.SB_HUB_API_KEY?.trim();
   const shopId = env.SB_HUB_SHOP_ID?.trim();
-  if (!url || !apiKey || !shopId) return null;
+  const staffId = env.SB_HUB_STAFF_ID?.trim();
+  // SOGAは担当のない予約を受けない（PUTで400）ので、担当IDがなければつながない。
+  if (!url || !apiKey || !shopId || !staffId) return null;
   // 鍵を平文の通信で送らない。
   if (!url.startsWith("https://")) return null;
-  return { url: url.replace(/\/+$/, ""), apiKey, shopId, staffId: env.SB_HUB_STAFF_ID?.trim() || null };
+  return { url: url.replace(/\/+$/, ""), apiKey, shopId, staffId };
 }
 
 export function sbHubEnabled(): boolean {

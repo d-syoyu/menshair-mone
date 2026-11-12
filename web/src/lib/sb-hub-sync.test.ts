@@ -26,6 +26,7 @@ function enableHub() {
   vi.stubEnv("SB_HUB_URL", "https://admin.soga.test/hub");
   vi.stubEnv("SB_HUB_API_KEY", "sbh_key");
   vi.stubEnv("SB_HUB_SHOP_ID", "shop_1");
+  vi.stubEnv("SB_HUB_STAFF_ID", "staff_1");
 }
 
 beforeEach(() => {

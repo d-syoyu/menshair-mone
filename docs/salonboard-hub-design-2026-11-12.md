@@ -229,7 +229,7 @@ SOGAの `SALONBOARD_EXTENSION_SECRET`、SOGAのRedisの接続先、画像認証�
 
 - `SB_HUB_URL`・`SB_HUB_API_KEY`・`SB_HUB_SHOP_ID` の3つがそろい、URLが `https://` の時だけ連携が動く。どれかが欠ければ、空き枠・予約・取り消し・管理画面の動きは今までと同じ（SOGAへは何も送らない）。
 - `SB_HUB_WEBHOOK_SECRET` がない間、`/api/sb-hub/webhook` は404を返す。
-- `SB_HUB_STAFF_ID`（任意）：SOGAでのMONËの担当ID。あれば、占有のうちその担当の分と、担当のない占有だけを見る。
+- `SB_HUB_STAFF_ID`（必須）：SOGAでのMONËの担当ID。SOGAは担当のない予約を受けない（H-3, #406）ので、これがないとハブにつながない。占有はその担当の分と、担当のない占有だけを見る。
 
 ### 10-2. 入れたもの
 
