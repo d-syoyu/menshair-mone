@@ -60,12 +60,11 @@ export default function AboutContent({ paymentMethods, closedDaysText }: AboutCo
             <div data-reveal="up" style={revealOrder(4)} className="mb-4 max-w-3xl mx-auto">
               <div className="relative aspect-[4/3] rounded overflow-hidden border border-glass-border">
                 <Image
-                  src="/entrance.webp"
+                  src="/entrance.jpeg"
                   alt="MONË 店舗入口"
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 896px"
-                  quality={90}
                 />
               </div>
             </div>
@@ -93,7 +92,7 @@ export default function AboutContent({ paymentMethods, closedDaysText }: AboutCo
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
-                  src="/shampoo2.webp"
+                  src="/shampoo2.jpeg"
                   alt="ヘッドスパ"
                   fill
                   className="object-cover"
@@ -126,7 +125,7 @@ export default function AboutContent({ paymentMethods, closedDaysText }: AboutCo
               {/* Image */}
               <div className="relative aspect-[16/9]">
                 <Image
-                  src="/shaving.webp"
+                  src="/shaving.jpeg"
                   alt="シェービング"
                   fill
                   className="object-cover"
@@ -176,14 +175,13 @@ export default function AboutContent({ paymentMethods, closedDaysText }: AboutCo
                 {/* Stylist Photo */}
                 <div className="w-48 h-48 md:w-56 md:h-56 rounded-full flex-shrink-0 border border-glass-border overflow-hidden relative">
                   <Image
-                    src="/staff.webp"
+                    src="/staff.png"
                     alt="原崎 裕二 - MONË オーナー/スタイリスト"
                     fill
                     className="object-cover"
-                    sizes="(max-width: 768px) 384px, 448px"
-                    quality={100}
+                    // 表示は直径 192px（スマホ）/ 224px の円
+                    sizes="(max-width: 768px) 192px, 224px"
                     priority
-                    unoptimized={false}
                   />
                 </div>
 
