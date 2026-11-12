@@ -131,7 +131,7 @@ export async function PUT(
     });
 
     // メニューキャッシュを無効化
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     // 名前またはisActiveが変更された場合、Notion配信先オプションを同期
     if (validationResult.data.name !== undefined || validationResult.data.isActive !== undefined) {
@@ -193,7 +193,7 @@ export async function DELETE(
     });
 
     // メニューキャッシュを無効化
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     // Notion配信先オプションを同期（削除されたカテゴリのオプションを削除）
     syncNewsletterOptionsBackground();

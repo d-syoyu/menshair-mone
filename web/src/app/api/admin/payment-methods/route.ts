@@ -19,7 +19,7 @@ const updatePaymentMethodSchema = z.object({
 const updatePaymentMethodsSchema = z.array(updatePaymentMethodSchema);
 
 function revalidatePaymentMethodViews() {
-  revalidateTag(PAYMENT_METHODS_CACHE_TAG, "max");
+  revalidateTag(PAYMENT_METHODS_CACHE_TAG, { expire: 0 });
   revalidatePath("/about");
   revalidatePath("/terms");
   revalidatePath("/api/payment-methods");

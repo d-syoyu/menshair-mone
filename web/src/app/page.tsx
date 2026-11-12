@@ -1,31 +1,18 @@
 import HomeClient from "./HomeClient";
-import { getNews, type BlogPost } from "@/lib/notion";
+import { getHomeNews } from "@/lib/home-news";
 import { getClosedDaysForPublicSeo, getClosedDaysText } from "@/lib/business-settings";
 import { buildHairSalonJsonLd, renderJsonLd } from "@/lib/seo";
 
-export const revalidate = 3600;
-
-function getDateKey(item: BlogPost) {
-  if (item.publishedAt) {
-    return item.publishedAt.replace(/\./g, "");
-  }
-
-  return item.createdAt?.replace(/[-T:.Z]/g, "").slice(0, 8) || "0";
-}
-
-function getLatestNewsItems(news: BlogPost[]) {
-  return [...news]
-    .sort((a, b) => getDateKey(b).localeCompare(getDateKey(a)))
-    .slice(0, 3);
-}
+// お知らせ・定休日はキャッシュタグで即時に破棄されるため、時間ベースの再生成は1日1回の保険だけにする。
+// （以前は1時間ごと＋cronで15分ごとに無条件で破棄しており、CDNキャッシュが頻繁に捨てられていた）
+export const revalidate = 86400;
 
 export default async function HomePage() {
-  const [news, closedDaysText, closedDays] = await Promise.all([
-    getNews(),
+  const [newsItems, closedDaysText, closedDays] = await Promise.all([
+    getHomeNews(),
     getClosedDaysText(),
     getClosedDaysForPublicSeo(),
   ]);
-  const initialNewsItems = getLatestNewsItems(news);
   const localBusinessJsonLd = buildHairSalonJsonLd(closedDays);
 
   return (
@@ -36,7 +23,7 @@ export default async function HomePage() {
           __html: renderJsonLd(localBusinessJsonLd),
         }}
       />
-      <HomeClient initialNewsItems={initialNewsItems} closedDaysText={closedDaysText} />
+      <HomeClient initialNewsItems={newsItems} closedDaysText={closedDaysText} />
     </>
   );
 }

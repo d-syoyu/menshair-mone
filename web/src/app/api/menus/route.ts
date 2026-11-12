@@ -2,44 +2,13 @@
 // MONË Salon - 公開用メニューAPI
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { getCachedBookingMenus } from "@/lib/menu-cache";
 
 // GET /api/menus - 有効なメニュー一覧を取得（公開API）
+// キャッシュ（タグ menus）から返す。管理画面でメニューを変えると破棄される。
 export async function GET() {
   try {
-    const menus = await prisma.menu.findMany({
-      where: { isActive: true },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            nameEn: true,
-            color: true,
-            displayOrder: true,
-          },
-        },
-      },
-      orderBy: [
-        { category: { displayOrder: "asc" } },
-        { displayOrder: "asc" },
-      ],
-    });
-
-    // カテゴリも取得
-    const categories = await prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        nameEn: true,
-        color: true,
-        displayOrder: true,
-      },
-    });
-
-    return NextResponse.json({ menus, categories });
+    return NextResponse.json(await getCachedBookingMenus());
   } catch (error) {
     console.error("Get menus error:", error);
     return NextResponse.json(

@@ -73,11 +73,11 @@ export async function PUT(request: NextRequest) {
       create: { key: "closed_days", value: JSON.stringify(closedDays) },
     });
 
-    revalidateTag(BUSINESS_SETTINGS_CACHE_TAG, "max");
+    // 定休日はフッター経由で全ページに出るため、データを即時に破棄し、全ページを作り直す
+    // （'max' だと再生成時に古い定休日を再利用してしまう）
+    revalidateTag(BUSINESS_SETTINGS_CACHE_TAG, { expire: 0 });
     revalidateTag(HOLIDAY_CACHE_TAG, { expire: 0 });
-    revalidatePath("/");
-    revalidatePath("/about");
-    revalidatePath("/sitemap.xml");
+    revalidatePath("/", "layout");
 
     return NextResponse.json({
       closedDays,

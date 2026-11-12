@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     });
 
     // メニューキャッシュを無効化
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     return NextResponse.json(menu, { status: 201 });
   } catch (error) {

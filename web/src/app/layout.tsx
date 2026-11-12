@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import FloatingButtons from "../components/FloatingPhoneButton";
 import { SogaReturnButton } from "../components/SogaReturnButton";
+import { getClosedDaysText } from "@/lib/business-settings";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -94,11 +95,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // キャッシュ済み（タグ business-settings）。管理画面で定休日を変えると即時に破棄される
+  const closedDaysText = await getClosedDaysText();
+
   return (
     <html lang="ja" className={`scroll-smooth ${cormorant.variable}`} data-scroll-behavior="smooth">
       <body className="flex flex-col min-h-screen">
@@ -106,7 +110,7 @@ export default function RootLayout({
         <main className="flex-grow">
           {children}
         </main>
-        <Footer />
+        <Footer closedDaysText={closedDaysText} />
         <FloatingButtons />
         <SogaReturnButton />
       </body>

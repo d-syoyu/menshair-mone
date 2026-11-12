@@ -572,6 +572,21 @@ h1, h2, h3, h4, h5, h6 {
   will-change: opacity, transform;
 }
 
+/* 動きを減らす設定では1枚目だけを静止表示 */
+@media (prefers-reduced-motion: reduce) {
+  .ken-burns-1,
+  .ken-burns-2,
+  .ken-burns-3 {
+    animation: none;
+    will-change: auto;
+  }
+
+  .ken-burns-2,
+  .ken-burns-3 {
+    display: none;
+  }
+}
+
 /* ============================================
    Admin Page Styles - White Theme
    ============================================ */

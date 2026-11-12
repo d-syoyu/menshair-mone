@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     });
 
     // メニューキャッシュを無効化（カテゴリ一覧もキャッシュに含まれるため）
-    revalidateTag(MENU_CACHE_TAG, "max");
+    revalidateTag(MENU_CACHE_TAG, { expire: 0 });
 
     // Notion配信先オプションを自動同期（バックグラウンドで実行）
     syncNewsletterOptionsBackground();
