@@ -124,7 +124,7 @@ export default function HomeContent({ initialNewsItems, closedDaysText }: HomeCo
             <div data-reveal="up" style={revealOrder(0)} className="relative">
               <div className="relative aspect-[4/5] glass-card overflow-hidden">
                 <Image
-                  src="/entrance.webp"
+                  src="/entrance.jpeg"
                   alt="MONË店舗入口"
                   fill
                   className="object-cover"

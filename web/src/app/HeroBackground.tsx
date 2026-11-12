@@ -9,9 +9,9 @@ import Image from 'next/image';
 // アニメーション（globals.css の ken-burns-*）はラッパーに付け、最初からマウントしておくので
 // 3枚のタイムラインは常に同期する。
 const SLIDES = [
-  { src: '/image1.webp', className: 'ken-burns-1' },
-  { src: '/image2.webp', className: 'ken-burns-2' },
-  { src: '/image3.webp', className: 'ken-burns-3' },
+  { src: '/image1.jpeg', className: 'ken-burns-1' },
+  { src: '/image2.jpeg', className: 'ken-burns-2' },
+  { src: '/image3.jpeg', className: 'ken-burns-3' },
 ] as const;
 
 export default function HeroBackground() {

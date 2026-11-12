@@ -50,7 +50,7 @@ export default function LazyGoogleMapCard({ revealIndex }: { revealIndex: number
       ) : (
         <>
           <Image
-            src="/entrance.webp"
+            src="/entrance.jpeg"
             alt="MONË 店舗外観"
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
