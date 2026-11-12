@@ -1,7 +1,7 @@
 // src/app/api/availability/route.ts
 // MONË - Availability API
 
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getBusinessHours } from "@/constants/salon";
 import {
@@ -15,6 +15,7 @@ import {
   getJstWeekday,
   parseLocalDate,
 } from "@/lib/date-utils";
+import { getSbOccupancy, sbBusyOverlaps, sbHubEnabled, sendSbReadDemand } from "@/lib/sb-hub";
 
 interface TimeSlot {
   time: string;
@@ -28,7 +29,10 @@ interface AvailabilityResponse {
   slots: TimeSlot[];
   totalDuration?: number;
   totalPrice?: number;
+  sbNotice?: string;
 }
+
+const SB_UNKNOWN_NOTICE = "この日の空き状況を確認しています。少し時間をおいてから、もう一度お選びください。お急ぎの場合はお店にご連絡ください";
 
 // 定休日をデータベースから取得するヘルパー関数
 async function getClosedDays(): Promise<number[]> {
@@ -184,6 +188,25 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // SB連携：SB側の占有を重ねる。分からない日は予約を受けない（設計 3-2-1・5-3）。
+    let sbDay: Awaited<ReturnType<typeof getSbOccupancy>> = null;
+    if (sbHubEnabled()) {
+      // お客様が日付を選んだ時だけ、SOGAにその日を優先して読み直してもらう（答えは待たない）。
+      if (searchParams.get("demand") === "1") after(() => sendSbReadDemand(dateStr));
+      sbDay = await getSbOccupancy(dateStr);
+      if (!sbDay || !sbDay.open) {
+        return NextResponse.json<AvailabilityResponse>({
+          date: dateStr,
+          dayOfWeek,
+          isClosed: false,
+          slots: [],
+          totalDuration,
+          totalPrice,
+          sbNotice: SB_UNKNOWN_NOTICE,
+        });
+      }
+    }
+
     // タイムスロット生成
     const allSlots = generateTimeSlots();
 
@@ -240,7 +263,9 @@ export async function GET(request: NextRequest) {
           return slotTime < holidayEnd && endTime > holidayStart;
         });
 
-        return { time: slotTime, available: !hasConflict && !hasHolidayConflict };
+        const hasSbConflict = sbDay ? sbBusyOverlaps(sbDay, slotTime, endTime) : false;
+
+        return { time: slotTime, available: !hasConflict && !hasHolidayConflict && !hasSbConflict };
       });
 
     return NextResponse.json<AvailabilityResponse>({

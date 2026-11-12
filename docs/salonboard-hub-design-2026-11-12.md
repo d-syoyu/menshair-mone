@@ -207,3 +207,75 @@ SOGAの `SALONBOARD_EXTENSION_SECRET`、SOGAのRedisの接続先、画像認証�
 - SOGAの書込の試行を「外部予約」に広げる作業の正確な大きさ（H-3）。書込の中心部分（`salonboard-write-attempt-*`、`salonboard-sync.ts`、占有の判定）を細かく読む必要がある。
 - `occupancy` を、SOGAの今の「生の占有」の仕組み（`salonboard-live.ts`）でそのまま返せるか。今はSOGAの公開予約の画面のためだけに作られている。
 - VPS（ABLENET）の実機の設定（ファイアウォールなど）。手順書とコードだけを見た。
+
+## 10. MONË側の実装（2026-11-13）
+
+5章のうち、5-1〜5-4をMONËに入れた。**SOGA側の共通APIとWebhook（H-2〜H-5）はまだない。** そのため、MONËの実装は3章の取り決めに合わせて書き、SOGAの応答は試験の中で作った応答で確かめただけである。
+
+### 10-1. 連携の入り切り
+
+- `SB_HUB_URL`・`SB_HUB_API_KEY`・`SB_HUB_SHOP_ID` の3つがそろい、URLが `https://` の時だけ連携が動く。どれかが欠ければ、空き枠・予約・取り消し・管理画面の動きは今までと同じ（SOGAへは何も送らない）。
+- `SB_HUB_WEBHOOK_SECRET` がない間、`/api/sb-hub/webhook` は404を返す。
+- `SB_HUB_STAFF_ID`（任意）：SOGAでのMONËの担当ID。あれば、占有のうちその担当の分と、担当のない占有だけを見る。
+
+### 10-2. 入れたもの
+
+| 場所 | すること |
+| --- | --- |
+| `web/src/lib/sb-hub.ts` | SOGAの共通APIの呼び出し（占有・優先読取・枠を押さえる・取り消す・状態）。時間切れは、枠を押さえる・取り消すが30秒、それ以外は8秒。占有は同じ日について15秒覚える。鍵・URL・応答の本文はログに出さない |
+| `web/src/lib/sb-hub-sync.ts` | 予約の今の状態をSOGAに伝える（版を1つ上げてから送る） |
+| `web/src/lib/sb-hub-webhook.ts`・`web/src/app/api/sb-hub/webhook/route.ts` | Webhookの受け口。署名・5分の時刻の幅・イベントIDの重複除き。イベントの記録と予約の更新は1つのトランザクション（失敗すれば記録も残らず、SOGAが送り直す） |
+| `/api/availability` | 連携が有効なら、SBの占有を重ねる。分からない日・`open: false` の日は枠を出さず、お知らせを出す。お客様が日付を選んだ時（`demand=1`）だけ、優先読取を送る（応答の後に送る） |
+| `POST /api/reservations`（お客様） | MONËに予約を作ってから、SOGAに枠を押さえてもらう（受け口 `PUBLIC`）。`CONFIRMED` は今までと同じ。`REQUESTED` は「申込」として残し、確定のメールは送らない（完了画面も申込の文言にする）。`CONFLICT`・`PAUSED`・届かない時は、MONËの予約を消して断る。届かない時は、念のため取り消しも送る |
+| お客様の取り消し・管理画面の作成・変更・状態の変更 | 変えた後にSOGAに伝える（受け口 `ADMIN`）。SOGAに送れなくても予約は残し、「SBへ手で入力」と「要確認」にする |
+| 管理画面の削除 | 行を消す前に、SOGAにある予約を取り消す。取り消せない時は消さない（SBに残ったままになるため） |
+| 予約管理の画面 | 「SB連携」欄（画面を開いた時と再読込の時だけ取る）：状態、SOGAの設定画面へのリンク、要確認・申込の予約、「確認済みにする」。予約の欄に「SB反映待ち」などを出す |
+| スキーマ | `Reservation` に `sbState`・`sbVersion`・`sbReservationNo`・`sbRequested`・`sbNeedsReview`。表 `SbHubEvent` |
+
+### 10-3. 3章から決め足したこと（SOGA側のH-3〜H-5で合わせる）
+
+- `PUT bookings` の本文：`{ version, staffId, date, start, end, status: "ACTIVE", noteName, origin }`。答え：`{ answer: "CONFIRMED" | "REQUESTED" | "CONFLICT" | "PAUSED" }`（HTTPは200・201、`CONFLICT` は409でもよい）。
+- `DELETE bookings`：200・202・204を受けた、404はSOGAが知らない予約（取り消す物がない）として扱う。
+- `occupancy` の答え：`{ days: [{ date, open, busy: [{ staffId?, start: "HH:MM", end: "HH:MM" }] }] }`。
+- `read-demand` の本文：`{ dates: ["YYYY-MM-DD"] }`。
+- `status` の答え：`{ state: "CONNECTED" | "LOGIN_REQUIRED" | "CAPTCHA_REQUIRED" | "STALE" | "STOPPED", settingsUrl }`。
+- Webhookの形：`{ id, type, data }`。`booking.state_changed` の `state` に、**`DECLINED`（申込が成り立たなかった）を足した。** 3章の状態（`PENDING` `APPLIED` `VERIFY_REQUIRED` `MANUAL_REQUIRED`）だけでは、申込の不成立をMONËが知れないため。受けると、MONËの予約を取り消し、お客様にメールする。
+- 秘密の入れ替えの間は、`X-Sb-Hub-Signature` に `v1=` を2つ並べてよい（どちらかが合えば受ける）。
+- 管理画面の予約がSOGAに届かない時：3-2-1は「届かない時は受けない」としたが、これはお客様の予約の話とし、**管理画面の予約（電話の予約など）は残して、SBへ手で入れる扱いにした。** 店がSOGAの障害で電話の予約を取れなくなるのを避けるため。
+
+### 10-4. 本番に出す前に
+
+1. **本番DBのスキーマを先に変える。** Prismaは予約の全部の列を読むので、列がないまま新しいコードが動くと、予約まわりがすべて失敗する。SQLは列と表を足すだけ（10-5）。本番への書き込みは、ユーザーの了承を得てから行う。
+2. SOGA側のH-2〜H-5（鍵・外部予約・API・Webhook）とH-6（運営画面の2段階認証）を済ませる。
+3. SOGAの運営画面で、MONËのテナント・店舗・鍵・Webhookの宛先（`https://<MONËのドメイン>/api/sb-hub/webhook`）を作る。オーナーがSOGAでSBの初期設定をする（SBのID・パスワードの入力はオーナーが行う）。
+4. VercelのMONEの環境変数に、10-1の値を入れる（まずプレビューだけ）。プレビューとSOGAのプレビューで、8章の確認をする。
+5. 本番の環境変数を入れる。入れるまでは、本番の動きは今と同じ。
+
+### 10-5. スキーマの変更（本番に流すSQL）
+
+```sql
+CREATE TYPE "SbSyncState" AS ENUM ('NONE', 'PENDING', 'APPLIED', 'VERIFY_REQUIRED', 'MANUAL_REQUIRED');
+ALTER TABLE "Reservation" ADD COLUMN "sbNeedsReview" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "sbRequested" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "sbReservationNo" TEXT,
+ADD COLUMN "sbState" "SbSyncState" NOT NULL DEFAULT 'NONE',
+ADD COLUMN "sbVersion" INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE "SbHubEvent" (
+    "id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "SbHubEvent_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX "SbHubEvent_receivedAt_idx" ON "SbHubEvent"("receivedAt");
+CREATE INDEX "Reservation_sbNeedsReview_idx" ON "Reservation"("sbNeedsReview");
+```
+
+既定値つきの列の追加は、PostgreSQLでは表を書き直さない。予約は約1,000件。
+
+### 10-6. 確認できていないこと
+
+- 実際のSOGAとのやり取り（SOGA側のAPIがまだない）。
+- 空き枠の画面で、SBの占有が分からない日のお知らせの見え方（ブラウザで見ていない）。
+- 管理画面の「SB連携」欄の見え方（連携が無効の間は出ないので、本番・プレビューでは出ない）。
+- E2E（Playwright）は、連携が無効の状態で今までどおり通るかだけを見る。連携が有効な状態のE2Eは、SOGAのプレビューができてから足す。
+- `SbHubEvent` は増え続ける。古い行（例：30日より前）を消す処理は、毎日動いている処理に足すか、SOGA側が同じイベントIDを送り直す期間（最長約15時間）に合わせて決める。

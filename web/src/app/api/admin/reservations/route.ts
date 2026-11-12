@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { getJstTimeString, getJstWeekday, parseLocalDate } from "@/lib/date-utils";
 import { sendReservationConfirmationEmail, sendAdminNewReservationEmail } from "@/lib/email";
+import { syncReservationToSb } from "@/lib/sb-hub-sync";
 
 // DB Menuの型定義
 interface DbMenu {
@@ -406,6 +407,9 @@ export async function POST(request: NextRequest) {
         items: true,
       },
     });
+
+    // SB連携：店舗の管理画面からの予約（受け口 ADMIN）。送れなくても予約は残し、「要確認」にする。
+    await syncReservationToSb(reservation.id, "ADMIN");
 
     // 電話予約確認メール送信（顧客にメールアドレスがある場合のみ）
     if (reservation.user?.email) {

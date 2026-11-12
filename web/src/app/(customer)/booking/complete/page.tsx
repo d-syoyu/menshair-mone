@@ -8,6 +8,8 @@ import { CheckCircle, Calendar, ArrowRight } from 'lucide-react';
 function BookingCompleteContent() {
   const searchParams = useSearchParams();
   const reservationId = searchParams.get('id');
+  // SB連携で「申込」として受けた予約（SBで確かめてから確定する）
+  const requested = searchParams.get('requested') === '1';
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -19,12 +21,19 @@ function BookingCompleteContent() {
 
         {/* Header */}
         <div className="enter-up mb-12">
-          <h1 className="text-heading text-white mb-4">ご予約完了</h1>
+          <h1 className="text-heading text-white mb-4">{requested ? 'ご予約の申込を受け付けました' : 'ご予約完了'}</h1>
           <div className="divider-line mx-auto mb-6" />
-          <p className="text-text-secondary">
-            ご予約ありがとうございます。<br />
-            ご来店を心よりお待ちしております。
-          </p>
+          {requested ? (
+            <p className="text-text-secondary">
+              空き状況を確認のうえ、確定しましたらメールでお知らせします。<br />
+              確定のメールが届くまで、ご予約は確定していません。
+            </p>
+          ) : (
+            <p className="text-text-secondary">
+              ご予約ありがとうございます。<br />
+              ご来店を心よりお待ちしております。
+            </p>
+          )}
         </div>
 
         {/* Reservation ID */}
