@@ -246,3 +246,30 @@ export async function getSbShopStatus(
   const settingsUrl = typeof json.settingsUrl === "string" && json.settingsUrl.startsWith("https://") ? json.settingsUrl : null;
   return { reachable: true, state: SHOP_STATES.has(json.state) ? json.state : "UNKNOWN", settingsUrl };
 }
+
+// ---------- SOGAのSB設定画面への一度きりのリンク（設計 3-4） ----------
+
+/**
+ * SOGAのSB設定画面に入るリンク（5分・1回だけ）。管理者がボタンを押した時だけ出す。保存しない。
+ * SOGAの答えのURLは、共通窓口と同じ配信元のものだけを使う（別のサイトへ飛ばされないように）。
+ */
+export async function createSbSetupLink(
+  actor: string,
+  { config = sbHubConfig(), fetchImpl }: { config?: SbHubConfig | null; fetchImpl?: FetchLike } = {}
+): Promise<string | null> {
+  if (!config) return null;
+  const res = await call(config, "POST", "/setup-link", { body: { actor: actor.slice(0, 200) }, timeoutMs: READ_TIMEOUT_MS, fetchImpl });
+  const url = (res?.json as { url?: unknown } | null)?.url;
+  if (!res || (res.status !== 200 && res.status !== 201) || typeof url !== "string") {
+    logFailure("setup link", res?.status ?? null);
+    return null;
+  }
+  try {
+    const link = new URL(url);
+    if (link.protocol !== "https:" || link.origin !== new URL(config.url).origin) throw new Error("origin");
+    return link.toString();
+  } catch {
+    logFailure("setup link", res.status);
+    return null;
+  }
+}

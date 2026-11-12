@@ -2,6 +2,7 @@
 
 // 管理画面の「SB連携」欄（設計 docs/salonboard-hub-design-2026-11-12.md 5-4）。
 // 開いた時だけ状態を取る。定期的に読み直さない。連携が無効なら何も出さない。
+// SBの初期設定・画像認証・ログインのやり直しは、「SBの設定を開く」からSOGAの画面で行う。
 
 import { useEffect, useState } from 'react';
 
@@ -67,6 +68,33 @@ export default function SbHubPanel() {
     load();
   }, []);
 
+  const [opening, setOpening] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  // SOGAのSB設定画面を、一度きりのリンクで開く（設計 3-4）。
+  // ポップアップを止められないよう、押した時にタブを先に開いてから行き先を入れる。
+  const openSettings = async () => {
+    setOpening(true);
+    setLinkError(null);
+    const tab = window.open('', '_blank');
+    try {
+      const res = await fetch('/api/admin/sb-hub/setup-link', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || typeof body.url !== 'string') throw new Error(body.error || 'SOGAの設定画面を開けませんでした');
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = body.url;
+      } else {
+        window.location.href = body.url;
+      }
+    } catch (error) {
+      tab?.close();
+      setLinkError(error instanceof Error ? error.message : 'SOGAの設定画面を開けませんでした');
+    } finally {
+      setOpening(false);
+    }
+  };
+
   const resolve = async (id: string) => {
     const res = await fetch('/api/admin/sb-hub/status', {
       method: 'PATCH',
@@ -92,12 +120,13 @@ export default function SbHubPanel() {
           <span className={healthy ? 'text-green-700' : 'text-amber-800'}>
             {status.reachable ? STATE_LABELS[status.state] ?? STATE_LABELS.UNKNOWN : 'SOGAに接続できません（Web予約は受け付けていません）'}
           </span>
-          {status.reachable && status.settingsUrl && (
-            <a href={status.settingsUrl} target="_blank" rel="noopener noreferrer" className="underline">SOGAの設定画面</a>
-          )}
+          <button type="button" onClick={openSettings} disabled={opening} className="rounded border border-gray-300 px-2 py-1 text-xs disabled:opacity-50">
+            {opening ? '開いています…' : 'SBの設定を開く'}
+          </button>
           <button type="button" onClick={load} className="rounded border border-gray-300 px-2 py-1 text-xs">再読込</button>
         </div>
       </div>
+      {linkError && <p className="mt-2 text-xs text-red-700">{linkError}</p>}
       {data.review.length > 0 && (
         <ul className="mt-3 space-y-2">
           {data.review.map((row) => (

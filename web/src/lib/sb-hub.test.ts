@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearSbOccupancyCache,
+  createSbSetupLink,
   deleteSbBooking,
   getSbOccupancy,
   getSbShopStatus,
@@ -133,5 +134,27 @@ describe("other calls", () => {
     expect(sbNoteName(null)).toBe("お客様");
     expect(sbNoteName("  a\nb\tc  ")).toBe("a b c");
     expect(sbNoteName("x".repeat(100))).toHaveLength(60);
+  });
+});
+
+describe("createSbSetupLink", () => {
+  it("returns SOGA's one-time link and says who asked", async () => {
+    const fetchImpl = respond(201, { url: "https://admin.soga.test/salonboard-link/abc", expiresAt: "2026-11-13T00:05:00Z" });
+    expect(await createSbSetupLink("owner@example.com", { config, fetchImpl })).toBe("https://admin.soga.test/salonboard-link/abc");
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/shops\/shop_1\/setup-link$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ actor: "owner@example.com" });
+  });
+
+  it("never sends the admin to another site", async () => {
+    for (const link of ["https://evil.test/salonboard-link/abc", "http://admin.soga.test/x", "javascript:alert(1)", "nonsense"]) {
+      expect(await createSbSetupLink("a", { config, fetchImpl: respond(200, { url: link }) })).toBeNull();
+    }
+  });
+
+  it("is null when SOGA does not give one", async () => {
+    expect(await createSbSetupLink("a", { config, fetchImpl: respond(429, {}) })).toBeNull();
+    expect(await createSbSetupLink("a", { config: null })).toBeNull();
   });
 });
