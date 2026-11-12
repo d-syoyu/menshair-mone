@@ -1,117 +1,11 @@
-'use client';
-
-import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { HomeNewsItem } from '@/lib/home-news';
 import Image from 'next/image';
-import { motion, useInView, type Variants } from 'framer-motion';
 import { ArrowRight, Clock, MapPin, Calendar, Phone } from 'lucide-react';
+import type { HomeNewsItem } from '@/lib/home-news';
+import { RevealSection } from '@/components/RevealSection';
+import { revealOrder } from '@/components/reveal-order';
 import HeroBackground from './HeroBackground';
-
-// Animation variants
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] } }
-};
-
-const fadeIn: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 1 } }
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 }
-  }
-};
-
-// Section component with scroll animation
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
-
-  return (
-    <motion.section
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={staggerContainer}
-      className={className}
-    >
-      {children}
-    </motion.section>
-  );
-}
-
-function LazyGoogleMapCard() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [shouldLoadMap, setShouldLoadMap] = useState(false);
-
-  useEffect(() => {
-    const target = containerRef.current;
-    if (!target || shouldLoadMap) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoadMap(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '120px' }
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [shouldLoadMap]);
-
-  return (
-    <motion.div
-      ref={containerRef}
-      variants={fadeInUp}
-      className="relative w-full aspect-square lg:aspect-[4/3] glass-card overflow-hidden"
-    >
-      {shouldLoadMap ? (
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3278.4479374057114!2d135.56415047574637!3d34.744307472904254!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6000e163c999dd39%3A0xe6cfa343e4fc5f48!2smen's%20hair%20MONE!5e0!3m2!1sja!2sjp!4v1789968354329!5m2!1sja!2sjp"
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          title="Men's hair MONEのGoogleマップ"
-          className="absolute inset-0 grayscale-[30%] contrast-[1.1]"
-        />
-      ) : (
-        <>
-          <Image
-            src="/entrance.webp"
-            alt="MONË 店舗外観"
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-        </>
-      )}
-
-      <div className="absolute right-4 bottom-4">
-        <a
-          href="https://www.google.com/maps/search/?api=1&query=men's+hair+MONE+大阪府守口市八雲中町1-24-1"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-dark/90 border border-glass-border text-white text-sm transition-all duration-300 hover:bg-accent hover:border-accent backdrop-blur-sm"
-        >
-          <MapPin className="w-4 h-4" />
-          <span className="text-xs tracking-[0.1em]">大きな地図で見る</span>
-        </a>
-      </div>
-    </motion.div>
-  );
-}
+import LazyGoogleMapCard from './LazyGoogleMapCard';
 
 // メニューデータ
 const featuredMenus = [
@@ -142,12 +36,14 @@ const featuredMenus = [
 ];
 
 
-interface HomeClientProps {
+interface HomeContentProps {
   initialNewsItems: HomeNewsItem[];
   closedDaysText: string;
 }
 
-export default function HomeClient({ initialNewsItems, closedDaysText }: HomeClientProps) {
+// トップページの本体。サーバー部品として描画し、ブラウザで動くのは
+// ヒーロー画像（HeroBackground）・地図（LazyGoogleMapCard）・表示アニメーション（RevealSection）だけ。
+export default function HomeContent({ initialNewsItems, closedDaysText }: HomeContentProps) {
   const newsItems = initialNewsItems;
 
   return (
@@ -221,11 +117,11 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
       </section>
 
       {/* Concept Section */}
-      <AnimatedSection className="py-16 md:py-32 lg:py-40 section-gradient overflow-hidden">
+      <RevealSection className="py-16 md:py-32 lg:py-40 section-gradient overflow-hidden">
         <div className="container-wide">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center">
             {/* Decorative Element */}
-            <motion.div variants={fadeInUp} className="relative">
+            <div data-reveal="up" style={revealOrder(0)} className="relative">
               <div className="relative aspect-[4/5] glass-card overflow-hidden">
                 <Image
                   src="/entrance.webp"
@@ -238,59 +134,60 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
               {/* Decorative frame - hidden on mobile to prevent overflow */}
               <div className="hidden md:block absolute -bottom-4 -right-4 w-full h-full border border-accent/30 -z-10" />
               <div className="hidden md:block absolute -bottom-8 -right-8 w-full h-full border border-gold/20 -z-20" />
-            </motion.div>
+            </div>
 
             {/* Content */}
             <div className="lg:pl-8">
-              <motion.p variants={fadeInUp} className="text-subheading mb-4">
+              <p data-reveal="up" style={revealOrder(1)} className="text-subheading mb-4">
                 Concept
-              </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-heading mb-8">
+              </p>
+              <h2 data-reveal="up" style={revealOrder(2)} className="text-heading mb-8">
                 上質な休息を、<br />
                 <span className="text-accent-light">あなたに。</span>
-              </motion.h2>
-              <motion.div variants={fadeInUp} className="divider-line mb-8" />
-              <motion.p variants={fadeInUp} className="text-body mb-6">
+              </h2>
+              <div data-reveal="up" style={revealOrder(3)} className="divider-line mb-8" />
+              <p data-reveal="up" style={revealOrder(4)} className="text-body mb-6">
                 柔らかな「光」が差すプライベート空間で
                 一人のスタッフが最初から最後まで丁寧にお客様と向き合い、
                 大人の男性に相応しい凜とした「印象」と
                 「光」のような清潔感をご提供致します。
-              </motion.p>
-              <motion.p variants={fadeInUp} className="text-body mb-10">
+              </p>
+              <p data-reveal="up" style={revealOrder(5)} className="text-body mb-10">
                 日々忙しい大人の男性にカット、シェービング、ヘッドスパなど
                 様々なメニューを通じ「上質な休息」をご提供します。
-              </motion.p>
-              <motion.div variants={fadeInUp}>
+              </p>
+              <div data-reveal="up" style={revealOrder(6)}>
                 <Link href="/about" className="btn-ghost group">
                   <span className="border-b border-text-muted pb-1 group-hover:border-accent transition-colors">
                     店舗情報を見る
                   </span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Menu Section */}
-      <AnimatedSection className="py-16 md:py-32 section-dark overflow-hidden">
+      <RevealSection className="py-16 md:py-32 section-dark overflow-hidden">
         <div className="container-wide relative z-10">
           <div className="text-center mb-20">
-            <motion.p variants={fadeInUp} className="text-subheading mb-4">
+            <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
               Menu
-            </motion.p>
-            <motion.h2 variants={fadeInUp} className="text-heading mb-6">
+            </p>
+            <h2 data-reveal="up" style={revealOrder(1)} className="text-heading mb-6">
               メニュー
-            </motion.h2>
-            <motion.div variants={fadeInUp} className="divider-line-long mx-auto" />
+            </h2>
+            <div data-reveal="up" style={revealOrder(2)} className="divider-line-long mx-auto" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-            {featuredMenus.map((menu) => (
-              <motion.div
+            {featuredMenus.map((menu, i) => (
+              <div
                 key={menu.title}
-                variants={fadeInUp}
+                data-reveal="up"
+                style={revealOrder(3 + i)}
                 className="menu-card flex flex-col"
               >
                 <div className="mb-4">
@@ -316,47 +213,48 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
                     </span>
                   )}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
-          <motion.div variants={fadeInUp} className="text-center mt-16">
+          <div data-reveal="up" style={revealOrder(7)} className="text-center mt-16">
             <Link href="/menu" className="btn-primary">
               全てのメニューを見る
               <ArrowRight className="w-4 h-4" />
             </Link>
-          </motion.div>
+          </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* News Section */}
-      <AnimatedSection className="py-16 md:py-32 section-gradient overflow-hidden">
+      <RevealSection className="py-16 md:py-32 section-gradient overflow-hidden">
         <div className="container-narrow">
           <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-12">
             <div>
-              <motion.p variants={fadeInUp} className="text-subheading mb-4">
+              <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
                 News
-              </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-heading">
+              </p>
+              <h2 data-reveal="up" style={revealOrder(1)} className="text-heading">
                 お知らせ
-              </motion.h2>
+              </h2>
             </div>
-            <motion.div variants={fadeIn} className="mt-6 md:mt-0">
+            <div data-reveal="fade" style={revealOrder(2)} className="mt-6 md:mt-0">
               <Link href="/news" className="btn-ghost group">
                 <span>一覧を見る</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>
-            </motion.div>
+            </div>
           </div>
 
-          <motion.div variants={fadeInUp} className="divider-line-long mb-8" />
+          <div data-reveal="up" style={revealOrder(3)} className="divider-line-long mb-8" />
 
           <div className="space-y-0">
             {newsItems.length > 0 ? (
-              newsItems.map((news) => (
-                <motion.div
+              newsItems.map((news, i) => (
+                <div
                   key={news.id}
-                  variants={fadeInUp}
+                  data-reveal="up"
+                  style={revealOrder(4 + i)}
                   className="news-card group cursor-pointer"
                 >
                   <Link href={`/news/${news.slug}`} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
@@ -367,31 +265,31 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
                       {news.title}
                     </span>
                   </Link>
-                </motion.div>
+                </div>
               ))
             ) : (
-              <motion.p variants={fadeInUp} className="text-text-muted text-center py-8">
+              <p data-reveal="up" style={revealOrder(4)} className="text-text-muted text-center py-8">
                 お知らせはありません
-              </motion.p>
+              </p>
             )}
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* Access Section */}
-      <AnimatedSection className="py-16 md:py-32 section-dark overflow-hidden">
+      <RevealSection className="py-16 md:py-32 section-dark overflow-hidden">
         <div className="container-wide relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
             <div>
-              <motion.p variants={fadeInUp} className="text-subheading mb-4">
+              <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
                 Access
-              </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-heading mb-8">
+              </p>
+              <h2 data-reveal="up" style={revealOrder(1)} className="text-heading mb-8">
                 アクセス
-              </motion.h2>
-              <motion.div variants={fadeInUp} className="divider-line mb-10" />
+              </h2>
+              <div data-reveal="up" style={revealOrder(2)} className="divider-line mb-10" />
 
-              <motion.div variants={fadeInUp} className="space-y-8">
+              <div data-reveal="up" style={revealOrder(3)} className="space-y-8">
                 <div>
                   <p className="text-xs tracking-[0.2em] uppercase text-text-muted mb-2">Salon</p>
                   <p className="text-2xl font-serif text-white">MONË</p>
@@ -455,9 +353,9 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
                     <p className="text-text-secondary">完全予約制</p>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div variants={fadeInUp} className="mt-12">
+              <div data-reveal="up" style={revealOrder(4)} className="mt-12">
                 <Link
                   href="/about"
                   className="btn-outline"
@@ -465,16 +363,16 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
                   店舗情報を見る
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-              </motion.div>
+              </div>
             </div>
 
-            <LazyGoogleMapCard />
+            <LazyGoogleMapCard revealIndex={5} />
           </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
       {/* CTA Section */}
-      <AnimatedSection className="py-16 md:py-32 relative overflow-hidden">
+      <RevealSection className="py-16 md:py-32 relative overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-dark-gray via-dark to-dark-gray" />
@@ -482,18 +380,18 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
         </div>
 
         <div className="container-narrow relative z-10 text-center">
-          <motion.p variants={fadeInUp} className="text-subheading mb-4">
+          <p data-reveal="up" style={revealOrder(0)} className="text-subheading mb-4">
             Reservation
-          </motion.p>
-          <motion.h2 variants={fadeInUp} className="text-[clamp(1.3rem,4vw,2.75rem)] font-light leading-tight mb-6 whitespace-nowrap">
+          </p>
+          <h2 data-reveal="up" style={revealOrder(1)} className="text-[clamp(1.3rem,4vw,2.75rem)] font-light leading-tight mb-6 whitespace-nowrap">
             ご予約をお待ちしております
-          </motion.h2>
-          <motion.div variants={fadeInUp} className="divider-line mx-auto mb-8" />
-          <motion.p variants={fadeInUp} className="text-body max-w-lg mx-auto mb-12">
+          </h2>
+          <div data-reveal="up" style={revealOrder(2)} className="divider-line mx-auto mb-8" />
+          <p data-reveal="up" style={revealOrder(3)} className="text-body max-w-lg mx-auto mb-12">
             当サロンは完全予約制となっております。<br />
             お電話またはWebからご予約ください。
-          </motion.p>
-          <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center">
+          </p>
+          <div data-reveal="up" style={revealOrder(4)} className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/booking" className="btn-primary">
               Web予約する
               <ArrowRight className="w-4 h-4" />
@@ -501,9 +399,9 @@ export default function HomeClient({ initialNewsItems, closedDaysText }: HomeCli
             <a href="tel:06-6908-4859" className="btn-outline">
               06-6908-4859
             </a>
-          </motion.div>
+          </div>
         </div>
-      </AnimatedSection>
+      </RevealSection>
 
     </div>
   );

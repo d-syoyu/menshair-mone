@@ -106,6 +106,10 @@ export default async function RootLayout({
   return (
     <html lang="ja" className={`scroll-smooth ${cormorant.variable}`} data-scroll-behavior="smooth">
       <body className="flex flex-col min-h-screen">
+        {/* JS が動かない環境では、スクロール表示のアニメーション対象を最初から見せる */}
+        <noscript>
+          <style>{"[data-reveal]{opacity:1!important;transform:none!important}"}</style>
+        </noscript>
         <Header />
         <main className="flex-grow">
           {children}

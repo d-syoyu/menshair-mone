@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AboutClient from "./AboutClient";
+import AboutContent from "./AboutContent";
 import { getClosedDaysText } from "@/lib/business-settings";
 import { getCachedPaymentMethods } from "@/lib/payment-methods";
 
@@ -35,7 +35,7 @@ export default async function AboutPage() {
   ]);
 
   return (
-    <AboutClient
+    <AboutContent
       closedDaysText={closedDaysText}
       paymentMethods={paymentMethods}
     />

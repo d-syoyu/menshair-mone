@@ -1,4 +1,4 @@
-import HomeClient from "./HomeClient";
+import HomeContent from "./HomeContent";
 import { getHomeNews } from "@/lib/home-news";
 import { getClosedDaysForPublicSeo, getClosedDaysText } from "@/lib/business-settings";
 import { buildHairSalonJsonLd, renderJsonLd } from "@/lib/seo";
@@ -23,7 +23,7 @@ export default async function HomePage() {
           __html: renderJsonLd(localBusinessJsonLd),
         }}
       />
-      <HomeClient initialNewsItems={newsItems} closedDaysText={closedDaysText} />
+      <HomeContent initialNewsItems={newsItems} closedDaysText={closedDaysText} />
     </>
   );
 }
