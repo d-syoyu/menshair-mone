@@ -87,6 +87,18 @@ const getCategoryTextColor = (categoryName: string): string => {
   return textColors[categoryName] || "#FFFFFF";
 };
 
+type DayMark = 'plenty' | 'available' | 'limited' | 'full' | 'closed' | 'unavailable' | 'unknown';
+
+// 空き状況の印（SOGAの予約カレンダーと同じ ◎○△×）。休業日・受付期間外は日付自体を選べなくしている。
+const DAY_MARKS: Partial<Record<DayMark, { symbol: string; label: string; className: string }>> = {
+  plenty: { symbol: '◎', label: '余裕あり', className: 'text-accent-light' },
+  available: { symbol: '○', label: '空きあり', className: 'text-sky-300' },
+  limited: { symbol: '△', label: '残りわずか', className: 'text-amber-300' },
+  full: { symbol: '×', label: '空きなし', className: 'text-rose-300' },
+  unknown: { symbol: '－', label: '確認中', className: 'text-text-muted' },
+};
+const DAY_MARK_LEGEND = ['plenty', 'available', 'limited', 'full'] as const;
+
 export default function BookingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -100,6 +112,8 @@ export default function BookingPage() {
   const [holidays, setHolidays] = useState<Array<{ date: string; startTime: string | null; endTime: string | null }>>([]);
   const [closedDays, setClosedDays] = useState<number[]>([1]); // デフォルトは月曜日
   const [specialOpenDays, setSpecialOpenDays] = useState<string[]>([]);
+  // カレンダーの各日の空き状況の印（選んだメニューの所要時間で決まる）
+  const [dayMarks, setDayMarks] = useState<Record<string, DayMark>>({});
 
   // DBから取得したメニューとカテゴリ
   const [menus, setMenus] = useState<DbMenu[]>([]);
@@ -151,6 +165,20 @@ export default function BookingPage() {
     };
     fetchHolidays();
   }, [currentMonth]);
+
+  // 日時選択の画面では、表示中の月の各日の空き状況の印を取得
+  const menuKey = selectedMenuIds.join(',');
+  useEffect(() => {
+    if (step !== 2 || !menuKey) return;
+    const controller = new AbortController();
+    const month = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+    setDayMarks({});
+    fetch(`/api/availability/calendar?month=${month}&menuIds=${menuKey}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.marks) setDayMarks(data.marks); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [step, currentMonth, menuKey]);
 
   // 日付選択時に空き状況を取得
   useEffect(() => {
@@ -696,12 +724,13 @@ export default function BookingPage() {
                 const isClosed = isClosedDay(date) && !isSpecialOpenDay(date);
                 const holiday = isHoliday(date);
                 const hasTimeHoliday = hasTimeRangeHoliday(date);
+                const mark = isSelectable ? DAY_MARKS[dayMarks[formatDateLocal(date)]] : undefined;
 
                 const getTitle = () => {
                   if (isClosed) return '定休日';
                   if (holiday) return '臨時休業';
-                  if (hasTimeHoliday) return '一部時間帯休業';
-                  return undefined;
+                  if (hasTimeHoliday) return mark ? `一部時間帯休業・${mark.label}` : '一部時間帯休業';
+                  return mark?.label;
                 };
 
                 return (
@@ -710,7 +739,8 @@ export default function BookingPage() {
                     onClick={() => handleDateSelect(date)}
                     disabled={!isSelectable}
                     title={getTitle()}
-                    className={`aspect-square flex items-center justify-center text-[11px] sm:text-xs font-medium transition-all rounded relative ${
+                    aria-label={`${date.getMonth() + 1}月${date.getDate()}日${getTitle() ? ` ${getTitle()}` : ''}`}
+                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 text-[11px] sm:text-xs font-medium transition-all rounded relative ${
                       isSelected
                         ? 'bg-accent text-white'
                         : isSelectable
@@ -720,13 +750,30 @@ export default function BookingPage() {
                       date.getDay() === 0 && isSelectable ? 'text-red-400' : ''
                     } ${date.getDay() === 6 && isSelectable ? 'text-blue-400' : ''}`}
                   >
-                    {date.getDate()}
+                    <span className="leading-none">{date.getDate()}</span>
+                    {mark && (
+                      <span
+                        aria-hidden="true"
+                        className={`text-[9px] sm:text-[10px] leading-none ${isSelected ? 'text-white' : mark.className}`}
+                      >
+                        {mark.symbol}
+                      </span>
+                    )}
                     {hasTimeHoliday && isSelectable && (
                       <span className="absolute bottom-0.5 right-0.5 w-1 h-1 bg-yellow-400 rounded-full" />
                     )}
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[9px] sm:text-[10px] text-text-muted">
+              {DAY_MARK_LEGEND.map((key) => DAY_MARKS[key] && (
+                <span key={key} className="inline-flex items-center gap-1">
+                  <span aria-hidden="true" className={DAY_MARKS[key]!.className}>{DAY_MARKS[key]!.symbol}</span>
+                  {DAY_MARKS[key]!.label}
+                </span>
+              ))}
             </div>
 
             {closedDays.length > 0 && (
