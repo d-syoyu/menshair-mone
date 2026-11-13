@@ -4,10 +4,8 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getBusinessHours } from "@/constants/salon";
-import {
-  generateTimeSlots,
-  isWithinBookingWindow,
-} from "@/constants/booking";
+import { isWithinBookingWindow } from "@/constants/booking";
+import { computeDaySlots, type TimeSlot } from "@/lib/availability";
 import {
   addDaysToDbDate,
   getJstDateString,
@@ -15,12 +13,7 @@ import {
   getJstWeekday,
   parseLocalDate,
 } from "@/lib/date-utils";
-import { getSbOccupancy, sbBusyOverlaps, sbHubEnabled, sendSbReadDemand } from "@/lib/sb-hub";
-
-interface TimeSlot {
-  time: string;
-  available: boolean;
-}
+import { getSbOccupancy, sbHubEnabled, sendSbReadDemand } from "@/lib/sb-hub";
 
 interface AvailabilityResponse {
   date: string;
@@ -207,66 +200,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // タイムスロット生成
-    const allSlots = generateTimeSlots();
-
-    // 現在時刻チェック用
     const now = new Date();
-    const isToday = dateStr === getJstDateString(now);
-    const currentJstTime = getJstTimeString(now);
-
-    // 開店時間以降のスロットのみをフィルタリング
-    const filteredSlots = allSlots.filter((slotTime) => slotTime >= businessHours.open);
-
-    const slots: TimeSlot[] = filteredSlots.map((slotTime) => {
-        // 1. 最終受付時間チェック（最優先）
-        //    営業時間の最終受付時間（平日20:00、土日祝19:30）を超えていたら予約不可
-        if (slotTime > earliestLastBookingTime) {
-          return { time: slotTime, available: false };
-        }
-
-        // 2. 今日の場合、過去の時間は除外
-        if (isToday) {
-          if (slotTime <= currentJstTime) {
-            return { time: slotTime, available: false };
-          }
-        }
-
-        // 3. 施術終了時間を計算
-        const [startHours, startMinutes] = slotTime.split(":").map(Number);
-        const endMinutes = startHours * 60 + startMinutes + totalDuration;
-        const endHours = Math.floor(endMinutes / 60);
-        const endMins = endMinutes % 60;
-        const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
-
-        // 4. 施術終了が閉店時間を超える場合は予約不可
-        //    最終受付時間内でも、施術が閉店までに終わらない場合は選択不可
-        if (endTime > businessHours.close) {
-          return { time: slotTime, available: false };
-        }
-
-        // 既存予約との重複チェック
-        const hasConflict = existingReservations.some((reservation) => {
-          const resStart = reservation.startTime;
-          const resEnd = reservation.endTime;
-
-          // 重複判定: 新予約の開始 < 既存の終了 && 新予約の終了 > 既存の開始
-          return slotTime < resEnd && endTime > resStart;
-        });
-
-        // 時間帯休業との重複チェック
-        const hasHolidayConflict = timeRangeHolidays.some((holiday) => {
-          const holidayStart = holiday.startTime!;
-          const holidayEnd = holiday.endTime!;
-
-          // 重複判定: 新予約の開始 < 休業終了 && 新予約の終了 > 休業開始
-          return slotTime < holidayEnd && endTime > holidayStart;
-        });
-
-        const hasSbConflict = sbDay ? sbBusyOverlaps(sbDay, slotTime, endTime) : false;
-
-        return { time: slotTime, available: !hasConflict && !hasHolidayConflict && !hasSbConflict };
-      });
+    const slots = computeDaySlots({
+      businessHours: { ...businessHours, lastBooking: earliestLastBookingTime },
+      totalDuration,
+      reservations: existingReservations,
+      timeRangeHolidays: timeRangeHolidays.map((h) => ({ startTime: h.startTime!, endTime: h.endTime! })),
+      sbDay,
+      nowTime: dateStr === getJstDateString(now) ? getJstTimeString(now) : null,
+    });
 
     return NextResponse.json<AvailabilityResponse>({
       date: dateStr,

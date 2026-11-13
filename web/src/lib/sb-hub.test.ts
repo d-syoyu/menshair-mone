@@ -5,6 +5,7 @@ import {
   createSbSetupLink,
   deleteSbBooking,
   getSbOccupancy,
+  getSbOccupancyRange,
   getSbShopStatus,
   putSbBooking,
   sbBusyOverlaps,
@@ -69,6 +70,32 @@ describe("putSbBooking", () => {
     expect(await putSbBooking(booking, { config, fetchImpl: respond(500, { answer: "CONFIRMED" }) })).toBe("UNREACHABLE");
     expect(await putSbBooking(booking, { config, fetchImpl: respond(200, { answer: "MAYBE" }) })).toBe("UNREACHABLE");
     expect(await putSbBooking(booking, { config: null })).toBe("UNREACHABLE");
+  });
+});
+
+describe("getSbOccupancyRange", () => {
+  it("asks for up to 14 days at a time and answers every day", async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const u = new URL(String(url));
+      const from = u.searchParams.get("from")!;
+      return new Response(JSON.stringify({ days: [{ date: from, open: true, busy: [] }] }), { status: 200 });
+    });
+    const result = await getSbOccupancyRange("2026-11-01", "2026-11-30", { config, fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect([...fetchImpl.mock.calls.map((c) => new URL(String(c[0])).search)]).toEqual([
+      "?from=2026-11-01&to=2026-11-14", "?from=2026-11-15&to=2026-11-28", "?from=2026-11-29&to=2026-11-30",
+    ]);
+    expect(result.size).toBe(30);
+    expect(result.get("2026-11-01")).toEqual({ open: true, busy: [] });
+    expect(result.get("2026-11-02")).toBeNull();
+    // 覚えている日は聞き直さない
+    await getSbOccupancy("2026-11-01", { config, fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("answers every day as unknown without the hub", async () => {
+    const result = await getSbOccupancyRange("2026-11-01", "2026-11-03", { config: null });
+    expect([...result.values()]).toEqual([null, null, null]);
   });
 });
 

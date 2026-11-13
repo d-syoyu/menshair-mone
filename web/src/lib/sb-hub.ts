@@ -122,16 +122,63 @@ function parseOccupancy(json: unknown, staffId: string | null): Map<string, SbHu
  */
 export async function getSbOccupancy(
   date: string,
-  { config = sbHubConfig(), fetchImpl, now = Date.now() }: { config?: SbHubConfig | null; fetchImpl?: FetchLike; now?: number } = {}
+  options: { config?: SbHubConfig | null; fetchImpl?: FetchLike; now?: number } = {}
 ): Promise<SbHubDayOccupancy | null> {
-  if (!config || !DATE.test(date)) return null;
-  const cached = occupancyCache.get(date);
-  if (cached && now - cached.at < OCCUPANCY_CACHE_MS) return cached.value?.get(date) ?? null;
-  const res = await call(config, "GET", `/occupancy?from=${date}&to=${date}`, { timeoutMs: READ_TIMEOUT_MS, fetchImpl });
-  const value = res && res.status === 200 ? parseOccupancy(res.json, config.staffId) : null;
-  if (!value) logFailure("occupancy", res?.status ?? null);
-  occupancyCache.set(date, { at: now, value });
-  return value?.get(date) ?? null;
+  if (!DATE.test(date)) return null;
+  return (await getSbOccupancyRange(date, date, options)).get(date) ?? null;
+}
+
+/** SOGAが1回で答える日数の上限。 */
+const OCCUPANCY_MAX_DAYS = 14;
+
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * from〜to の各日のSB側の占有（カレンダーの印用）。分からない日は null。
+ * 14日ずつまとめて聞き、日ごとに覚える。日を読み直してもらう依頼（read-demand）は出さない。
+ */
+export async function getSbOccupancyRange(
+  from: string,
+  to: string,
+  { config = sbHubConfig(), fetchImpl, now = Date.now() }: { config?: SbHubConfig | null; fetchImpl?: FetchLike; now?: number } = {}
+): Promise<Map<string, SbHubDayOccupancy | null>> {
+  const result = new Map<string, SbHubDayOccupancy | null>();
+  if (!DATE.test(from) || !DATE.test(to) || from > to) return result;
+  const dates: string[] = [];
+  for (let d = from; d <= to && dates.length < 100; d = addDays(d, 1)) dates.push(d);
+  if (!config) {
+    for (const d of dates) result.set(d, null);
+    return result;
+  }
+
+  const missing: string[] = [];
+  for (const d of dates) {
+    const cached = occupancyCache.get(d);
+    if (cached && now - cached.at < OCCUPANCY_CACHE_MS) result.set(d, cached.value?.get(d) ?? null);
+    else missing.push(d);
+  }
+
+  // 抜けている日を、続いた14日ずつの範囲にまとめて聞く。
+  const spans: [string, string][] = [];
+  for (const d of missing) {
+    const last = spans.at(-1);
+    if (last && addDays(last[1], 1) === d && dates.indexOf(d) - dates.indexOf(last[0]) < OCCUPANCY_MAX_DAYS) last[1] = d;
+    else spans.push([d, d]);
+  }
+  await Promise.all(spans.map(async ([start, end]) => {
+    const res = await call(config, "GET", `/occupancy?from=${start}&to=${end}`, { timeoutMs: READ_TIMEOUT_MS, fetchImpl });
+    const value = res && res.status === 200 ? parseOccupancy(res.json, config.staffId) : null;
+    if (!value) logFailure("occupancy", res?.status ?? null);
+    for (let d = start; d <= end; d = addDays(d, 1)) {
+      occupancyCache.set(d, { at: now, value });
+      result.set(d, value?.get(d) ?? null);
+    }
+  }));
+  return new Map(dates.map((d) => [d, result.get(d) ?? null]));
 }
 
 /** テスト用。 */
