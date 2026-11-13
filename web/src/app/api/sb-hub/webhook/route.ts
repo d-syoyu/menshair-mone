@@ -53,8 +53,7 @@ async function apply(event: SbHubEvent, tx: Prisma.TransactionClient): Promise<F
     await tx.reservation.updateMany({ where: { id: event.data.externalId }, data: { sbNeedsReview: true } });
     return null;
   }
-  // shop.status_changed・occupancy.changed：覚えている空き枠を捨てる（次に聞いた時に取り直す）。
-  clearSbOccupancyCache();
+  // shop.status_changed・occupancy.changed はここに来ない（POST でDBに触れずに受ける）。
   return null;
 }
 
@@ -122,6 +121,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ignored: typeof eventId === "string" }, { status: 200 });
   }
   const event = parsed.data;
+
+  // shop.status_changed・occupancy.changed：覚えている空き枠を捨てるだけ（次に聞いた時に取り直す）。
+  // 何度届いても同じ結果なので、イベントを記録せず、DB（Neon）を起こさない。
+  if (event.type === "shop.status_changed" || event.type === "occupancy.changed") {
+    clearSbOccupancyCache();
+    return NextResponse.json({ ok: true });
+  }
 
   let followup: Followup;
   try {

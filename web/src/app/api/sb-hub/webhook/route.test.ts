@@ -135,6 +135,19 @@ describe("POST /api/sb-hub/webhook", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("takes shop and occupancy news without waking the database", async () => {
+    for (const event of [
+      { id: "evt_3", type: "shop.status_changed", data: { state: "CONNECTED" } },
+      { id: "evt_4", type: "occupancy.changed", data: { dates: ["2026-11-14"] } },
+    ]) {
+      const res = await deliver(event);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+    }
+    expect(eventCreate).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
   it("asks SOGA to send again when applying fails", async () => {
     findUnique.mockRejectedValue(new Error("db down"));
     expect((await deliver(stateChanged("APPLIED"))).status).toBe(500);
