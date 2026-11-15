@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { RevealSection } from '@/components/RevealSection';
 import { revealOrder } from '@/components/reveal-order';
+import { BOOKING_CONFIG } from '@/constants/booking';
 
 // DBから取得するメニューの型
 interface DbMenu {
@@ -272,8 +273,8 @@ export default function BookingPage() {
 
     if (isHoliday(date)) return false; // 全日休業のみ選択不可
 
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 60);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + BOOKING_CONFIG.bookingAdvanceDays);
     if (date > maxDate) return false;
 
     return true;
