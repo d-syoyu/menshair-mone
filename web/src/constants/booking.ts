@@ -29,7 +29,9 @@ export const BOOKING_CONFIG = {
   closedDayOfWeek: 1, // 月曜日 (0=日, 1=月, ...)
 
   // 予約可能期間
-  bookingAdvanceDays: 90, // 90日先まで予約可能
+  // 84日先まで予約可能。SOGA の SB 読取（SB 連携店は12週＝84日まで）と揃える。
+  // これより先は SB の空きを読めず、カレンダーが「確認中」のままになるため。
+  bookingAdvanceDays: 84,
 } as const;
 
 // 時間スロットを生成
