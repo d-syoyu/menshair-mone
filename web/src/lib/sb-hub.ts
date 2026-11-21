@@ -274,6 +274,52 @@ export async function deleteSbBooking(
   return false;
 }
 
+// ---------- お店がSBで確かめた結果（SOGA docs/architecture/salonboard-hub-settlement-design.md） ----------
+
+export type SbHubSettlementRefusal = "STALE_VERSION" | "NOT_SETTLEABLE" | "NUMBER_IN_USE";
+export type SbHubSettlementAnswer =
+  | { kind: "SETTLED"; sbReservationNo: string | null }
+  | { kind: "REFUSED"; reason: SbHubSettlementRefusal }
+  /** SOGAが知らない予約（SOGAに送る前に失敗したもの）。 */
+  | { kind: "UNKNOWN_BOOKING" }
+  | { kind: "UNREACHABLE" };
+
+const REFUSALS = new Set<SbHubSettlementRefusal>(["STALE_VERSION", "NOT_SETTLEABLE", "NUMBER_IN_USE"]);
+export const SB_RESERVATION_NO = /^YH\d{8}$/;
+
+/**
+ * IN_SB：SBの予約表に、この番号でこの予約がある（SOGAが書いた・お店が手で入れた、のどちらでも）。
+ * NOT_IN_SB：取り消した予約のカードが、SBに残っていない。
+ * SOGAが決着させると、Webhook（booking.state_changed の APPLIED）でも同じことが届く。
+ */
+export async function settleSbBooking(
+  input: { reservationId: string; version: number; outcome: "IN_SB" | "NOT_IN_SB"; sbReservationNo?: string; actor: string },
+  { config = sbHubConfig(), fetchImpl }: { config?: SbHubConfig | null; fetchImpl?: FetchLike } = {}
+): Promise<SbHubSettlementAnswer> {
+  if (!config) return { kind: "UNREACHABLE" };
+  const res = await call(config, "POST", `/bookings/${encodeURIComponent(input.reservationId)}/settlement`, {
+    body: {
+      version: input.version,
+      outcome: input.outcome,
+      ...(input.outcome === "IN_SB" ? { sbReservationNo: input.sbReservationNo } : {}),
+      actor: input.actor.slice(0, 200),
+    },
+    timeoutMs: READ_TIMEOUT_MS,
+    fetchImpl,
+  });
+  const json = res?.json as { state?: unknown; sbReservationNo?: unknown; error?: unknown } | null;
+  if (res?.status === 200 && json?.state === "APPLIED") {
+    occupancyCache.clear();
+    return { kind: "SETTLED", sbReservationNo: typeof json.sbReservationNo === "string" ? json.sbReservationNo : null };
+  }
+  if (res?.status === 409 && typeof json?.error === "string" && REFUSALS.has(json.error as SbHubSettlementRefusal)) {
+    return { kind: "REFUSED", reason: json.error as SbHubSettlementRefusal };
+  }
+  if (res?.status === 404) return { kind: "UNKNOWN_BOOKING" };
+  logFailure("settlement", res?.status ?? null);
+  return { kind: "UNREACHABLE" };
+}
+
 // ---------- 連携の状態（管理画面を開いた時だけ） ----------
 
 export type SbHubShopStatus =
