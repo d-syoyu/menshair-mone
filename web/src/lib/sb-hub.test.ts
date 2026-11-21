@@ -12,6 +12,7 @@ import {
   sbHubConfig,
   sbNoteName,
   sendSbReadDemand,
+  settleSbBooking,
   type SbHubConfig,
 } from "./sb-hub";
 
@@ -184,5 +185,33 @@ describe("createSbSetupLink", () => {
   it("is null when SOGA does not give one", async () => {
     expect(await createSbSetupLink("a", { config, fetchImpl: respond(429, {}) })).toBeNull();
     expect(await createSbSetupLink("a", { config: null })).toBeNull();
+  });
+});
+
+describe("settleSbBooking", () => {
+  const input = { reservationId: "res_1", version: 2, outcome: "IN_SB" as const, sbReservationNo: "YH71841322", actor: "owner@mone" };
+
+  it("posts the shop's finding and reads SOGA's answer", async () => {
+    const fetchImpl = respond(200, { externalId: "res_1", version: 2, state: "APPLIED", sbReservationNo: "YH71841322" });
+    expect(await settleSbBooking(input, { config, fetchImpl })).toEqual({ kind: "SETTLED", sbReservationNo: "YH71841322" });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://admin.soga.test/api/salonboard/hub/v1/shops/shop_1/bookings/res_1/settlement");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({ version: 2, outcome: "IN_SB", sbReservationNo: "YH71841322", actor: "owner@mone" });
+  });
+
+  it("sends no number for NOT_IN_SB", async () => {
+    const fetchImpl = respond(200, { state: "APPLIED", sbReservationNo: null });
+    await settleSbBooking({ ...input, outcome: "NOT_IN_SB" }, { config, fetchImpl });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ version: 2, outcome: "NOT_IN_SB", actor: "owner@mone" });
+  });
+
+  it("tells refusals, an unknown booking and failures apart", async () => {
+    expect(await settleSbBooking(input, { config, fetchImpl: respond(409, { error: "STALE_VERSION" }) })).toEqual({ kind: "REFUSED", reason: "STALE_VERSION" });
+    expect(await settleSbBooking(input, { config, fetchImpl: respond(409, { error: "SOMETHING_ELSE" }) })).toEqual({ kind: "UNREACHABLE" });
+    expect(await settleSbBooking(input, { config, fetchImpl: respond(404, { error: "NOT_FOUND" }) })).toEqual({ kind: "UNKNOWN_BOOKING" });
+    expect(await settleSbBooking(input, { config, fetchImpl: respond(503, { error: "UNAVAILABLE" }) })).toEqual({ kind: "UNREACHABLE" });
+    expect(await settleSbBooking(input, { config: null })).toEqual({ kind: "UNREACHABLE" });
   });
 });

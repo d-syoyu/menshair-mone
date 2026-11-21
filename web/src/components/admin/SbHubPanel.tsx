@@ -60,7 +60,7 @@ function decisionFor(row: ReviewRow): { action: Decision; label: string; confirm
     return {
       action: 'in_sb',
       label: 'SBに入っているのを確認した',
-      confirm: `${when}\n\nSBの予約表に、この予約（日時・担当）が入っていますか？\n入っていない時は、先にSBに手で入れてから押してください。`
+      confirm: `${when}\n\nSBの予約表に、この予約（日時・担当）が入っていますか？\n入っていない時は、先にSBに手で入れてから押してください。\n次に、その予約のSB予約番号（YHから始まる番号）を入れます。`
         + (row.sbRequested ? '\n\n申込が確定し、お客様に予約確定のメールを送ります。' : ''),
     };
   }
@@ -126,13 +126,24 @@ export default function SbHubPanel() {
   const resolve = async (row: ReviewRow) => {
     const decision = decisionFor(row);
     if (!window.confirm(decision.confirm)) return;
+    // SOGAが、この番号のSBの予約として覚える（そのあとの変更・取消をSBに反映できるように）。
+    let sbReservationNo: string | undefined;
+    if (decision.action === 'in_sb') {
+      const typed = window.prompt('SBの予約番号を入れてください（YHから始まる番号。例：YH71841322）')?.trim().toUpperCase();
+      if (!typed) return;
+      if (!/^YH\d{8}$/.test(typed)) {
+        setResolveMessage({ ok: false, text: 'SBの予約番号は「YH」と数字8桁です。SBの予約の詳細で確かめてください。' });
+        return;
+      }
+      sbReservationNo = typed;
+    }
     setResolving(row.id);
     setResolveMessage(null);
     try {
       const res = await fetch('/api/admin/sb-hub/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reservationId: row.id, action: decision.action }),
+        body: JSON.stringify({ reservationId: row.id, action: decision.action, ...(sbReservationNo ? { sbReservationNo } : {}) }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || '保存できませんでした');
