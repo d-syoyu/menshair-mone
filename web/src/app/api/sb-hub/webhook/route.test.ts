@@ -55,6 +55,7 @@ beforeEach(() => {
   vi.stubEnv("SB_HUB_WEBHOOK_SECRET", SECRET);
   for (const fn of [eventCreate, findUnique, update, updateMany, sendConfirmation, sendEmail]) fn.mockReset();
   eventCreate.mockResolvedValue({});
+  sendConfirmation.mockResolvedValue({ success: true });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -112,6 +113,13 @@ describe("POST /api/sb-hub/webhook", () => {
     expect((await deliver(stateChanged("DECLINED"))).status).toBe(200);
     expect(update).toHaveBeenCalledWith({ where: { id: "res_1" }, data: { status: "CANCELLED", sbState: "NONE", sbRequested: false } });
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "c@example.com", html: expect.stringContaining("&lt;b&gt;") }));
+  });
+
+  it("treats a cancellation applied to SB as gone from SB, not as booked", async () => {
+    findUnique.mockResolvedValue({ id: "res_1", sbVersion: 2, sbRequested: false, status: "CANCELLED" });
+    expect((await deliver(stateChanged("APPLIED", 2))).status).toBe(200);
+    expect(update).toHaveBeenCalledWith({ where: { id: "res_1" }, data: { sbState: "NONE", sbRequested: false, sbNeedsReview: false } });
+    expect(sendConfirmation).not.toHaveBeenCalled();
   });
 
   it("ignores news about an older version", async () => {

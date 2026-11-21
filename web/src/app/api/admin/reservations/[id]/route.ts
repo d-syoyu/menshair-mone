@@ -542,14 +542,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       await syncReservationToSb(id, "ADMIN");
     }
 
-    // メール送信処理
+    // メール送信処理（送り終わるまで待つ。Vercelでは応答後の処理が止まることがあるため。エラー時もAPIは成功扱い）
     const customerEmail = updatedReservation.user?.email;
+    const emails: Promise<unknown>[] = [];
 
     // ステータスがCANCELLEDに変更された場合 → キャンセル通知メール
     if (status === "CANCELLED" && existingReservation.status !== "CANCELLED") {
       // 顧客へのキャンセル通知
       if (customerEmail) {
-        sendReservationCancellationEmail(customerEmail, {
+        emails.push(sendReservationCancellationEmail(customerEmail, {
           reservationId: updatedReservation.id,
           customerName: updatedReservation.user?.name || 'お客様',
           date: new Date(updatedReservation.date),
@@ -557,11 +558,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           menuSummary: updatedReservation.menuSummary,
         }).catch((err) => {
           console.error('Failed to send cancellation email to customer:', err);
-        });
+        }));
       }
 
       // 管理者へのキャンセル通知
-      sendAdminCancellationEmail({
+      emails.push(sendAdminCancellationEmail({
         reservationId: updatedReservation.id,
         customerName: updatedReservation.user?.name || 'お客様',
         customerEmail: customerEmail,
@@ -573,19 +574,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         cancelledByAdmin: true,
       }).catch((err) => {
         console.error('Failed to send cancellation notification to admin:', err);
-      });
+      }));
     }
     // それ以外で日時・メニュー・料金が変更された場合 → 変更通知メール
     else if (customerEmail && status !== "CANCELLED") {
       const dateChanged = date && parseLocalDate(date).getTime() !== new Date(existingReservation.date).getTime();
       const timeChanged = (startTime && startTime !== existingReservation.startTime) ||
                           (endTime && endTime !== existingReservation.endTime);
-      const menuChanged = menuIds !== undefined;
+      // メニューを送ってきても、同じメニュー・同じ順なら変更ではない（保存し直しただけ）
+      const oldMenuIds = [...existingReservation.items]
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+        .map((item) => item.menuId);
+      const menuChanged = menuIds !== undefined &&
+        (menuIds.length !== oldMenuIds.length || menuIds.some((menuId, index) => menuId !== oldMenuIds[index]));
       const priceChanged = updatedReservation.totalPrice !== existingReservation.totalPrice;
 
       // 重要な変更がある場合のみ通知
       if (dateChanged || timeChanged || menuChanged || priceChanged) {
-        sendReservationChangeEmail(customerEmail, {
+        emails.push(sendReservationChangeEmail(customerEmail, {
           reservationId: updatedReservation.id,
           customerName: updatedReservation.user?.name || 'お客様',
           oldDate: new Date(existingReservation.date),
@@ -601,9 +607,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           note: updatedReservation.note,
         }).catch((err) => {
           console.error('Failed to send change notification email:', err);
-        });
+        }));
       }
     }
+    await Promise.all(emails);
 
     return NextResponse.json(updatedReservation);
   } catch (error) {
