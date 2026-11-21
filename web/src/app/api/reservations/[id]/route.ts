@@ -205,9 +205,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // SB連携：SOGAにも取り消しを伝える
     await cancelReservationOnSb(id);
 
-    // キャンセル確認メール送信（非同期・エラー時もAPIは成功扱い）
+    // キャンセル確認メール送信（送り終わるまで待つ。Vercelでは応答後の処理が止まることがあるため。エラー時もAPIは成功扱い）
+    const emails: Promise<unknown>[] = [];
     if (reservation.user?.email) {
-      sendReservationCancellationEmail(reservation.user.email, {
+      emails.push(sendReservationCancellationEmail(reservation.user.email, {
         reservationId: reservation.id,
         customerName: reservation.user.name || 'お客様',
         date: new Date(reservation.date),
@@ -215,11 +216,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         menuSummary: reservation.menuSummary,
       }).catch((err) => {
         console.error('Failed to send cancellation confirmation email:', err);
-      });
+      }));
     }
 
-    // 管理者へのキャンセル通知メール（非同期・エラー時もAPIは成功扱い）
-    sendAdminCancellationEmail({
+    // 管理者へのキャンセル通知メール（エラー時もAPIは成功扱い）
+    emails.push(sendAdminCancellationEmail({
       reservationId: reservation.id,
       customerName: reservation.user?.name || 'お客様',
       customerEmail: reservation.user?.email,
@@ -231,7 +232,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       cancelledByAdmin: session.user.role === "ADMIN",
     }).catch((err) => {
       console.error('Failed to send admin cancellation notification:', err);
-    });
+    }));
+    await Promise.all(emails);
 
     return NextResponse.json({
       message: "予約をキャンセルしました",

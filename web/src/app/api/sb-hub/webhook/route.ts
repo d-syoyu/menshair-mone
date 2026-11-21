@@ -8,7 +8,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { clearSbOccupancyCache } from "@/lib/sb-hub";
 import { sbHubEventSchema, verifySbHubSignature, type SbHubEvent } from "@/lib/sb-hub-webhook";
-import { sendEmail, sendReservationConfirmationEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
+import { sendRequestConfirmedEmail } from "@/lib/sb-hub-review";
 import { formatJstDate } from "@/lib/date-utils";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,14 @@ async function apply(event: SbHubEvent, tx: Prisma.TransactionClient): Promise<F
       return { kind: "declined", reservationId: externalId };
     }
     const confirmedNow = state === "APPLIED" && reservation.sbRequested;
+    // 取り消した予約の今の版（取り消し）がSBに反映された＝SBからも消えた。反映済みと見せず、要確認も残さない。
+    if (state === "APPLIED" && reservation.status === "CANCELLED" && version === reservation.sbVersion) {
+      await tx.reservation.update({
+        where: { id: externalId },
+        data: { sbState: "NONE", sbRequested: false, sbNeedsReview: false },
+      });
+      return null;
+    }
     await tx.reservation.update({
       where: { id: externalId },
       data: {
@@ -63,6 +72,10 @@ function escapeHtml(value: string) {
 
 async function followUp(followup: Followup) {
   if (!followup) return;
+  if (followup.kind === "confirmed") {
+    await sendRequestConfirmedEmail(followup.reservationId);
+    return;
+  }
   const reservation = await prisma.reservation.findUnique({
     where: { id: followup.reservationId },
     include: { user: { select: { name: true, email: true } } },
@@ -70,20 +83,6 @@ async function followUp(followup: Followup) {
   const email = reservation?.user?.email;
   if (!reservation || !email) return;
   const name = reservation.user?.name || "お客様";
-  if (followup.kind === "confirmed") {
-    await sendReservationConfirmationEmail(email, {
-      reservationId: reservation.id,
-      customerName: name,
-      date: new Date(reservation.date),
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      menuSummary: reservation.menuSummary,
-      totalPrice: reservation.totalPrice,
-      couponDiscount: reservation.couponDiscount,
-      note: reservation.note || undefined,
-    });
-    return;
-  }
   const when = `${formatJstDate(reservation.date, "jp")} ${reservation.startTime}`;
   const text = `${name} 様\n\nご予約の申込（${when}〜、${reservation.menuSummary}）は、空きを確認できなかったため、お受けできませんでした。\n申し訳ございません。お手数ですが、別の日時でお申込みいただくか、お店にご連絡ください。\n\nMen's hair MONË`;
   await sendEmail({

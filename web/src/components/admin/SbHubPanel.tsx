@@ -43,10 +43,35 @@ export const SB_STATE_LABELS: Record<string, string> = {
 };
 
 function reason(row: ReviewRow) {
-  if (row.sbRequested && row.status === 'CONFIRMED') return '申込（SBで確かめてから確定）';
-  if (row.sbState === 'MANUAL_REQUIRED') return 'SOGAに送れませんでした。SBに手で入力・取消してください';
-  if (row.sbState === 'VERIFY_REQUIRED') return 'SBの予約と重なった可能性があります';
+  const cancelled = row.status === 'CANCELLED';
+  if (row.sbRequested && row.status === 'CONFIRMED') return '申込（確定待ち）：SBに入ったか確認できていません。お客様にはまだ確定メールを送っていません';
+  if (row.sbState === 'MANUAL_REQUIRED') return cancelled ? 'SOGAから取消を送れませんでした。SBから手で消してください' : 'SOGAに送れませんでした。SBに手で入力してください';
+  if (row.sbState === 'VERIFY_REQUIRED') return cancelled ? 'SBから消えたか確認できていません' : 'SBに入ったか確認できていません';
+  if (row.sbState === 'PENDING') return cancelled ? 'SBからの取消が終わっていません' : 'SBへの反映が終わっていません';
   return 'SB上で変更・削除されました';
+}
+
+type Decision = 'in_sb' | 'not_in_sb' | 'reviewed';
+
+/** 予約の状態から、オーナーが押せる確認のボタン。 */
+function decisionFor(row: ReviewRow): { action: Decision; label: string; confirm: string } {
+  const when = `${row.date} ${row.startTime}〜${row.endTime} ${row.customerName ?? 'お客様'}`;
+  if (row.status === 'CONFIRMED') {
+    return {
+      action: 'in_sb',
+      label: 'SBに入っているのを確認した',
+      confirm: `${when}\n\nSBの予約表に、この予約（日時・担当）が入っていますか？\n入っていない時は、先にSBに手で入れてから押してください。`
+        + (row.sbRequested ? '\n\n申込が確定し、お客様に予約確定のメールを送ります。' : ''),
+    };
+  }
+  if (row.status === 'CANCELLED') {
+    return {
+      action: 'not_in_sb',
+      label: 'SBから消えているのを確認した',
+      confirm: `${when}\n\nSBの予約表から、この予約が消えていますか？\n残っている時は、先にSBで取り消してから押してください。`,
+    };
+  }
+  return { action: 'reviewed', label: '確認済みにする', confirm: `${when}\n\nSBの予約を確認・修正しましたか？` };
 }
 
 export default function SbHubPanel() {
@@ -95,13 +120,33 @@ export default function SbHubPanel() {
     }
   };
 
-  const resolve = async (id: string) => {
-    const res = await fetch('/api/admin/sb-hub/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reservationId: id }),
-    });
-    if (res.ok) load();
+  const [resolving, setResolving] = useState<string | null>(null);
+  const [resolveMessage, setResolveMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const resolve = async (row: ReviewRow) => {
+    const decision = decisionFor(row);
+    if (!window.confirm(decision.confirm)) return;
+    setResolving(row.id);
+    setResolveMessage(null);
+    try {
+      const res = await fetch('/api/admin/sb-hub/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservationId: row.id, action: decision.action }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || '保存できませんでした');
+      setResolveMessage(body.confirmedRequest
+        ? body.emailSent
+          ? { ok: true, text: '申込を確定し、お客様に予約確定のメールを送りました。' }
+          : { ok: false, text: '申込を確定しましたが、確定メールを送れませんでした。お客様に直接ご連絡ください。' }
+        : { ok: true, text: '確認結果を保存しました。' });
+      await load();
+    } catch (error) {
+      setResolveMessage({ ok: false, text: error instanceof Error ? error.message : '保存できませんでした' });
+    } finally {
+      setResolving(null);
+    }
   };
 
   if (failed) {
@@ -127,19 +172,33 @@ export default function SbHubPanel() {
         </div>
       </div>
       {linkError && <p className="mt-2 text-xs text-red-700">{linkError}</p>}
+      {resolveMessage && <p className={`mt-2 text-xs ${resolveMessage.ok ? 'text-green-700' : 'text-red-700'}`}>{resolveMessage.text}</p>}
       {data.review.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {data.review.map((row) => (
-            <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-white/70 px-3 py-2">
-              <span>
-                {row.date} {row.startTime}〜{row.endTime} {row.customerName ?? 'お客様'}：{reason(row)}
-              </span>
-              {row.sbNeedsReview && (
-                <button type="button" onClick={() => resolve(row.id)} className="rounded border border-gray-300 px-2 py-1 text-xs">確認済みにする</button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mt-3 text-xs text-gray-600">
+            SBの予約表を見て確かめてください。申込をお受けできない時は、その予約をキャンセルしてください（お客様にキャンセルのメールが届きます）。
+          </p>
+          <ul className="mt-2 space-y-2">
+            {data.review.map((row) => {
+              const decision = decisionFor(row);
+              return (
+                <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-white/70 px-3 py-2">
+                  <span>
+                    {row.date} {row.startTime}〜{row.endTime} {row.customerName ?? 'お客様'}：{reason(row)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => resolve(row)}
+                    disabled={resolving !== null}
+                    className="rounded border border-gray-300 px-2 py-1 text-xs disabled:opacity-50"
+                  >
+                    {resolving === row.id ? '保存しています…' : decision.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </section>
   );
