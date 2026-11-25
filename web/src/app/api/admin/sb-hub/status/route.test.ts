@@ -100,11 +100,19 @@ describe("PATCH /api/admin/sb-hub/status", () => {
     expect(updateMany).not.toHaveBeenCalled();
   });
 
-  it("needs the SB number while connected", async () => {
+  it("rejects a malformed SB number", async () => {
     findUnique.mockResolvedValue(confirmed);
-    expect((await patch({ reservationId: "res_1", action: "in_sb" })).status).toBe(400);
     expect((await patch({ ...inSb, sbReservationNo: "12345678" })).status).toBe(400);
     expect(settle).not.toHaveBeenCalled();
+  });
+
+  it("settles without the SB number and keeps the number SOGA answers", async () => {
+    findUnique.mockResolvedValue(confirmed);
+    updateMany.mockResolvedValue({ count: 0 });
+    expect((await patch({ reservationId: "res_1", action: "in_sb" })).status).toBe(200);
+    expect(settle).toHaveBeenCalledWith(expect.objectContaining({ outcome: "IN_SB", sbReservationNo: undefined }));
+    expect(updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ sbState: "APPLIED", sbReservationNo: "YH71841322" }) }));
   });
 
   it("records locally only when SOGA never had the booking, or the hub is off", async () => {

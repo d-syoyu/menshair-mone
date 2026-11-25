@@ -43,7 +43,7 @@ const decisionSchema = z.object({
   // not_in_sb：取り消した予約が、SBの予約表から消えている（手で消した時も含む）。
   // reviewed：SB上の予約を手で直した（これまでの「確認済みにする」。完了・無断キャンセルの予約など）。
   action: z.enum(["in_sb", "not_in_sb", "reviewed"]).default("reviewed"),
-  // in_sb の時の、SBの予約番号。連携している間は必須（SOGAがこの番号の予約として覚える）。
+  // in_sb の時の、SBの予約番号。任意（画面では聞かない）。なければSOGAがすでに持っている番号を使い、答えで返す。
   sbReservationNo: z.string().regex(SB_RESERVATION_NO).optional(),
 });
 
@@ -87,9 +87,6 @@ export async function PATCH(request: Request) {
   let number: string | null = action === "in_sb" ? sbReservationNo ?? null : null;
   // SOGAに一度も送っていない予約（版0）は、SOGAが知らないので伝えない。
   if (sbHubEnabled() && reservation.sbVersion > 0) {
-    if (action === "in_sb" && !sbReservationNo) {
-      return NextResponse.json({ error: "SBの予約番号（YHから始まる番号）を入れてください" }, { status: 400 });
-    }
     const answer = await settleSbBooking({
       reservationId: id,
       version: reservation.sbVersion,
