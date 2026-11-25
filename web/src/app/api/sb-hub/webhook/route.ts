@@ -52,7 +52,10 @@ async function apply(event: SbHubEvent, tx: Prisma.TransactionClient): Promise<F
       data: {
         sbState: state,
         ...(sbReservationNo ? { sbReservationNo } : {}),
-        ...(state === "APPLIED" ? { sbRequested: false } : {}),
+        // 反映済み＝SOGAがSBを読んで確かめた。それまでの「確認が必要」で付けた要確認の印も外す
+        // （外さないと、管理画面で「SB上で変更・削除されました」と出たままになる）。
+        // そのあとSBで手で変えられた時は、SOGAから changed_in_sb が届いて、また印が付く。
+        ...(state === "APPLIED" ? { sbRequested: false, sbNeedsReview: false } : {}),
         ...(state === "VERIFY_REQUIRED" || state === "MANUAL_REQUIRED" ? { sbNeedsReview: true } : {}),
       },
     });
