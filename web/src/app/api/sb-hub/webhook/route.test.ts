@@ -93,8 +93,19 @@ describe("POST /api/sb-hub/webhook", () => {
     findUnique.mockResolvedValue({ id: "res_1", sbVersion: 1, sbRequested: false, status: "CONFIRMED" });
     expect((await deliver(stateChanged("APPLIED"))).status).toBe(200);
     expect(eventCreate).toHaveBeenCalledWith({ data: { id: "evt_1", type: "booking.state_changed" } });
-    expect(update).toHaveBeenCalledWith({ where: { id: "res_1" }, data: { sbState: "APPLIED", sbReservationNo: "BE123", sbRequested: false } });
+    expect(update).toHaveBeenCalledWith({ where: { id: "res_1" },
+      data: { sbState: "APPLIED", sbReservationNo: "BE123", sbRequested: false, sbNeedsReview: false } });
     expect(sendConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("clears the review mark once SB is read back after an uncertain save", async () => {
+    findUnique.mockResolvedValue({ id: "res_1", sbVersion: 1, sbRequested: false, status: "CONFIRMED" });
+    expect((await deliver(stateChanged("VERIFY_REQUIRED"))).status).toBe(200);
+    expect(update).toHaveBeenLastCalledWith({ where: { id: "res_1" },
+      data: expect.objectContaining({ sbState: "VERIFY_REQUIRED", sbNeedsReview: true }) });
+    expect((await deliver({ ...stateChanged("APPLIED"), id: "evt_applied" })).status).toBe(200);
+    expect(update).toHaveBeenLastCalledWith({ where: { id: "res_1" },
+      data: expect.objectContaining({ sbState: "APPLIED", sbNeedsReview: false }) });
   });
 
   it("confirms a request once SB has it, and tells the customer", async () => {
